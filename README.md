@@ -6,7 +6,7 @@ The backend of Soundscape consists of four parts:
 1. Ingestion service that takes data from Open Street Maps (OSM) in .pbf form and transforms to PostGIS format.
 2. PostgreSQL database with PostGIS extension installed to store the output of the Ingestion service.
 3. Tile service that allows the database to be queried and outputs a .json file in GeoJSON format.
-4. Ingestion service updates that takes any updates from OSM and applies them to the database
+4. Ingestion service updates that takes any changes from OSM and applies them to the database in a two minute cycle.
 
 If you want to have a local dev environment running in Docker. Then clone the repo, navigate to Docker/ and from a terminal: 
 
@@ -31,7 +31,7 @@ The final step is that Imposm takes the the intermediate format and writes the d
 
 # Ingestion Service Updates
 
-Imposm can be configured to perform updates to the database as the OSM data is updated at source. The configuration file is config.json which tells Imposm where and when to get the updates and the Python file which uses that is ingest_diffs.py
+Imposm can be configured to perform updates to the database as the OSM data is updated at source. The configuration file is config.json which tells Imposm where and when to get the updates and the Python file which uses that is ingest_diffs.py. If you have set this up with the Docker Compose file then it will be off by default and you will need to bring it up if you want updates. The update service depends on the files contained in imposm_cache which were generated on the initial import process and you cannot make any changes to mapping.yml or it will corrupt the database.
 
 # PostgreSQL with PostGIS extensions
 
