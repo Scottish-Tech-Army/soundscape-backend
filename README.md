@@ -21,9 +21,9 @@ The request above is in the format: /zoom-level/x-coordinates/y-coordinates.json
 
 # Ingestion Service
 
-The Ingestion service is a Python file (ingest_simple.py) which gets Open Street Map data and transform it into PostGIS format using the Imposm program and and the mapping.yml file to transform the data. Imposm then connects to the PostgreSQL database and writes the data to the db.
+The Ingestion service is a Python file (ingest_simple.py) which gets Open Street Map data and transform it into PostGIS format using the Imposm program and uses the mapping.yml file to transform the data. Imposm then connects to the PostgreSQL database and writes the data to the db.
 
-The Open Street Map data can be in the form of a singular extract (district-of-columbia-latest.osm.pbf) or multiple extracts. The service uses the extracts.json file to know where to get the extracts from. The .pbf file is a compressed file format that OSM uses to distribute their data.
+The Open Street Map data can be in the form of a singular extract (district-of-columbia-latest.osm.pbf) or multiple extracts. The service uses the extracts.json file to know which and where to get the extracts from. The .pbf file is a compressed file format that OSM uses to distribute their data.
 
 Imposm then performs a transform of the OSM data using the mapping.yml file and writes the files to storage in an intermediate format using levelDB. If you have used the Docker Compose file to bring up the environment then you will find all of the intermediate data in the data_tiles volume.
 
