@@ -12,7 +12,7 @@ If you want to have a local dev environment running in Docker. Then clone the re
 
 docker compose up
 
-This will spin up a stack containing four Docker containers with the services described above. The Ingester service fetches the OSM .pbf file and transforms it. You will be able to perform a quick test that it is working by using a browser/curl/whatever to hit the Tile service which is listening on 8080 and it should respond with a GeoJSON file for the Washington Capitol Building: 
+This will spin up a stack containing four Docker containers with the services described above. You will be able to perform a quick test that it is working by using a browser/curl/whatever to hit the Tile service which is listening on 8080 and it should respond with a GeoJSON file for the Washington Capitol Building: 
 
 http://localhost:8080/16/18748/25072.json
 
@@ -30,7 +30,7 @@ The final steps that Imposm takes are reading the intermediate format and writin
 
 # Ingestion Service Updates
 
-Imposm can be configured to perform updates to the database as the OSM data is updated at source. The configuration file is config.json which tells Imposm where and when to get the updates and the Python file which uses that is ingest_diffs.py. If you have set this up with the Docker Compose file then it will be off by default and you will need to bring it up if you want updates. The update service depends on the files contained in imposm_cache which were generated on the initial import process and you cannot make any changes to mapping.yml or it will corrupt the database.
+Imposm can be configured to perform updates to the database as the OSM data is updated at source. The configuration file is config.json which tells Imposm where and when to get the updates and the Python file which uses that is ingest_diffs.py. If you have set this up with the Docker Compose file then it will be off by default and you will need to bring it up if you want updates. The update service depends on the files contained in imposm_cache which were generated on the initial import process and you should not make any changes to mapping.yml or it will corrupt the database.
 
 # PostgreSQL with PostGIS extensions
 
