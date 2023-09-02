@@ -12,7 +12,7 @@ If you want to have a local dev environment running in Docker. Then clone the re
 
 docker compose up
 
-This will spin up a stack containing four Docker containers with the services described above. Once the Ingester service has fetched the OSM .pbf file and transformed it. You will be able to a quick test that it is working by using a browser/curl/whatever to hit the Tile service which is listening on 8080 and it should respond with a GeoJSON file for the Washington Capitol Building: 
+This will spin up a stack containing four Docker containers with the services described above. Once the Ingester service has fetched the OSM .pbf file and transformed it. You will be able to perform a quick test that it is working by using a browser/curl/whatever to hit the Tile service which is listening on 8080 and it should respond with a GeoJSON file for the Washington Capitol Building: 
 
 http://localhost:8080/16/18748/25072.json
 
