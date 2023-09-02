@@ -1,17 +1,18 @@
 # soundscape-backend
 Code for the backend services for soundscape
 
-The backend of Soundscape consists of three parts:
+The backend of Soundscape consists of four parts:
 
-1. Ingestion service that takes data from Open Street Maps in .pbf form and transforms to PostGIS format.
+1. Ingestion service that takes data from Open Street Maps (OSM) in .pbf form and transforms to PostGIS format.
 2. PostgreSQL database with PostGIS extension installed to store the output of the Ingestion service.
 3. Tile service that allows the database to be queried and outputs a .json file in GeoJSON format.
+4. Ingestion service updates that takes any updates from OSM and applies them to the database
 
 If you want to have a local dev environment running in Docker. Then clone the repo, navigate to Docker/ and from a terminal: 
 
 docker compose up
 
-This will spin up a stack containing three Docker containers with the services described above. Once the Ingester service has fetched the OSM .pbf file and transformed it. You will be able to a quick test that it is working by using a browser/curl/whatever to hit the Tile service which is listening on 8080 and it should respond with a GeoJSON file for the Washington Capitol Building: 
+This will spin up a stack containing four Docker containers with the services described above. Once the Ingester service has fetched the OSM .pbf file and transformed it. You will be able to a quick test that it is working by using a browser/curl/whatever to hit the Tile service which is listening on 8080 and it should respond with a GeoJSON file for the Washington Capitol Building: 
 
 http://localhost:8080/16/18748/25072.json
 
@@ -28,18 +29,27 @@ Imposm then performs a transform of the OSM data using the mapping.yml file and 
 
 The final step is that Imposm takes the the intermediate format and writes the data to the PostgreSQL database. It then performs indexing of the data to improve performance.
 
-Imposm can be configured to perform updates to the database as the OSM data is updated at source. The configuration file is config.json and the Python file which uses that is ingest_diffs.py
+# Ingestion Service Updates
+
+Imposm can be configured to perform updates to the database as the OSM data is updated at source. The configuration file is config.json which tells Imposm where and when to get the updates and the Python file which uses that is ingest_diffs.py
 
 # PostgreSQL with PostGIS extensions
 
 The database is used for storage of the transformed data. Imposm creates a database 'osm' and within that there are three schema: import, production and backup. The schemas consist of three tables: osm_entrances, osm_places and osm_roads.
 
-There is a function that the Tile service uses to retrieve data:  tilefunc.sql
+There is a PostgreSQL function (soundscape_tile) that the Tile service uses to retrieve data:  
+
+tilefunc.sql
+
 This takes the zoom, x and y coordinates and returns the GeoJSON for the bounding box defined by x and y.
+
+The bounding box function (TileBBox) that tilefunc.sql uses is defined in:
+
+postgis-vt-util.sql
 
 # Tile Service
 
-The tile service uses the aiohttp async web framework to provide a simple interface to allow the database to be queried. It expects a GET request in the /z/x/y format discussed above:
+The tile service is gentiles.py and uses the aiohttp async web framework to provide a simple interface to allow the database to be queried. It expects a GET request in the /z/x/y format discussed above:
 '/{zoom}/{x}/{y}.json'
 
-It also has a /metrics interface which returns statistics about tiles served, etc. and a /probe/alive interface to check if the service is up.
+It also has a /metrics interface which returns statistics about tiles served, errors, etc. and a /probe/alive interface to check if the service is up.
