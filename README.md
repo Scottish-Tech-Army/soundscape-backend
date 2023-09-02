@@ -19,7 +19,7 @@ http://localhost:8080/16/18748/25072.json
 The request above is in the format: /zoom-level/x-coordinates/y-coordinates.json
 
 
-# Ingestion Service Details
+# Ingestion Service
 
 The Ingestion service is a Python file (ingest_simple.py) which gets Open Street Map data and transform it into PostGIS format using the Imposm program and and the mapping.yml file to transform the data. Imposm then connects to the PostgreSQL database and writes the data to the db.
 
