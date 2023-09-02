@@ -18,7 +18,6 @@ http://localhost:8080/16/18748/25072.json
 
 The request above is in the format: /zoom-level/x-coordinates/y-coordinates.json
 
-
 # Ingestion Service
 
 The Ingestion service is a Python file (ingest_simple.py) which gets Open Street Map data and transform it into PostGIS format using the Imposm program and uses the mapping.yml file to transform the data. Imposm then connects to the PostgreSQL database and writes the data to the db.
@@ -35,7 +34,15 @@ Imposm can be configured to perform updates to the database as the OSM data is u
 
 # PostgreSQL with PostGIS extensions
 
-The database is used for storage of the transformed data. Imposm creates a database 'osm' and within that there are three schema: import, production and backup. The schemas consist of three tables: osm_entrances, osm_places and osm_roads.
+The database is used for storage of the transformed data. Imposm creates a database 'osm' and within that there are three schema: 
+1. import
+2. production
+3. backup.
+
+The schemas consist of three tables: 
+1. osm_entrances
+2. osm_places
+3. osm_roads
 
 There is a PostgreSQL function (soundscape_tile) that the Tile service uses to retrieve data:  
 
