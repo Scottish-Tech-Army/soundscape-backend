@@ -46,7 +46,7 @@ services:
       # from the available downloads at http://download.geofabrik.de/
       # or you can modify GEN_REGIONS to accept multiple extracts like
       # GEN_REGIONS=somerset bristol
-      - GEN_REGIONS=bristol
+      - GEN_REGIONS=district-of-columbia
       #- LOOP_TIME=86400
       #- NAMESPACE=soundscape
       - POSTGIS_HOST=postgis

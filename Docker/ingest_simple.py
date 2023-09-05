@@ -108,7 +108,7 @@ async def provision_database_async(postgres_dsn, osm_dsn):
         try:
             await cursor.execute('CREATE DATABASE osm')
         except psycopg2.ProgrammingError:
-            logger.warning('Database already existed at "{0}"'.format(postgres_dsn))
+            logger.warning('Unable to CREATE DATABASE osm.')
     async with aiopg.connect(dsn=osm_dsn) as conn:
         cursor = await conn.cursor()
         await cursor.execute('CREATE EXTENSION IF NOT EXISTS postgis')
