@@ -1,6 +1,8 @@
 # soundscape-backend
 Code for the backend services for soundscape
 
+![architecture](soundscape-backend.png)
+
 The backend of Soundscape consists of four parts:
 
 1. Ingestion service that takes data from Open Street Maps (OSM) in .pbf form and transforms to PostGIS format.
