@@ -8,7 +8,7 @@ The backend of Soundscape consists of four parts:
 1. Ingestion service that takes data from Open Street Maps (OSM) in .pbf form and transforms to PostGIS format.
 2. PostgreSQL database with PostGIS extension installed to store the output of the Ingestion service.
 3. Tile service that allows the database to be queried and outputs a .json file in GeoJSON format.
-4. Ingestion Updates service that takes any changes from OSM and applies them to the database in a two minute cycle.
+4. Ingestion Updates service that takes any change files from OSM (.ocz) and applies them to the database in a two minute cycle.
 
 If you want to have a local dev environment running in Docker. Then clone the repo, navigate to Docker/ and from a terminal: 
 
