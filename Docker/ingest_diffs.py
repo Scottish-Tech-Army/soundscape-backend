@@ -5,7 +5,6 @@ import os
 import subprocess
 
 parser = argparse.ArgumentParser(description='Ingestion diff engine for Soundscape')
-
 # Arguments needed for Imposm to run incremental updates
 parser.add_argument('--imposm', type=str, help='Imposm executable path', default='imposm')
 parser.add_argument('--mapping', type=str, help='Mapping file path use by Imposm', default='mapping.yml')

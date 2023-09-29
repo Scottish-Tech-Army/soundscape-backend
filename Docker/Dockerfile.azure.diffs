@@ -1,0 +1,19 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+FROM --platform=linux/amd64 alpine:latest
+
+ENV IMPOSM_BINARY_RELEASE=0.11.1 PYTHONUNBUFFERED=true INGEST=/ingest TILES=/tiles MAPPING=/mapping
+RUN apk update && apk upgrade \
+&& apk add build-base gcc ca-certificates wget python3 py3-pip py3-setuptools libpq-dev python3-dev tar gzip \
+&& mkdir -p /imposm3
+
+RUN wget -q -O - https://github.com/omniscale/imposm3/releases/download/v$IMPOSM_BINARY_RELEASE/imposm-$IMPOSM_BINARY_RELEASE-linux-x86-64.tar.gz | tar -xz && mv imposm-0.11.1-linux-x86-64/* /imposm3
+
+COPY requirements.txt ingest_diffs.py extracts.json config.json mapping.yml $INGEST/
+
+RUN pip3 install -r $INGEST/requirements.txt
+
+CMD /imposm3/imposm version 
+
+# && python3 $INGEST/ingest_diffs.py --imposm /imposm3/imposm --mapping $INGEST/mapping.yml --cachedir $TILES/imposm_cache  --diffdir $TILES/imposm_diff --expiredir $TILES/imposm_expired --verbose --config $INGEST/config.json  

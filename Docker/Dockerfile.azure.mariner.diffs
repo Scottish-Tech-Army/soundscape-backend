@@ -1,0 +1,31 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+FROM --platform=linux/amd64 mcr.microsoft.com/cbl-mariner/base/core:2.0 as installer
+
+RUN tdnf -y update \
+ && tdnf install -y dnf \
+ && mkdir /staging \
+ && dnf install -y --release=2.0 --installroot /staging prebuilt-ca-certificates wget python3 python3-pip python3-setuptools
+
+FROM --platform=linux/amd64 mcr.microsoft.com/cbl-mariner/base/core:2.0 as imposm
+
+ENV IMPOSM_BINARY_RELEASE=0.11.1
+
+RUN tdnf -y update \
+ && tdnf install -y ca-certificates-microsoft wget tar gzip \
+ && mkdir -p /ingest/imposm3 \
+ && wget -q -O - https://github.com/omniscale/imposm3/releases/download/v$IMPOSM_BINARY_RELEASE/imposm-$IMPOSM_BINARY_RELEASE-linux-x86-64.tar.gz | tar -xz --strip-components=1 -C /ingest/imposm3
+
+FROM --platform=linux/amd64 mcr.microsoft.com/cbl-mariner/distroless/base:2.0 as final
+
+ENV PYTHONUNBUFFERED=true INGEST=/ingest TILES=/tiles MAPPING=/mapping
+
+COPY --from=imposm /ingest/ $INGEST/
+COPY --from=installer /staging/ /
+
+COPY requirements.txt ingest_diffs.py extracts.json config.json mapping.yml $INGEST/
+
+RUN /usr/bin/pip3 install -r $INGEST/requirements.txt
+
+CMD python3 $INGEST/ingest_diffs.py --imposm $INGEST/imposm3/imposm --mapping $INGEST/mapping.yml --cachedir $TILES/imposm_cache  --diffdir $TILES/imposm_diff --expiredir $TILES/imposm_expired --verbose --config $INGEST/config.json  
