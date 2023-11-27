@@ -61,6 +61,6 @@ postgis-vt-util.sql
 The tile service is gentiles.py and uses the aiohttp async web framework to provide a simple interface to allow the database to be queried. It expects a GET request in the /z/x/y format discussed above:
 '/{zoom}/{x}/{y}.json'
 
-The GeoJSON file represents a tile which is 611.496 meters/tile side.
+The GeoJSON file represents a tile which is 380.7371 meters/tile side.
 
 It also has a /metrics interface which returns statistics about tiles served, errors, etc. and a /probe/alive interface to check if the service is up.
