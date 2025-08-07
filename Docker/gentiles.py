@@ -22,6 +22,7 @@ import logging
 import aiopg
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
+from psycopg2.extensions import make_dsn
 
 from aiohttp import web
 
@@ -137,7 +138,7 @@ async def gentile_async(cursor, zoom, x, y, gather_metrics=False):
             tile_size.sample(len(tile))
         return tile
     except psycopg2.Error as e:
-        print(e)
+        logger.warning(f"Database error: {e}")
         raise
 
 async def tile_handler_on_conn(conn, request):
@@ -150,8 +151,7 @@ async def tile_handler_on_conn(conn, request):
         y = int(request.match_info['y'])
         tile_data = await gentile_async(cursor, zoom, x, y, True)
         if tile_data == None:
-            logger.info('ERROR GET {0}/{1}/{2}.json'.format(zoom, x, y))
-            always_log('TILE_ERROR')
+            logger.info("No data found %d/%d/%d", zoom, x, y)
             tile_queryfail.inc()
             raise web.HTTPServiceUnavailable()
         else:
@@ -164,25 +164,30 @@ async def tile_handler_no_pooling(request):
     try:
         async with aiopg.connect(request.app['dsn']) as conn:
             response = await tile_handler_on_conn(conn, request)
+            logger.info("Response status code: %d", response.status)
             return response
     except Exception:
         tile_exception.inc()
         raise
 
 async def tile_handler_pooling(request):
+    logger.info('Tile handler pooling called %s %s', request.method, request.url)
     try:
         async with request.app['pool'].acquire() as conn:
-            always_log('pool: {0}/{1}/{2}'.format(request.app['pool'].minsize, request.app['pool'].size, request.app['pool'].maxsize))
+            logger.info('Pool: {0}/{1}/{2}'.format(request.app['pool'].minsize, request.app['pool'].size, request.app['pool'].maxsize))
             response = await tile_handler_on_conn(conn, request)
             return response
-    except Exception:
+    except Exception as e:
         tile_exception.inc()
+        logger.warning('Exception in tile handler pooling: %s', e)
         raise
 
 async def logger_middleware(app, handler):
     async def logger_m(request):
-        logger.warning('REQUEST {0}'.format(request.method))
-        return await handler(request)
+        logger.info('Processing request %s %s', request.method, request.url)
+        response = await handler(request)
+        logger.info("Response status code: %d (for %s %s)", response.status, request.method, request.url)
+        return response
     return logger_m
 
 @web.middleware
@@ -196,7 +201,7 @@ async def error_middleware(request, handler):
         raise web.HTTPInternalServerError()
 
 async def alive_handler(request):
-    always_log('ALIVE CHECK')
+    logger.info("Liveness check")
     tilesrv_aliveprobe.inc()
     return web.Response()
 
@@ -233,9 +238,6 @@ def tile_bbox_from_coords(zoom, coord_bbox):
     tile_maxy = max(ay, by)
     return (tile_minx, tile_miny, tile_maxx, tile_maxy)
 
-def always_log(s):
-    print('{0}: {1}'.format(datetime.now(), s))
-
 def telemetry_log(event_name, start, end, extra=None):
     if args.telemetry:
         if extra == None:
@@ -248,8 +250,10 @@ async def app_factory():
     if args.verbose:
         app.middlewares.append(logger_middleware)
     app.middlewares.append(error_middleware)
-    app['dsn'] = args.dsn
+    #app['dsn'] = args.dsn
+    app['dsn'] = make_osm_dsn()
     if connection_pooling:
+        logger.info('Using connection pooling with DSN: %s', app['dsn'])
         app['pool'] = await aiopg.create_pool(app['dsn'], minsize=0, pool_recycle=30*60)
 
     # assume ingress addding /tiles/
@@ -257,6 +261,18 @@ async def app_factory():
                     web.get('/probe/alive', alive_handler),
                     web.get('/metrics', metrics_handler)])
     return app
+
+def make_osm_dsn():
+    dsn = make_dsn(
+                    user=os.environ['POSTGIS_USER'],
+                    password=os.environ['POSTGIS_PASSWORD'],
+                    host=os.environ['POSTGIS_HOST'],
+                    port=os.environ['POSTGIS_PORT'],
+                    dbname=os.environ['POSTGIS_DBNAME'],
+                    sslmode='require'
+                )
+    logger.info('Generated DSN: %s', dsn)
+    return dsn
 
 def main():
     global args
@@ -272,12 +288,15 @@ def main():
 
     args = parser.parse_args()
 
-    logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s')
-    logger = logging.getLogger()
-    if args.telemetry:
-        pass
+    if args.verbose:
+        loglevel = logging.INFO
+    else:
+        loglevel = logging.WARNING
 
-    always_log('start server')
+    logging.basicConfig(level=loglevel, format='%(asctime)s:%(levelname)s:%(message)s')
+    logger = logging.getLogger()
+
+    logger.warning('Starting server')
     tilesrv_start.inc()
 
     if connection_pooling:

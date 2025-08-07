@@ -1,0 +1,9 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+FROM ubuntu:latest as final
+
+RUN apt-get update && apt-get upgrade -y && apt-get install curl postgresql-client-common postgresql-client-16 -y
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+ENTRYPOINT tail -f /dev/null

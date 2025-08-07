@@ -1,5 +1,5 @@
 {
-    "replication_interval": "2m",
-    "replication_url": "https://planet.openstreetmap.org/replication/minute/",
+    "replication_interval": "1m",
+    "replication_url": "https://planet.openstreetmap.org/replication/day/",
     "mapping": "mapping.yml"
 }
