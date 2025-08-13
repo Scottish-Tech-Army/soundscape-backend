@@ -60,10 +60,10 @@ param adminPassword string = newGuid() // Random string
 @description('Revision bump for the Container Apps')
 param revisionSuffix string = utcNow('yyyyMMddHHmmss')
 
-@description('Regions to generate tiles for - planet except for testing')
+@description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
 //param genRegions string = 'planet'
-//param genRegions string = 'canada'
-param genRegions string = 'finland'
+//param genRegions string = 'france-regions'
+param genRegions string = 'france-single'
 
 @description('Cron schedule for running the job - once per day at 6am')
 param scheduleCron string = '0 6 * * *'

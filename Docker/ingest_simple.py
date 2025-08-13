@@ -16,7 +16,6 @@ parser = argparse.ArgumentParser(description='Ingestion engine for Soundscape')
 # Arguments needed for Imposm
 parser.add_argument('--imposm', type=str, help='Imposm executable path', default='imposm')
 parser.add_argument('--mapping', type=str, help='Mapping file path use by Imposm', default='mapping.yml')
-parser.add_argument('--where', metavar='regions', nargs='+', type=str, help='Region names for extracts that match the name key in extracts.json, for example, great-britain')
 parser.add_argument('--extracts', type=str, default='extracts.json', help='Extracts file which defines urls for extracts')
 parser.add_argument('--config', type=str, help='Config file for fetching diffs.', default='config.json')
 parser.add_argument('--basedir', type=str, help='Base dir for directories', default='/tmp')
@@ -309,17 +308,12 @@ if __name__ == '__main__':
         logger.info('Creating pbfdir: %s', pbfdir)
         os.makedirs(pbfdir)
 
-    # Where indicates the list of regions, each of which is described in the extracts.json file.
+    # Where indicates the extracts file to use.
+    logger.info('Extracts to be processed from: %s', args.extracts)
     with open(args.extracts, 'r') as extracts_file:
         osm_extracts = json.load(extracts_file)
-
-    # If a specified list of regions is provided, actually use it.
-    if args.where and 'planet' not in args.where:
-        # Specific regions specified
-        logger.info('Regions specified: %s', args.where)
-        osm_extracts = list(filter(lambda e: e['name'] in args.where, osm_extracts))
-
-    logger.info('Extracts to be processed: %s', osm_extracts)
+    region_names = [e['name'] for e in osm_extracts]
+    logger.info('List of extract region names: %s', region_names)
 
     try:
         import_osm_data(args, osm_extracts)

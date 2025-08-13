@@ -24,8 +24,9 @@ ENV PYTHONUNBUFFERED=true INGEST=/ingest TILES=/tiles MAPPING=/mapping
 COPY --from=imposm /ingest/ $INGEST/
 COPY --from=installer /staging/ /
 
-COPY requirements.txt ingest_simple.py extracts.json tilefunc.sql postgis-vt-util.sql config.json mapping.yml $INGEST/
+COPY requirements.txt ingest_simple.py tilefunc.sql postgis-vt-util.sql config.json mapping.yml $INGEST/
+COPY extracts/ $INGEST/extracts/
 
 RUN /usr/bin/pip3 install -r $INGEST/requirements.txt
 
-CMD python3 $INGEST/ingest_simple.py --imposm $INGEST/imposm3/imposm --mapping $INGEST/mapping.yml --where $GEN_REGIONS --extracts $INGEST/extracts.json --basedir $TILES --verbose --config $INGEST/config.json
+CMD python3 $INGEST/ingest_simple.py --imposm $INGEST/imposm3/imposm --mapping $INGEST/mapping.yml --extracts $INGEST/extracts/extracts-${GEN_REGIONS}.json --basedir $TILES --verbose --config $INGEST/config.json

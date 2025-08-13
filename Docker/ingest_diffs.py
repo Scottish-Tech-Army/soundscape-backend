@@ -9,8 +9,6 @@ parser = argparse.ArgumentParser(description='Ingestion diff engine for Soundsca
 # Arguments needed for Imposm to run incremental updates
 parser.add_argument('--imposm', type=str, help='Imposm executable path', default='imposm')
 parser.add_argument('--mapping', type=str, help='Mapping file path use by Imposm', default='mapping.yml')
-#parser.add_argument('--where', metavar='regions', nargs='+', type=str, help='Region names for extracts that match the name key in extracts.json, for example, great-britain')
-#parser.add_argument('--extracts', type=str, default='extracts.json', help='Extracts file which defines urls for extracts')
 parser.add_argument('--config', type=str, help='Config file for fetching diffs.', default='config.json')
 parser.add_argument('--basedir', type=str, help='Base dir for directories', default='/tmp')
 
