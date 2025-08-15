@@ -11,6 +11,9 @@ from psycopg2.extensions import make_dsn, parse_dsn
 from psycopg2 import connect, OperationalError
 import aiopg
 import requests
+from azure.identity import ManagedIdentityCredential
+from azure.keyvault.secrets import SecretClient
+import time
 
 parser = argparse.ArgumentParser(description='Ingestion engine for Soundscape')
 # Arguments needed for Imposm
@@ -28,7 +31,29 @@ DIFF_DIR = 'imposm_diff'
 EXPIRE_DIR = 'imposm_expired'
 PBF_DIR = 'downloads'
 
-def make_osm_dsn(args):
+def set_password():
+    """
+    Get the PostGIS password from environment variables or Azure Key Vault.
+    """
+    password = os.environ.get('POSTGIS_PASSWORD', '')
+
+    if not password:
+        logger.info('No POSTGIS_PASSWORD environment variable set, attempting to fetch from Azure Key Vault')
+        key_vault_name = os.environ['KEY_VAULT_NAME']
+        client_id = os.environ['CLIENT_ID']
+        # Fetch the password from Azure Key Vault
+        credential = ManagedIdentityCredential(client_id=client_id)
+        client = SecretClient(vault_url=f"https://{key_vault_name}.vault.azure.net/", credential=credential)
+        secret = client.get_secret('postgres-pw')
+        password = secret.value
+        if not password:
+            raise ValueError('POSTGIS_PASSWORD not found in environment or Azure Key Vault')
+        logger.info("Got password from Azure Key Vault")
+        os.environ['POSTGIS_PASSWORD'] = password
+    else:
+        logger.info('POSTGIS_PASSWORD environment variable is set')
+
+def make_osm_dsn():
     dsn = make_dsn(
                     user=os.environ['POSTGIS_USER'],
                     password=os.environ['POSTGIS_PASSWORD'],
@@ -110,6 +135,7 @@ def connect_to_postgresdb(dsn):
 
     except OperationalError as e:
         logger.warning('Unable to connect to "{0}: {1}": FAILED'.format("postgres", e))
+        raise
 
 async def provision_database_async(postgres_dsn, osm_dsn):
     async with aiopg.connect(dsn=postgres_dsn) as conn:
@@ -148,7 +174,7 @@ def import_write(config, incremental):
     until they are rotated later.
     """
     logger.info('Writing of OSM tables (incremental: %s): START', incremental)
-    dsn = make_osm_dsn(config)
+    dsn = make_osm_dsn()
     dsn_url = get_url_dsn(dsn)
     logger.info('DSN URL: %s', dsn_url)
     imposm_args = [
@@ -170,7 +196,7 @@ def import_rotate(config, incremental):
     Deploy to production. This renames the tables we loaded so they become the live data
     """
     logger.info('Table rotation: START')
-    dsn = make_osm_dsn(config)
+    dsn = make_osm_dsn()
     dsn_url = get_url_dsn(dsn)
     imposm_args = [
         config.imposm, 'import',
@@ -189,7 +215,7 @@ def import_rotate(config, incremental):
 def run_diffs(config):
     logger.info('Running diffs with imposm')
     # config.json controls where the diffs are downloaded from and how often it runs (1h)
-    dsn = make_osm_dsn(config)
+    dsn = make_osm_dsn()
     dsn_url = get_url_dsn(dsn)
     logger.info('Incremental update - STARTED')
     imposm_args = [config.imposm, 'run',
@@ -222,9 +248,10 @@ def connect_to_osmdb(dsn, config, osm_extracts):
         if download_complete:
             logger.info('Download complete - reading, writing to tables')
             # Let Imposm do its stuff: read, import, write to db, rotate tables
-            import_extracts(config, osm_extracts, True)
-            import_write(config, True)
-            import_rotate(config, True)
+            incremental = True
+            import_extracts(config, osm_extracts, incremental)
+            import_write(config, incremental)
+            import_rotate(config, incremental)
             # This deploys the .sql files onto the soundscape database
             provision_database_soundscape(dsn)
             # Once we've run everything we want to setup diffs
@@ -233,6 +260,7 @@ def connect_to_osmdb(dsn, config, osm_extracts):
 
     except OperationalError as e:
         logger.warning('Unable to connect to "{0}: {1}": FAILED'.format(os.environ['POSTGIS_DBNAME'], e))
+        raise
 
 def import_extracts(config, extracts, incremental):
     """
@@ -276,7 +304,7 @@ def import_osm_data(config, osm_extracts):
     """
     # check whether there is an existing OSM db and schema
     try:
-        dsn = make_osm_dsn(config)
+        dsn = make_osm_dsn()
         # Can we connect to the postgres db?
         connect_to_postgresdb(dsn)
         # Connect to the osm db and do all the work.
@@ -297,10 +325,16 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     logger.info('Simple ingestion engine started')
 
+    # Remember the start time for logging
+    start_time = time.time()
+
     # Log args except for the password
     args_dict = vars(args)
     args_dict['POSTGIS_PASSWORD'] = '***'
     logger.info('Arguments: %s', args_dict)
+
+    # Make sure that the password is set; if not this sets it.
+    set_password()
 
     # Check that the pbfdir exists, and create if not.
     pbfdir = f"{args.basedir}/{PBF_DIR}"
@@ -317,16 +351,22 @@ if __name__ == '__main__':
 
     try:
         import_osm_data(args, osm_extracts)
+
         # When completed, create a file called 'ingest_complete' in the pbfdir
         complete_file = os.path.join(pbfdir, 'INGEST_COMPLETE')
         with open(complete_file, 'w') as f:
-            f.write(f"Ingestion completed at {datetime.now().isoformat()}\n")
+            f.write(f"Ingestion of {args.extracts} completed at {datetime.now().isoformat()}\n")
         logger.info('Ingestion completed successfully. File created: %s', complete_file)
+
+        elapsed_time = int(time.time() - start_time)
+        hours = elapsed_time // 3600
+        minutes = (elapsed_time % 3600) // 60
+        seconds = elapsed_time % 60
+        logger.info('Total ingestion time: %d seconds (%d:%02d:%02d hh:mm:ss)', elapsed_time, hours, minutes, seconds)
 
     except Exception as e:
         logger.error('An error occurred during ingestion: %s', e)
         raise
 
     finally:
-        logger.warning('Terminating logging')
         logging.shutdown()

@@ -1,5 +1,5 @@
 # Parameters in use
-export SUFFIX=tst2
+export SUFFIX=tst4
 export RG=rg-${SUFFIX}
 export REGION=uksouth
 export REGISTRYNAME=acrsspdevuks

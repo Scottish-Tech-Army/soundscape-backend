@@ -6,3 +6,5 @@ aiopg
 psycopg2-binary
 debugpy
 requests
+azure-identity
+azure-keyvault-secrets

@@ -1,0 +1,67 @@
+[
+	{
+	"name": "alberta",
+	"url": "http://download.geofabrik.de/north-america/canada/alberta-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "british-columbia",
+	"url": "http://download.geofabrik.de/north-america/canada/british-columbia-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "manitoba",
+	"url": "http://download.geofabrik.de/north-america/canada/manitoba-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "new-brunswick",
+	"url": "http://download.geofabrik.de/north-america/canada/new-brunswick-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "newfoundland-and-labrador",
+	"url": "http://download.geofabrik.de/north-america/canada/newfoundland-and-labrador-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "northwest-territories",
+	"url": "http://download.geofabrik.de/north-america/canada/northwest-territories-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "nova-scotia",
+	"url": "http://download.geofabrik.de/north-america/canada/nova-scotia-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "nunavut",
+	"url": "http://download.geofabrik.de/north-america/canada/nunavut-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "ontario",
+	"url": "http://download.geofabrik.de/north-america/canada/ontario-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "prince-edward-island",
+	"url": "http://download.geofabrik.de/north-america/canada/prince-edward-island-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "quebec",
+	"url": "http://download.geofabrik.de/north-america/canada/quebec-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "saskatchewan",
+	"url": "http://download.geofabrik.de/north-america/canada/saskatchewan-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "yukon",
+	"url": "http://download.geofabrik.de/north-america/canada/yukon-latest.osm.pbf",
+	"bbox": []
+	}
+]

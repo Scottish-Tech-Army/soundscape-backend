@@ -19,7 +19,7 @@ RUN tdnf -y update \
 
 FROM mcr.microsoft.com/azurelinux/distroless/base:3.0 as final
 
-ENV PYTHONUNBUFFERED=true INGEST=/ingest TILES=/tiles MAPPING=/mapping
+ENV PYTHONUNBUFFERED=true INGEST=/ingest TILES=/tiles
 
 COPY --from=imposm /ingest/ $INGEST/
 COPY --from=installer /staging/ /

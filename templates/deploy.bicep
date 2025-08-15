@@ -35,11 +35,17 @@ param vnetName string = '${suffix}-vnet'
 @description('Address range for the VNet')
 param vnetAddressPrefix string = '10.1.0.0/16'
 
-@description('Address range for the database subnet')
+@description('Address range and name for the database subnet')
 param dbSubnetPrefix string = '10.1.0.0/24'
+param dbSubnetName string = 'db-subnet'
 
-@description('Address range for the Container Apps subnet')
-param containerSubnetPrefix string = '10.1.32.0/20'
+@description('Address range and name for the Container Apps subnet')
+param containerAppSubnetPrefix string = '10.1.32.0/20'
+param containerAppSubnetName string = 'app-subnet'
+
+@description('Address range and name for the Container Instance subnet')
+param containerInstanceSubnetPrefix string = '10.1.48.0/20'
+param containerInstanceSubnetName string = 'instance-subnet'
 
 @description('Name of the storage account')
 param storageAccountName string = '${suffix}${uniqueString(resourceGroup().id)}'
@@ -130,7 +136,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
     }
     subnets: [
       {
-        name: 'db-subnet'
+        name: dbSubnetName
         properties: {
           addressPrefix: dbSubnetPrefix
           delegations: [
@@ -146,9 +152,23 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
         }
       }
       {
-        name: 'container-subnet'
+        name: containerAppSubnetName
         properties: {
-          addressPrefix: containerSubnetPrefix
+          addressPrefix: containerAppSubnetPrefix
+        }
+      }
+      {
+        name: containerInstanceSubnetName
+        properties: {
+          addressPrefix: containerInstanceSubnetPrefix
+          delegations: [
+            {
+              name: 'delegate-to-container-instances'
+              properties: {
+                serviceName: 'Microsoft.ContainerInstance/containerGroups'
+              }
+            }
+          ]
         }
       }
     ]
@@ -156,8 +176,8 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
 }
 
 // Subnet for PostgreSQL private endpoint
-var dbSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'db-subnet')
-var containerSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, 'container-subnet')
+var dbSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, dbSubnetName)
+var containerSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnet.name, containerAppSubnetName)
 
 // Private DNS Zone for PostgreSQL; name must exactly match this
 resource pgDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
