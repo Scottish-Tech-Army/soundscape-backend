@@ -20,7 +20,6 @@ param keyVaultName string = '${suffix}-vlt-${uniqueString(resourceGroup().id)}'
 param logAnalyticsWorkspaceName string = '${suffix}-law-${uniqueString(resourceGroup().id)}'
 
 // VM specific parameters
-
 @description('ssh key')
 var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ plw@plwhite.org'
 
@@ -31,6 +30,9 @@ param vmSize string = 'Standard_E4ds_v4'
 
 @description('Azure user name')
 param adminUsername string = 'azureuser'
+
+@description('')
+param filesTgz string = loadFileAsBase64('../tmp/files.tgz')
 
 // Get existing resources
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' existing = {
@@ -66,7 +68,7 @@ var envLines = [
 var envBlock = join(envLines, '\n      ')
 
 @description('Cloud init file after substitution')
-var cloudInitRendered = replace(cloudInitRaw, '{{ENV_BLOCK}}', envBlock)
+var cloudInitRendered = replace(replace(cloudInitRaw, '{{ENV_BLOCK}}', envBlock), '{{FILES_TGZ}}', filesTgz)
 
 // Create the new resources
 resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
@@ -172,5 +174,58 @@ resource amaExt 'Microsoft.Compute/virtualMachineScaleSets/extensions@2024-07-01
     protectedSettings: {
       workspaceKey: logAnalytics.listKeys().primarySharedKey
     }
+  }
+}
+
+resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
+  name: 'my-dcr'
+  location: resourceGroup().location
+  kind: 'Linux'
+  properties: {
+    description: 'Collect ingest logs'
+    dataSources: {
+      logFiles: [
+        {
+          name: 'jobLogs'
+          filePatterns: [
+            '/opt/ingest/logs/*.log'
+          ]
+          format: 'text'
+          settings: {
+            text: {
+              recordStartTimestampFormat: 'yyyy-MM-ddTHH:mm:ss'
+            }
+          }
+          streams: [
+            'Custom-IngestLogs'
+          ]
+        }
+      ]
+    }
+    destinations: {
+      logAnalytics: [
+        {
+          name: 'workspace'
+          workspaceResourceId: logAnalytics.id
+        }
+      ]
+    }
+    dataFlows: [
+      {
+        streams: [
+          'Custom-IngestLogs'
+        ]
+        destinations: [
+          'workspace'
+        ]
+      }
+    ]
+  }
+}
+
+resource dcrAssoc 'Microsoft.Insights/dataCollectionRuleAssociations@2022-06-01' = {
+  name: 'dcrassoc'
+  properties: {
+    dataCollectionRuleId: dcr.id
   }
 }

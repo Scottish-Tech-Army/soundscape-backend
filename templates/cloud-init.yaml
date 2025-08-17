@@ -14,6 +14,10 @@ packages:
   - python3-venv
 
 write_files:
+  - path: /opt/ingest/files.tgz
+    encoding: b64
+    content: |
+      {{filesTar}}
   - path: /opt/ingest/env.sh
     permissions: '0700'
     content: |
@@ -27,12 +31,13 @@ write_files:
       export INGEST=/opt/ingest
       export TILES=/mnt
       {{ENV_BLOCK}}
-
   - path: /opt/ingest/setup.sh
     permissions: '0700'
     content: |
       #!/bin/bash
       . /opt/ingest/env.sh
+
+      mkdir -p ${INGEST}/logs
 
       # Install Azure CLI
       curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
@@ -50,18 +55,16 @@ write_files:
         --settings "{\"workspaceId\": \"${LAW_ID}\"}" \
         --protected-settings "{\"workspaceKey\": \"${LAW_KEY}\"}"
 
-      mkdir -p ${INGEST}/files
       mkdir -p ${INGEST}/imposm3
       wget -q -O - https://github.com/omniscale/imposm3/releases/download/v$IMPOSM_BINARY_RELEASE/imposm-$IMPOSM_BINARY_RELEASE-linux-x86-64.tar.gz | tar -xz --strip-components=1 -C ${INGEST}/imposm3
 
-      # ENV PYTHONUNBUFFERED=true INGEST=${HOME}/ingest
-      # COPY requirements.txt ingest_simple.py config.json mapping.yml ${INGEST}/
-      # COPY extracts/ /${INGEST}/extracts/
+      # Extract the files
+      tar -xzf /opt/ingest/files.tgz -C ${INGEST}
 
       # Create venv and install deps
-      # RUN python3 -m venv ${INGEST}/venv && ${INGEST}/venv/bin/pip install --no-cache-dir -r $INGEST/requirements.txt
+      python3 -m venv ${INGEST}/venv && ${INGEST}/venv/bin/pip install --no-cache-dir -r $INGEST/requirements.txt
 
-  - path: /opt/ingest/runjob.sh
+  - path: /opt/ingest/ingest.sh
     permissions: '0700'
     content: |
       #!/bin/bash
@@ -70,23 +73,16 @@ write_files:
       # Ensure venv Python is default for CMD and any shell-in debugging
       PATH="/opt/ingest/venv/bin:$PATH"
 
+      LOGFILE="${INGEST}/logs/ingest_$(date +%Y%m%d_%H%M%S).log"
+
       python3 ${INGEST}/ingest_simple.py --imposm ${INGEST}/imposm3/imposm --mapping ${INGEST}/mapping.yml --extracts ${INGEST}/extracts/extracts-${GEN_REGIONS}.json \
-        --basedir ${TILES} --verbose --config ${INGEST}/config.json
+        --basedir ${TILES} --verbose --config ${INGEST}/config.json > ${LOGFILE} 2>&1
 
-      # === YOUR JOB HERE ===
-      #echo "Starting job..."
-      # Example workload
-      #curl -s https://example.com/workload.zip -o /tmp/workload.zip
-      #unzip /tmp/workload.zip -d /opt/workload
-      #/opt/workload/run.sh
-
-      # Upload artifacts to blob
-      #if [ -d /opt/workload/output ]; then
-      #  wget -O /usr/local/bin/azcopy https://aka.ms/downloadazcopy-v10-linux && chmod +x /usr/local/bin/azcopy
-      #  azcopy copy "/opt/workload/output/*" "$OUTPUT_SAS_URL" --recursive
-      #fi
+      # Sleep for 30 seconds so logs are flushed
+      #sleep 30
 
       # Shutdown after completion
+      # Actually, should really downsize the vmss instead
       #sudo shutdown -h now
 
 runcmd:
