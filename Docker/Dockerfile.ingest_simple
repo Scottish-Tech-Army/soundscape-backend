@@ -27,4 +27,4 @@ RUN python3 -m venv /opt/venv && \
 # Ensure venv Python is default for CMD and any shell-in debugging
 ENV PATH="/opt/venv/bin:$PATH"
 
-CMD python3 /ingest/ingest_simple.py --imposm /ingest/imposm3/imposm --mapping /ingest/mapping.yml --extracts /ingest/extracts/extracts-${GEN_REGIONS}.json --basedir ${TILES} --verbose --config /ingest/config.json
+CMD python3 /ingest/ingest_simple.py --imposm /ingest/imposm3/imposm --mapping /ingest/mapping.yml --extracts /ingest/extracts/extracts-${GEN_REGIONS}.json --basedir ${TILES} --verbose --inc --config /ingest/config.json

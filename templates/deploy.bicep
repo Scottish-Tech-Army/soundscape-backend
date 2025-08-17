@@ -47,6 +47,10 @@ param containerAppSubnetName string = 'app-subnet'
 param containerInstanceSubnetPrefix string = '10.1.48.0/20'
 param containerInstanceSubnetName string = 'instance-subnet'
 
+@description('Address range and name for the Container Instance subnet')
+param vmSubnetPrefix string = '10.1.16.0/20'
+param vmSubnetName string = 'vm-subnet'
+
 @description('Name of the storage account')
 param storageAccountName string = '${suffix}${uniqueString(resourceGroup().id)}'
 
@@ -169,6 +173,12 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
               }
             }
           ]
+        }
+      }
+      {
+        name: vmSubnetName
+        properties: {
+          addressPrefix: vmSubnetPrefix
         }
       }
     ]

@@ -22,6 +22,7 @@ parser.add_argument('--mapping', type=str, help='Mapping file path use by Imposm
 parser.add_argument('--extracts', type=str, default='extracts.json', help='Extracts file which defines urls for extracts')
 parser.add_argument('--config', type=str, help='Config file for fetching diffs.', default='config.json')
 parser.add_argument('--basedir', type=str, help='Base dir for directories', default='/tmp')
+parser.add_argument('--inc', action='store_true', help='Enable incremental mode', default=False)
 
 # Logging
 parser.add_argument('--verbose', action='store_true', help='Turn on verbose logging.')
@@ -168,12 +169,12 @@ async def provision_database_soundscape_async(osm_dsn):
         with open(ingest_path + '/' + 'tilefunc.sql', 'r') as sql:
             await cursor.execute(sql.read())
 
-def import_write(config, incremental):
+def import_write(config):
     """
     Write the OSM tables to the database. Note that these are not live data
     until they are rotated later.
     """
-    logger.info('Writing of OSM tables (incremental: %s): START', incremental)
+    logger.info('Writing of OSM tables (incremental: %s): START', config.inc)
     dsn = make_osm_dsn()
     dsn_url = get_url_dsn(dsn)
     logger.info('DSN URL: %s', dsn_url)
@@ -185,13 +186,13 @@ def import_write(config, incremental):
         '-srid', '4326',
         '-cachedir', f"{config.basedir}/{CACHE_DIR}"
     ]
-    if incremental:
+    if config.inc:
         imposm_args.extend(['-diff', '-diffdir', f"{config.basedir}/{DIFF_DIR}"])
     logger.info('Running command: %s', ' '.join(imposm_args))
     subprocess.run(imposm_args, check=True)
     logger.info('Write of OSM tables: DONE')
 
-def import_rotate(config, incremental):
+def import_rotate(config):
     """
     Deploy to production. This renames the tables we loaded so they become the live data
     """
@@ -206,7 +207,7 @@ def import_rotate(config, incremental):
             '-deployproduction',
             '-cachedir', f"{config.basedir}/{CACHE_DIR}"
             ]
-    if incremental:
+    if config.inc:
         imposm_args.extend(['-diff', '-diffdir', f"{config.basedir}/{DIFF_DIR}"])
     logger.info('Running command: %s', ' '.join(imposm_args))
     subprocess.run(imposm_args, check=True)
@@ -217,7 +218,7 @@ def run_diffs(config):
     # config.json controls where the diffs are downloaded from and how often it runs (1h)
     dsn = make_osm_dsn()
     dsn_url = get_url_dsn(dsn)
-    logger.info('Incremental update - STARTED')
+    logger.info('Diffs run - STARTED')
     imposm_args = [config.imposm, 'run',
                    '-config', config.config,
                    '-mapping', config.mapping,
@@ -229,7 +230,7 @@ def run_diffs(config):
                    '-expiretiles-zoom', '16']
     logger.info('Running command: %s', ' '.join(imposm_args))
     subprocess.run(imposm_args, check=True)
-    logger.info('Incremental update - DONE')
+    logger.info('Diffs run - DONE')
 
 def connect_to_osmdb(dsn, config, osm_extracts):
     """
@@ -248,10 +249,9 @@ def connect_to_osmdb(dsn, config, osm_extracts):
         if download_complete:
             logger.info('Download complete - reading, writing to tables')
             # Let Imposm do its stuff: read, import, write to db, rotate tables
-            incremental = True
-            import_extracts(config, osm_extracts, incremental)
-            import_write(config, incremental)
-            import_rotate(config, incremental)
+            import_extracts(config, osm_extracts)
+            import_write(config)
+            import_rotate(config)
             # This deploys the .sql files onto the soundscape database
             provision_database_soundscape(dsn)
             # Once we've run everything we want to setup diffs
@@ -262,7 +262,7 @@ def connect_to_osmdb(dsn, config, osm_extracts):
         logger.warning('Unable to connect to "{0}: {1}": FAILED'.format(os.environ['POSTGIS_DBNAME'], e))
         raise
 
-def import_extracts(config, extracts, incremental):
+def import_extracts(config, extracts):
     """
     Loop through calling import_extract for each extract.
     """
@@ -277,9 +277,9 @@ def import_extracts(config, extracts, incremental):
         if pbf in imported:
             continue
         imported[pbf] = True
-        import_extract(config, pbf, cache, incremental)
+        import_extract(config, pbf, cache)
 
-def import_extract(config, pbf, cache, incremental):
+def import_extract(config, pbf, cache):
     """
     Read data into cache
     """
@@ -290,7 +290,7 @@ def import_extract(config, pbf, cache, incremental):
                    '-srid', '4326',
                    cache,
                    '-cachedir', f"{config.basedir}/{CACHE_DIR}"]
-    if incremental:
+    if config.inc:
         imposm_args.extend(['-diff', '-diffdir', f"{config.basedir}/{DIFF_DIR}"])
     logger.info('Running command: %s', ' '.join(imposm_args))
     subprocess.run(imposm_args, check=True)
