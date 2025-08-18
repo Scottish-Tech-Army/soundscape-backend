@@ -17,7 +17,7 @@ write_files:
   - path: /opt/ingest/files.tgz
     encoding: b64
     content: |
-      {{filesTar}}
+      {{FILES_TGZ}}
   - path: /opt/ingest/env.sh
     permissions: '0700'
     content: |
@@ -35,6 +35,7 @@ write_files:
     permissions: '0700'
     content: |
       #!/bin/bash
+      set -euo pipefail
       . /opt/ingest/env.sh
 
       mkdir -p ${INGEST}/logs
@@ -44,16 +45,6 @@ write_files:
 
       # Login
       az login --identity
-
-      # Install AMA for Log Analytics
-      az vm extension set \
-        --publisher Microsoft.Azure.Monitor \
-        --name AzureMonitorLinuxAgent \
-        --ids $(curl -s -H Metadata:true \
-              --noproxy "*" \
-              "http://169.254.169.254/metadata/instance?api-version=2021-02-01" | jq -r '.compute.resourceId') \
-        --settings "{\"workspaceId\": \"${LAW_ID}\"}" \
-        --protected-settings "{\"workspaceKey\": \"${LAW_KEY}\"}"
 
       mkdir -p ${INGEST}/imposm3
       wget -q -O - https://github.com/omniscale/imposm3/releases/download/v$IMPOSM_BINARY_RELEASE/imposm-$IMPOSM_BINARY_RELEASE-linux-x86-64.tar.gz | tar -xz --strip-components=1 -C ${INGEST}/imposm3
@@ -68,6 +59,7 @@ write_files:
     permissions: '0700'
     content: |
       #!/bin/bash
+      # No pipefail, as we want to still continue if the ingest fails
       . /opt/ingest/env.sh
 
       # Ensure venv Python is default for CMD and any shell-in debugging
@@ -75,8 +67,9 @@ write_files:
 
       LOGFILE="${INGEST}/logs/ingest_$(date +%Y%m%d_%H%M%S).log"
 
-      python3 ${INGEST}/ingest_simple.py --imposm ${INGEST}/imposm3/imposm --mapping ${INGEST}/mapping.yml --extracts ${INGEST}/extracts/extracts-${GEN_REGIONS}.json \
-        --basedir ${TILES} --verbose --config ${INGEST}/config.json > ${LOGFILE} 2>&1
+      python3 -u ${INGEST}/ingest_simple.py --imposm ${INGEST}/imposm3/imposm --mapping ${INGEST}/mapping.yml --extracts ${INGEST}/extracts/extracts-${GEN_REGIONS}.json \
+        --basedir ${TILES} --verbose --config ${INGEST}/config.json 2>&1 | \
+        sed -uE 's/^\[([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}:[0-9]{2})Z\]/\1 \2/' > ${LOGFILE}
 
       # Sleep for 30 seconds so logs are flushed
       #sleep 30

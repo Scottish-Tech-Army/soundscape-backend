@@ -1,0 +1,67 @@
+[
+	{
+	"name": "denmark",
+	"url": "http://download.geofabrik.de/europe/denmark-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "germany",
+	"url": "http://download.geofabrik.de/europe/germany-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "greece",
+	"url": "http://download.geofabrik.de/europe/greece-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "great-britain",
+	"url": "http://download.geofabrik.de/europe/great-britain-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "spain",
+	"url": "http://download.geofabrik.de/europe/spain-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "finland",
+	"url": "http://download.geofabrik.de/europe/finland-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "france",
+	"url": "http://download.geofabrik.de/europe/france-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "italy",
+	"url": "http://download.geofabrik.de/europe/italy-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "norway",
+	"url": "http://download.geofabrik.de/europe/norway-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "netherlands",
+	"url": "http://download.geofabrik.de/europe/netherlands-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "portugal",
+	"url": "http://download.geofabrik.de/europe/portugal-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "sweden",
+	"url": "http://download.geofabrik.de/europe/sweden-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "ireland-and-northern-ireland",
+	"url": "http://download.geofabrik.de/europe/ireland-and-northern-ireland-latest.osm.pbf",
+	"bbox": []
+	}
+]

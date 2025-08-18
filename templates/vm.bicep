@@ -11,7 +11,7 @@ param dbServiceName string = '${suffix}-database'
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
 //param genRegions string = 'planet'
 //param genRegions string = 'france-regions'
-param genRegions string = 'canada-single'
+param genRegions string = 'europe'
 
 @description('Key vault name')
 param keyVaultName string = '${suffix}-vlt-${uniqueString(resourceGroup().id)}'
@@ -26,7 +26,8 @@ var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY
 @description('VM size supporting ephemeral NVMe OS disk')
 //param vmSize string = 'Standard_L8s_v3'
 //param vmSize string = 'Standard_L8s'
-param vmSize string = 'Standard_E4ds_v4'
+//param vmSize string = 'Standard_E4ds_v4'
+param vmSize string = 'Standard_E8ds_v4'
 
 @description('Azure user name')
 param adminUsername string = 'azureuser'
@@ -170,38 +171,73 @@ resource amaExt 'Microsoft.Compute/virtualMachineScaleSets/extensions@2024-07-01
     autoUpgradeMinorVersion: true
     settings: {
       workspaceId: logAnalytics.properties.customerId
+      region: resourceGroup().location
     }
     protectedSettings: {
+      // force the right API version so Bicep can pull the key
+      //workspaceKey: listKeys(logAnalytics.id, '2022-08-01').primarySharedKey
       workspaceKey: logAnalytics.listKeys().primarySharedKey
     }
   }
 }
 
+resource dcrAssoc 'Microsoft.Insights/dataCollectionRuleAssociations@2022-06-01' = {
+  name: 'dcrassoc'
+  scope: vmss
+  properties: {
+    dataCollectionRuleId: dcr.id
+  }
+}
+
+// Here be dragons. The DCR can only be created after the custom table, and a dependsOn is insufficient as
+// the table creation is asynchronous. We could script the dependency, but haven't yet.
 resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
-  name: 'my-dcr'
+  name: 'datacollectionrule'
   location: resourceGroup().location
   kind: 'Linux'
   properties: {
     description: 'Collect ingest logs'
+
+    // 1) Define the custom stream and its columns.
+    streamDeclarations: {
+        'Custom-IngestLogs':{
+          columns: [
+            {
+              name: 'TimeGenerated'
+              type: 'datetime'
+            }
+            {
+              name: 'RawData'
+              type: 'string'
+            }
+            {
+              name: 'FilePath'
+              type: 'string'
+            }
+            {
+              name: 'Computer'
+              type: 'string'
+            }
+         ]
+      }
+    }
+
+    // 2) Point log files data source at that stream.
     dataSources: {
       logFiles: [
         {
           name: 'jobLogs'
-          filePatterns: [
-            '/opt/ingest/logs/*.log'
-          ]
+          filePatterns: ['/opt/ingest/logs/*.log']
           format: 'text'
           settings: {
-            text: {
-              recordStartTimestampFormat: 'yyyy-MM-ddTHH:mm:ss'
-            }
+            text: { recordStartTimestampFormat: 'YYYY-MM-DD HH:MM:SS' }
           }
-          streams: [
-            'Custom-IngestLogs'
-          ]
+          streams: ['Custom-IngestLogs']
         }
       ]
     }
+
+    // 3) Send to your workspace.
     destinations: {
       logAnalytics: [
         {
@@ -210,22 +246,14 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
         }
       ]
     }
+
+    // 4) Map stream to workspace.
     dataFlows: [
       {
-        streams: [
-          'Custom-IngestLogs'
-        ]
-        destinations: [
-          'workspace'
-        ]
+        streams:      ['Custom-IngestLogs']
+        destinations: ['workspace']
+        outputStream: 'Custom-IngestLogs_CL'
       }
     ]
-  }
-}
-
-resource dcrAssoc 'Microsoft.Insights/dataCollectionRuleAssociations@2022-06-01' = {
-  name: 'dcrassoc'
-  properties: {
-    dataCollectionRuleId: dcr.id
   }
 }

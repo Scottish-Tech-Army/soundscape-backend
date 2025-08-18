@@ -1,0 +1,17 @@
+[
+	{
+	"name": "brazil",
+	"url": "http://download.geofabrik.de/south-america/brazil-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "canada",
+	"url": "http://download.geofabrik.de/north-america/canada-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "us",
+	"url": "http://download.geofabrik.de/north-america/us-latest.osm.pbf",
+	"bbox": []
+	}
+]

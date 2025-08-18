@@ -26,9 +26,6 @@ param tilesrvImage string = '${registryName}.azurecr.io/soundscape/tilesrv:${ver
 @description('Ingest initial image')
 param ingestInitialImage string = '${registryName}.azurecr.io/soundscape/ingest_simple:${versionTag}'
 
-@description('Ingest diffs image')
-param ingestDiffsImage string = '${registryName}.azurecr.io/soundscape/ingest_diffs:${versionTag}'
-
 @description('Name of the virtual network')
 param vnetName string = '${suffix}-vnet'
 
@@ -75,8 +72,8 @@ param revisionSuffix string = utcNow('yyyyMMddHHmmss')
 //param genRegions string = 'france-regions'
 param genRegions string = 'france-single'
 
-@description('Cron schedule for running the job - once per day at 6am')
-param scheduleCron string = '0 6 * * *'
+//@description('Cron schedule for running the job - once per day at 6am')
+//param scheduleCron string = '0 6 * * *'
 
 // Get the UAMI from the other subscription
 resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
@@ -323,6 +320,38 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
   properties: {}
 }
 
+// Create a table for ingest logs
+resource customTable 'Microsoft.OperationalInsights/workspaces/tables@2025-02-01' = {
+  name: 'IngestLogs_CL' // "_CL" suffix is required
+  parent: logAnalytics
+  properties: {
+    plan: 'Basic'
+    schema: {
+      name: 'IngestLogs_CL'
+      displayName: 'Ingest Logs'
+      description: 'Custom table for ingesting logs'
+      columns: [
+        {
+          name: 'TimeGenerated'
+          type: 'DateTime'
+        }
+        {
+          name: 'RawData'
+          type: 'String'
+        }
+        {
+          name: 'FilePath'
+          type: 'string'
+        }
+        {
+          name: 'Computer'
+          type: 'string'
+        }
+      ]
+    }
+  }
+}
+
 // Azure Container Apps Job
 // Manually invoked initial job
 resource ingestInitialAppJob 'Microsoft.App/jobs@2024-03-01' = {
@@ -424,110 +453,6 @@ resource ingestInitialAppJob 'Microsoft.App/jobs@2024-03-01' = {
   }
 }
 
-// Automatically running diffs job
-resource ingestDiffsAppJob 'Microsoft.App/jobs@2024-03-01' = {
-  name: 'ingest-diffs'
-  location: resourceGroup().location
-  identity: {
-    type: 'SystemAssigned, UserAssigned'
-    userAssignedIdentities: {
-      '${registryUamiResourceId}': {}
-      '${uami.id}': {}
-    }
-  }
-  dependsOn: [
-    vaultRole
-  ]
-  properties: {
-    configuration: {
-      registries: [
-        {
-          server: registryUrl
-          identity: registryUamiResourceId
-        }
-      ]
-      secrets: [
-        {
-          name: 'postgres-pw'
-          identity: uami.id
-          keyVaultUrl: 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/secrets/postgres-pw'
-        }
-      ]
-      replicaTimeout: 28800 // 8 hours
-      triggerType: 'Schedule'
-      scheduleTriggerConfig: {
-        cronExpression: scheduleCron
-        parallelism: 1
-        replicaCompletionCount: 1
-      }
-    }
-    environmentId: containerAppEnv.id
-    template: {
-      containers: [
-        {
-          name: 'ingest-diffs'
-          image: ingestDiffsImage
-          resources: {
-            cpu: 2
-            memory: '4Gi'
-          }
-          env: [
-            {
-              name: 'IMPOSM3_SINGLE_DIFF' // Ensures that only a single run is done
-              value: '1'
-            }
-            {
-              name: 'revision'
-              value: revisionSuffix
-            }
-            {
-              name: 'POSTGIS_HOST'
-              value: '${dbServiceName}.postgres.database.azure.com'
-            }
-            {
-              name: 'POSTGIS_PORT'
-              value: '5432'
-            }
-            {
-              name: 'POSTGIS_USER'
-              value: 'pgadmin'
-            }
-            {
-              name: 'POSTGIS_PASSWORD'
-              secretRef: 'postgres-pw'
-            }
-            {
-              name: 'POSTGIS_DBNAME'
-              value: 'osm'
-            }
-            {
-              name: 'GEN_REGIONS'
-              value: genRegions
-            }
-            {
-              name: 'TILES'
-              value: '/${suffix}-tiles'
-            }
-          ]
-          probes: []
-          volumeMounts: [
-            {
-              volumeName: 'fs-smb'
-              mountPath: '/${suffix}-tiles'
-            }
-          ]
-        }
-      ]
-      volumes: [
-        {
-          name: 'fs-smb'
-          storageType: 'AzureFile'
-          storageName: 'fs-smb'
-        }
-      ]
-    }
-  }
-}
 
 // Container Apps
 resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' = {
