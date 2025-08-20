@@ -320,6 +320,19 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
   properties: {}
 }
 
+// Grant UAMI rights to the LAW, so the AMA can write to it
+resource roleAssign 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(logAnalytics.id, 'ama-data-collector')
+  scope: logAnalytics
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'b0db2e35-c5f2-5753-8e1a-19ef176ddf8e'   // Azure Monitor Data Collector
+    )
+    principalId: uami.properties.principalId
+  }
+}
+
 // Create a table for ingest logs
 resource customTable 'Microsoft.OperationalInsights/workspaces/tables@2025-02-01' = {
   name: 'IngestLogs_CL' // "_CL" suffix is required

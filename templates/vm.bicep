@@ -11,7 +11,8 @@ param dbServiceName string = '${suffix}-database'
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
 //param genRegions string = 'planet'
 //param genRegions string = 'france-regions'
-param genRegions string = 'europe'
+//param genRegions string = 'europe'
+param genRegions string = 'noneurope'
 
 @description('Key vault name')
 param keyVaultName string = '${suffix}-vlt-${uniqueString(resourceGroup().id)}'
@@ -65,6 +66,8 @@ var envLines = [
   'export GEN_REGIONS=${genRegions}'
   'export KEY_VAULT_NAME=${keyVaultName}'
   'export CLIENT_ID=${uami.properties.clientId}'
+  'export VMSS_NAME=ingest-vmss'
+  'export RG=${resourceGroup().name}'
 ]
 var envBlock = join(envLines, '\n      ')
 
@@ -161,6 +164,19 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
   }
 }
 
+// Let the UAMI be used to scale the VMSS
+resource assignScaleRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(uami.id, vmss.id, 'vmss-scale-role')
+  scope: vmss
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'b499f0af-3d1a-4266-8fef-ada507b291df'  // Virtual Machine Scale Sets Contributor
+    )
+    principalId: uami.properties.principalId
+  }
+}
+
 resource amaExt 'Microsoft.Compute/virtualMachineScaleSets/extensions@2024-07-01' = {
   name: 'AzureMonitorLinuxAgent'
   parent: vmss
@@ -172,12 +188,9 @@ resource amaExt 'Microsoft.Compute/virtualMachineScaleSets/extensions@2024-07-01
     settings: {
       workspaceId: logAnalytics.properties.customerId
       region: resourceGroup().location
+      settingsAuthType: 'ManagedIdentity'
     }
-    protectedSettings: {
-      // force the right API version so Bicep can pull the key
-      //workspaceKey: listKeys(logAnalytics.id, '2022-08-01').primarySharedKey
-      workspaceKey: logAnalytics.listKeys().primarySharedKey
-    }
+    protectedSettings: {} // Deliberately empty.
   }
 }
 

@@ -43,9 +43,7 @@ write_files:
       # Install Azure CLI
       curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
-      # Login
-      az login --identity
-
+      # Install imposm
       mkdir -p ${INGEST}/imposm3
       wget -q -O - https://github.com/omniscale/imposm3/releases/download/v$IMPOSM_BINARY_RELEASE/imposm-$IMPOSM_BINARY_RELEASE-linux-x86-64.tar.gz | tar -xz --strip-components=1 -C ${INGEST}/imposm3
 
@@ -65,18 +63,36 @@ write_files:
       # Ensure venv Python is default for CMD and any shell-in debugging
       PATH="/opt/ingest/venv/bin:$PATH"
 
+      # Service log utility function
+      svclog() {
+        # %F is YYYY-MM-DD, %T is HH:MM:SS
+        printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "${INGEST}/logs/svc.log"
+      }
+
       LOGFILE="${INGEST}/logs/ingest_$(date +%Y%m%d_%H%M%S).log"
+      svclog "Ingest job started - output to ${LOGFILE}"
 
       python3 -u ${INGEST}/ingest_simple.py --imposm ${INGEST}/imposm3/imposm --mapping ${INGEST}/mapping.yml --extracts ${INGEST}/extracts/extracts-${GEN_REGIONS}.json \
         --basedir ${TILES} --verbose --config ${INGEST}/config.json 2>&1 | \
         sed -uE 's/^\[([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}:[0-9]{2})Z\]/\1 \2/' > ${LOGFILE}
 
-      # Sleep for 30 seconds so logs are flushed
-      #sleep 30
+      RETCODE=$?
+      if [ $RETCODE -ne 0 ]
+      then
+        svclog "Ingest job failed with return code ${RETCODE}. Check logs at ${LOGFILE}"
+      else
+        svclog "Ingest job succeeded - full logs at ${LOGFILE}"
+      fi
 
-      # Shutdown after completion
-      # Actually, should really downsize the vmss instead
-      #sudo shutdown -h now
+      # Obliterate the VM after completion
+      svclog "Goodbye cruel world"
+
+      # Sleep for 30 seconds so logs are flushed
+      sleep 30
+
+      # Nuke the VM once and for all
+      # az login --identity
+      # az vmss scale --resource-group ${RG} --name ${VMSS-NAME} --new-capacity 0
 
 runcmd:
   - [ bash, /opt/ingest/setup.sh ]

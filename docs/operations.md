@@ -10,14 +10,18 @@ ContainerAppConsoleLogs_CL
 | order by _timestamp_d
 ~~~
 
-For the ingestion container created as a container group, you can use
+Finally, for the VM that actually does all the work, you can use this.
 
 ~~~kql
-ContainerInstanceLog_CL
-| project TimeGenerated, ContainerName_s, Message
-| order by TimeGenerated
+IngestLogs_CL
 ~~~
 
+For service logs
+
+~~~kql
+IngestLogs_CL
+| where FilePath contains "svc.log"
+~~~
 
 ## Adding a debug container
 
