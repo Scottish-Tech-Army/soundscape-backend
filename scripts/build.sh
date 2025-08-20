@@ -9,7 +9,9 @@ cd "$(dirname "$0")/.."
 az acr login -n ${REGISTRYNAME}
 
 # Build the container locally, retag it, and push to the ACR
-for i in ingest_simple ingest_diffs tilesrv debug
+# Only tilesrv is still in use; others for historical reasons.
+#for i in ingest_simple ingest_diffs tilesrv debug
+for i in tilesrv
 do
   echo "Building and pushing ${i} container"
   docker build Docker/ -t ${i} -f Docker/Dockerfile.${i}

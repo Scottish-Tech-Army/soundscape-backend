@@ -30,6 +30,9 @@ var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY
 //param vmSize string = 'Standard_E4ds_v4'
 param vmSize string = 'Standard_E8ds_v4'
 
+@description('VMSS name')
+param vmssName string = 'ingest-vmss'
+
 @description('Azure user name')
 param adminUsername string = 'azureuser'
 
@@ -66,7 +69,7 @@ var envLines = [
   'export GEN_REGIONS=${genRegions}'
   'export KEY_VAULT_NAME=${keyVaultName}'
   'export CLIENT_ID=${uami.properties.clientId}'
-  'export VMSS_NAME=ingest-vmss'
+  'export VMSS_NAME=${vmssName}'
   'export RG=${resourceGroup().name}'
 ]
 var envBlock = join(envLines, '\n      ')
@@ -268,5 +271,104 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
         outputStream: 'Custom-IngestLogs_CL'
       }
     ]
+  }
+}
+
+// Azure function that triggers weekly updates
+var storageName     = toLower('${suffix}sa${uniqueString(resourceGroup().id)}')
+var planName        = '${suffix}-plan'
+var functionAppName = '${suffix}-scale-func'
+
+// 1) Storage Account for FUNCTIONS runtime
+resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+  name: storageName
+  location: resourceGroup().location
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+}
+
+// 2) Consumption (Dynamic) plan
+resource plan 'Microsoft.Web/serverfarms@2021-02-01' = {
+  name: planName
+  kind: 'functionapp'
+  location: resourceGroup().location
+  sku: {
+    tier: 'Dynamic'
+    name: 'Y1'
+  }
+}
+
+// 3) Function App
+resource func 'Microsoft.Web/sites@2021-02-01' = {
+  name: functionAppName
+  location: resourceGroup().location
+  kind: 'functionapp'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${uami.id}': {}
+    }
+  }
+  properties: {
+    serverFarmId: plan.id
+    siteConfig: {
+      appSettings: [
+        { name: 'AzureWebJobsStorage',          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=core.windows.net'}
+        { name: 'FUNCTIONS_WORKER_RUNTIME',     value: 'python'}
+        { name: 'UAMI_CLIENT_ID',               value: uami.properties.clientId }
+        { name: 'AZURE_SUBSCRIPTION_ID',        value: subscription().subscriptionId }
+        { name: 'VMSS_RESOURCE_GROUP',          value: resourceGroup().name }
+        { name: 'VMSS_NAME',                    value: vmssName }
+        { name: 'VMSS_RESOURCE_ID',             value: vmss.id }
+      ]
+    }
+  }
+}
+
+// 4) Define the function with both timer + HTTP trigger, inline code only
+resource scaleFn 'Microsoft.Web/sites/functions@2022-03-01' = {
+  parent: func
+  name: 'ingest-trigger'
+  properties: {
+    config: {
+      bindings: [
+        {
+          name: 'timer'
+          type: 'timerTrigger'
+          direction: 'in'
+          schedule: '0 0 9 * * 1'           // every Monday 09:00 GMT
+        }
+        {
+          authLevel: 'Function'
+          type: 'httpTrigger'
+          direction: 'in'
+          name: 'req'
+          methods: [ 'get', 'post' ]
+        }
+        {
+          type: 'http'
+          direction: 'out'
+          name: 'res'
+        }
+      ]
+    }
+    files: {
+      'run.py': '''
+import os, azure.functions as func
+from azure.identity import ManagedIdentityCredential
+from azure.mgmt.compute import ComputeManagementClient
+
+def main(timer: func.TimerRequest, req: func.HttpRequest) -> func.HttpResponse:
+    ComputeManagementClient(
+      credential=ManagedIdentityCredential(client_id=os.environ["UAMI_CLIENT_ID"]),
+      subscription_id=os.environ["AZURE_SUBSCRIPTION_ID"]
+    ).virtual_machine_scale_sets.begin_update(
+      resource_group_name=os.environ["VMSS_RESOURCE_GROUP"],
+      vm_scale_set_name=os.environ["VMSS_NAME"],
+      sku={"capacity": 1}
+    ).result()
+    return func.HttpResponse("VMSS scaled to 1", status_code=200)
+'''
+    }
   }
 }

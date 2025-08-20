@@ -23,9 +23,6 @@ param registryUrl string = '${registryName}.azurecr.io'
 @description('Tilesrv image')
 param tilesrvImage string = '${registryName}.azurecr.io/soundscape/tilesrv:${versionTag}'
 
-@description('Ingest initial image')
-param ingestInitialImage string = '${registryName}.azurecr.io/soundscape/ingest_simple:${versionTag}'
-
 @description('Name of the virtual network')
 param vnetName string = '${suffix}-vnet'
 
@@ -40,19 +37,9 @@ param dbSubnetName string = 'db-subnet'
 param containerAppSubnetPrefix string = '10.1.32.0/20'
 param containerAppSubnetName string = 'app-subnet'
 
-@description('Address range and name for the Container Instance subnet')
-param containerInstanceSubnetPrefix string = '10.1.48.0/20'
-param containerInstanceSubnetName string = 'instance-subnet'
-
-@description('Address range and name for the Container Instance subnet')
+@description('Address range and name for the VM subnet')
 param vmSubnetPrefix string = '10.1.16.0/20'
 param vmSubnetName string = 'vm-subnet'
-
-@description('Name of the storage account')
-param storageAccountName string = '${suffix}${uniqueString(resourceGroup().id)}'
-
-@description('Name of the file share')
-param fileShareName string = '${suffix}-fileshare'
 
 @description('Azure DB for PostgreSQL Flexible Server name')
 param dbServiceName string = '${suffix}-database'
@@ -60,20 +47,13 @@ param dbServiceName string = '${suffix}-database'
 @description('Log Analytics workspace name')
 param logAnalyticsWorkspaceName string = '${suffix}-law-${uniqueString(resourceGroup().id)}'
 
+// The DB admin password gets reset (but plumbed through) on every redeployment, to a random value.
 @description('DB admin password')
 @secure()
 param adminPassword string = newGuid() // Random string
 
 @description('Revision bump for the Container Apps')
 param revisionSuffix string = utcNow('yyyyMMddHHmmss')
-
-@description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
-//param genRegions string = 'planet'
-//param genRegions string = 'france-regions'
-param genRegions string = 'france-single'
-
-//@description('Cron schedule for running the job - once per day at 6am')
-//param scheduleCron string = '0 6 * * *'
 
 // Get the UAMI from the other subscription
 resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
@@ -159,20 +139,6 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
         }
       }
       {
-        name: containerInstanceSubnetName
-        properties: {
-          addressPrefix: containerInstanceSubnetPrefix
-          delegations: [
-            {
-              name: 'delegate-to-container-instances'
-              properties: {
-                serviceName: 'Microsoft.ContainerInstance/containerGroups'
-              }
-            }
-          ]
-        }
-      }
-      {
         name: vmSubnetName
         properties: {
           addressPrefix: vmSubnetPrefix
@@ -251,36 +217,6 @@ resource dbExtensions 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@
   }
 }
 
-// Storage account
-resource storageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
-  name: storageAccountName
-  location: resourceGroup().location
-  sku: {
-    name: 'Premium_LRS'
-  }
-  kind: 'FileStorage'
-}
-
-var storageAccountKey string = storageAccount.listKeys().keys[0].value
-
-resource storageFileService 'Microsoft.Storage/storageAccounts/fileServices@2025-01-01' = {
-  parent: storageAccount
-  name: 'default'
-}
-
-resource storageFileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2025-01-01' = {
-  parent: storageFileService
-  name: fileShareName
-  properties: {
-    fileSharePaidBursting: {
-      paidBurstingEnabled: false
-    }
-    accessTier: 'Premium'
-    shareQuota: 500
-    enabledProtocols: 'SMB'
-  }
-}
-
 // Container Apps Environment
 resource containerAppEnv 'Microsoft.App/managedEnvironments@2025-02-02-preview' = {
   name: containerAppEnvName
@@ -295,20 +231,6 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2025-02-02-preview' 
         customerId: logAnalytics.properties.customerId
         sharedKey: logAnalytics.listKeys().primarySharedKey
       }
-    }
-  }
-}
-
-// Storage attachment
-resource caeStorage 'Microsoft.App/managedEnvironments/storages@2025-02-02-preview' = {
-  parent: containerAppEnv
-  name: 'fs-smb'
-  properties: {
-    azureFile: {
-      accountName: storageAccountName
-      shareName: fileShareName
-      accessMode: 'ReadWrite'
-      accountKey: storageAccountKey
     }
   }
 }
@@ -366,106 +288,6 @@ resource customTable 'Microsoft.OperationalInsights/workspaces/tables@2025-02-01
 }
 
 // Azure Container Apps Job
-// Manually invoked initial job
-resource ingestInitialAppJob 'Microsoft.App/jobs@2024-03-01' = {
-  name: 'ingest-initial'
-  location: resourceGroup().location
-  identity: {
-    type: 'SystemAssigned, UserAssigned'
-    userAssignedIdentities: {
-      '${registryUamiResourceId}': {}
-      '${uami.id}': {}
-    }
-  }
-  dependsOn: [
-    vaultRole
-  ]
-  properties: {
-    configuration: {
-      registries: [
-        {
-          server: registryUrl
-          identity: registryUamiResourceId
-        }
-      ]
-      secrets: [
-        {
-          name: 'postgres-pw'
-          identity: uami.id
-          keyVaultUrl: 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/secrets/postgres-pw'
-        }
-      ]
-      replicaTimeout: 86400 // 24 hours
-      triggerType: 'Manual'
-      manualTriggerConfig: {
-        parallelism: 1
-        replicaCompletionCount: 1
-      }
-    }
-    environmentId: containerAppEnv.id
-    template: {
-      containers: [
-        {
-          name: 'ingest-initial'
-          image: ingestInitialImage
-          resources: {
-            cpu: 2
-            memory: '4Gi'
-          }
-          env: [
-            {
-              name: 'revision'
-              value: revisionSuffix
-            }
-            {
-              name: 'POSTGIS_HOST'
-              value: '${dbServiceName}.postgres.database.azure.com'
-            }
-            {
-              name: 'POSTGIS_PORT'
-              value: '5432'
-            }
-            {
-              name: 'POSTGIS_USER'
-              value: 'pgadmin'
-            }
-            {
-              name: 'POSTGIS_PASSWORD'
-              secretRef: 'postgres-pw'
-            }
-            {
-              name: 'POSTGIS_DBNAME'
-              value: 'osm'
-            }
-            {
-              name: 'GEN_REGIONS'
-              value: genRegions
-            }
-            {
-              name: 'TILES'
-              value: '/${suffix}-tiles'
-            }
-          ]
-          probes: []
-          volumeMounts: [
-            {
-              volumeName: 'fs-smb'
-              mountPath: '/${suffix}-tiles'
-            }
-          ]
-        }
-      ]
-      volumes: [
-        {
-          name: 'fs-smb'
-          storageType: 'AzureFile'
-          storageName: 'fs-smb'
-        }
-      ]
-    }
-  }
-}
-
 
 // Container Apps
 resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' = {
@@ -556,7 +378,7 @@ resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' = {
       ]
       scale: {
         minReplicas: 1
-        maxReplicas: 20
+        maxReplicas: 5
         rules: [
           {
             name: 'scalerule'

@@ -43,11 +43,16 @@ Follow the following steps.
     bash scripts/build.sh
     ~~~
 
-
 - Run the deploy script.
 
     ~~~bash
     bash scripts/deploy.sh
+    ~~~
+
+- Run the second half of the deployment (should combine with above).
+
+    ~~~bash
+    bash scripts/vm.sh
     ~~~
 
 ## Testing that your deployment works

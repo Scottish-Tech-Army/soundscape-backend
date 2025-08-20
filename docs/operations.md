@@ -23,11 +23,3 @@ IngestLogs_CL
 | where FilePath contains "svc.log"
 ~~~
 
-## Adding a debug container
-
-You can add a debug container (which is quite expensive - be warned) as follows.
-
-~~~bash
-bash scripts/debug.sh
-~~~
-

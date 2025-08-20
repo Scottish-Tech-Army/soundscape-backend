@@ -92,7 +92,7 @@ write_files:
 
       # Nuke the VM once and for all
       # az login --identity
-      # az vmss scale --resource-group ${RG} --name ${VMSS-NAME} --new-capacity 0
+      # az vmss scale --resource-group ${RG} --name ${VMSS_NAME} --new-capacity 0
 
 runcmd:
   - [ bash, /opt/ingest/setup.sh ]
