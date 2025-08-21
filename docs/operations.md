@@ -23,3 +23,9 @@ IngestLogs_CL
 | where FilePath contains "svc.log"
 ~~~
 
+For Function logs
+
+~~~kql
+AppTraces
+ | order by TimeGenerated
+~~~

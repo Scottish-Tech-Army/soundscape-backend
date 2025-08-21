@@ -12,6 +12,8 @@ Before you can initially create a deployment, you need the following.
 
     - [Docker](https://docs.docker.com/engine/install/)
 
+    - [Azure functions core tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=linux)
+
     - Various scripts contained in this repo, which must be checked out.
 
 - An Azure subscription. This will contain the various components that get deployed.
@@ -22,7 +24,8 @@ Follow the following steps.
 
 - Set up a config file. *TODO: document with an example.*
 
-    Before running any of the bash commands, you should source this config file.
+
+- Source the config file.
 
     ~~~bash
     . config/my_config_file.sh

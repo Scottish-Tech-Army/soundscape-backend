@@ -9,14 +9,15 @@ cd "$(dirname "$0")/.."
 # Before running this, you must be logged into your account, with the correct subscription selected.
 
 # Build the tar file of scripts
-mkdir -p tmp
+mkdir -p build
 pushd Docker
-tar -zcvf ../tmp/files.tgz requirements.txt ingest_simple.py tilefunc.sql postgis-vt-util.sql config.json mapping.yml extracts/
+tar -zcvf ../build/files.tgz requirements.txt ingest_simple.py tilefunc.sql postgis-vt-util.sql config.json mapping.yml extracts/
 popd
 
 # Create the group
+echo "Create deployment"
 az deployment group create \
     --resource-group ${RG} --template-file templates/vm.bicep \
-    --parameters suffix=${SUFFIX} --debug --verbose # Uncomment for debugging
+    --parameters suffix=${SUFFIX} storageName=${STORAGE} --debug --verbose
 
 echo "SUCCESS"

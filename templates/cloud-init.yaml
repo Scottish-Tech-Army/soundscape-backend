@@ -57,7 +57,7 @@ write_files:
     permissions: '0700'
     content: |
       #!/bin/bash
-      # No pipefail, as we want to still continue if the ingest fails
+      set -euo pipefail
       . /opt/ingest/env.sh
 
       # Ensure venv Python is default for CMD and any shell-in debugging
@@ -72,14 +72,22 @@ write_files:
       LOGFILE="${INGEST}/logs/ingest_$(date +%Y%m%d_%H%M%S).log"
       svclog "Ingest job started - output to ${LOGFILE}"
 
+      # Unset -e, so we can catch the error and log it
+      set +e
       python3 -u ${INGEST}/ingest_simple.py --imposm ${INGEST}/imposm3/imposm --mapping ${INGEST}/mapping.yml --extracts ${INGEST}/extracts/extracts-${GEN_REGIONS}.json \
         --basedir ${TILES} --verbose --config ${INGEST}/config.json 2>&1 | \
         sed -uE 's/^\[([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}:[0-9]{2})Z\]/\1 \2/' > ${LOGFILE}
+      RETCODES=("${PIPESTATUS[@]}")
+      RC1=${RETCODES[0]:-0}
+      RC2=${RETCODES[1]:-0}
+      set -e # Again, bomb out on error
 
-      RETCODE=$?
-      if [ $RETCODE -ne 0 ]
-      then
-        svclog "Ingest job failed with return code ${RETCODE}. Check logs at ${LOGFILE}"
+      if [ ${RC1} -ne 0 ]; then
+          svclog "Ingest job failed with return code ${RC1}. Check logs at ${LOGFILE}"
+          exit ${RC1}
+      elif [ ${RC2} -ne 0 ]; then
+          svclog "sed error with return code ${RC2}. Check logs at ${LOGFILE}"
+          exit ${RC2}
       else
         svclog "Ingest job succeeded - full logs at ${LOGFILE}"
       fi
@@ -87,14 +95,16 @@ write_files:
       # Obliterate the VM after completion
       svclog "Goodbye cruel world"
 
-      # Sleep for 30 seconds so logs are flushed
-      sleep 30
+      # Sleep for 600 seconds so logs are flushed. Mad overkill, but that's Azure logging delays for you.
+      sleep 600
 
       # Nuke the VM once and for all
-      # az login --identity
-      # az vmss scale --resource-group ${RG} --name ${VMSS_NAME} --new-capacity 0
+      az login --identity
+      az vmss scale --resource-group ${RG} --name ${VMSS_NAME} --new-capacity 0
 
 runcmd:
   - [ bash, /opt/ingest/setup.sh ]
   - [ chown, -R, azureuser:azureuser, /opt/ingest ]
   - [ chmod, '0777', /mnt ]
+  - [ chmod, '0755', /opt/ingest/ingest.sh ]
+  - [ su, '-', azureuser, -c, /opt/ingest/ingest.sh ]

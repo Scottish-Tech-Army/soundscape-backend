@@ -242,14 +242,27 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
   properties: {}
 }
 
-// Grant UAMI rights to the LAW, so the AMA can write to it
-resource roleAssign 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(logAnalytics.id, 'ama-data-collector')
+// Grant UAMI rights to publish to LAW
+resource roleAssignMetrics 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(logAnalytics.id, 'ama-metrics-publisher')
   scope: logAnalytics
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      'b0db2e35-c5f2-5753-8e1a-19ef176ddf8e'   // Azure Monitor Data Collector
+      '3913510d-42f4-4e42-8a64-420c390055eb' // Monitoring Metrics Publisher
+    )
+    principalId: uami.properties.principalId
+  }
+}
+
+// Custom logs imply that you need this too
+resource roleAssignLogs 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(logAnalytics.id, 'ama-log-writer')
+  scope: logAnalytics
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '73c42c96-874c-492b-b04d-ab87d138a893' // Log Analytics Contributor
     )
     principalId: uami.properties.principalId
   }

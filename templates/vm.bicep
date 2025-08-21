@@ -1,6 +1,9 @@
 @description('Suffix for the deployment, e.g. dev, prod, etc.')
 param suffix string
 
+@description('Storage account name for function app')
+param storageName string
+
 @description('Name of the virtual network and subnet')
 param vnetName string = '${suffix}-vnet'
 param vmSubnetName string = 'vm-subnet'
@@ -10,9 +13,8 @@ param dbServiceName string = '${suffix}-database'
 
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
 //param genRegions string = 'planet'
-//param genRegions string = 'france-regions'
 //param genRegions string = 'europe'
-param genRegions string = 'noneurope'
+param genRegions string = 'canada'
 
 @description('Key vault name')
 param keyVaultName string = '${suffix}-vlt-${uniqueString(resourceGroup().id)}'
@@ -22,7 +24,7 @@ param logAnalyticsWorkspaceName string = '${suffix}-law-${uniqueString(resourceG
 
 // VM specific parameters
 @description('ssh key')
-var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ plw@plwhite.org'
+var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
 
 @description('VM size supporting ephemeral NVMe OS disk')
 //param vmSize string = 'Standard_L8s_v3'
@@ -36,8 +38,11 @@ param vmssName string = 'ingest-vmss'
 @description('Azure user name')
 param adminUsername string = 'azureuser'
 
-@description('')
-param filesTgz string = loadFileAsBase64('../tmp/files.tgz')
+@description('Trigger schedule in cron format, e.g. "0 0 9 * * 1" for every Monday at 09:00 GMT')
+param triggerSchedule string = '0 0 9 * * 1'
+
+@description('Files TGZ file as base64 encoded string')
+param filesTgz string = loadFileAsBase64('../build/files.tgz')
 
 // Get existing resources
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' existing = {
@@ -174,7 +179,7 @@ resource assignScaleRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      'b499f0af-3d1a-4266-8fef-ada507b291df'  // Virtual Machine Scale Sets Contributor
+      'b24988ac-6180-42a0-ab88-20f7382dd24c'
     )
     principalId: uami.properties.principalId
   }
@@ -275,7 +280,6 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
 }
 
 // Azure function that triggers weekly updates
-var storageName     = toLower('${suffix}sa${uniqueString(resourceGroup().id)}')
 var planName        = '${suffix}-plan'
 var functionAppName = '${suffix}-scale-func'
 
@@ -287,22 +291,68 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   kind: 'StorageV2'
 }
 
+// Grab the first storage account key
+var storageKey = storage.listKeys().keys[0].value
+
+// Blob service and storage in that account
+var containerName = 'functionapp'
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' existing = {
+  name: 'default'
+  parent: storage
+}
+
+resource container 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: containerName
+  parent: blobService
+}
+
+// 1a - UAMI permissions on the storage account
+resource blobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, 'blob-contributor', uami.id)
+  scope: storage
+  properties: {
+    principalId: uami.properties.principalId
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+    )
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource queueDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, 'queue-contributor', uami.id)
+  scope: storage
+  properties: {
+    principalId: uami.properties.principalId
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '974c5e8b-45b9-4653-ba55-5f855dd0fb88' // Storage Queue Data Contributor
+    )
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // 2) Consumption (Dynamic) plan
 resource plan 'Microsoft.Web/serverfarms@2021-02-01' = {
   name: planName
   kind: 'functionapp'
   location: resourceGroup().location
   sku: {
-    tier: 'Dynamic'
-    name: 'Y1'
+    tier: 'FlexConsumption'
+    name: 'FC1'
+  }
+  properties: {
+    reserved: true // Linux
   }
 }
 
 // 3) Function App
-resource func 'Microsoft.Web/sites@2021-02-01' = {
+resource func 'Microsoft.Web/sites@2024-11-01' = {
   name: functionAppName
   location: resourceGroup().location
-  kind: 'functionapp'
+  kind: 'functionapp,linux,flex'
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -311,64 +361,103 @@ resource func 'Microsoft.Web/sites@2021-02-01' = {
   }
   properties: {
     serverFarmId: plan.id
+    functionAppConfig: {
+      runtime: {
+        name: 'python'
+        version: '3.12'
+      }
+      scaleAndConcurrency: {
+        instanceMemoryMB: 2048
+        maximumInstanceCount: 40 // Seems to be required, and 40 is minimum value
+      }
+      deployment: {
+        storage: {
+          // Package location
+          type: 'BlobContainer' // Pick most recent blob from this container
+          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${containerName}'
+
+          // Auth model for the package fetch (UAMI)
+          authentication: {
+            type: 'UserAssignedIdentity'
+            userAssignedIdentityResourceId: uami.id
+            // storageAccountConnectionStringName not required when using UAMI
+          }
+        }
+      }
+    }
     siteConfig: {
+      cors: {
+        allowedOrigins: [
+          'https://portal.azure.com'    // allow portal XHR calls, required for testing
+        ]
+      }
       appSettings: [
-        { name: 'AzureWebJobsStorage',          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=core.windows.net'}
-        { name: 'FUNCTIONS_WORKER_RUNTIME',     value: 'python'}
-        { name: 'UAMI_CLIENT_ID',               value: uami.properties.clientId }
-        { name: 'AZURE_SUBSCRIPTION_ID',        value: subscription().subscriptionId }
-        { name: 'VMSS_RESOURCE_GROUP',          value: resourceGroup().name }
-        { name: 'VMSS_NAME',                    value: vmssName }
-        { name: 'VMSS_RESOURCE_ID',             value: vmss.id }
+        //{ name: 'AzureWebJobsStorage__accountName', value: storageName }
+        //{ name: 'AzureWebJobsStorage__credential',  value: 'managedidentity' }
+        //{ name: 'AzureWebJobsStorage__clientId',    value: uami.properties.clientId }
+        //{ name: 'AzureWebJobsStorage__blobServiceUri',  value: 'https://${storageName}.blob.${environment().suffixes.storage}' }
+        //{ name: 'AzureWebJobsStorage__queueServiceUri', value: 'https://${storageName}.queue.${environment().suffixes.storage}' }
+
+        { name:  'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storageName};AccountKey=${storageKey};EndpointSuffix=${environment().suffixes.storage}' }
+        { name: 'FUNCTIONS_EXTENSION_VERSION',      value: '~4' }
+        //{ name: 'SCM_DO_BUILD_DURING_DEPLOYMENT',   value: 'true' }
+        //{ name: 'WEBSITE_RUN_FROM_PACKAGE',         value: 'https://${storageName}.blob.${environment().suffixes.storage}/${containerName}/${blobName}' }
+
+        // Diags settings
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',  value: appInsights.properties.ConnectionString }
+        { name: 'APPINSIGHTS_INSTRUMENTATIONKEY',   value: appInsights.properties.InstrumentationKey }
+        { name: 'APPLICATIONINSIGHTS_ROLE_NAME',    value: functionAppName }
+        // Variables passed to the code
+        { name: 'UAMI_CLIENT_ID',                   value: uami.properties.clientId }
+        { name: 'AZURE_SUBSCRIPTION_ID',            value: subscription().subscriptionId }
+        { name: 'VMSS_RESOURCE_GROUP',              value: resourceGroup().name }
+        { name: 'VMSS_NAME',                        value: vmssName }
+        { name: 'VMSS_RESOURCE_ID',                 value: vmss.id }
+        { name: 'TRIGGER_SCHEDULE',                 value: triggerSchedule }
       ]
     }
   }
 }
 
-// 4) Define the function with both timer + HTTP trigger, inline code only
-resource scaleFn 'Microsoft.Web/sites/functions@2022-03-01' = {
-  parent: func
-  name: 'ingest-trigger'
+// Application Insights linked to the existing Log Analytics workspace
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: '${suffix}-func-insights'
+  location: resourceGroup().location
+  kind: 'web'
   properties: {
-    config: {
-      bindings: [
-        {
-          name: 'timer'
-          type: 'timerTrigger'
-          direction: 'in'
-          schedule: '0 0 9 * * 1'           // every Monday 09:00 GMT
-        }
-        {
-          authLevel: 'Function'
-          type: 'httpTrigger'
-          direction: 'in'
-          name: 'req'
-          methods: [ 'get', 'post' ]
-        }
-        {
-          type: 'http'
-          direction: 'out'
-          name: 'res'
-        }
-      ]
-    }
-    files: {
-      'run.py': '''
-import os, azure.functions as func
-from azure.identity import ManagedIdentityCredential
-from azure.mgmt.compute import ComputeManagementClient
-
-def main(timer: func.TimerRequest, req: func.HttpRequest) -> func.HttpResponse:
-    ComputeManagementClient(
-      credential=ManagedIdentityCredential(client_id=os.environ["UAMI_CLIENT_ID"]),
-      subscription_id=os.environ["AZURE_SUBSCRIPTION_ID"]
-    ).virtual_machine_scale_sets.begin_update(
-      resource_group_name=os.environ["VMSS_RESOURCE_GROUP"],
-      vm_scale_set_name=os.environ["VMSS_NAME"],
-      sku={"capacity": 1}
-    ).result()
-    return func.HttpResponse("VMSS scaled to 1", status_code=200)
-'''
-    }
+    Application_Type: 'web'
+    //Flow_Type: 'Redfield'
+    WorkspaceResourceId: logAnalytics.id
   }
 }
+
+// Optional: Diagnostic settings from Function App to Log Analytics (platform logs/metrics)
+/*
+resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: '${suffix}-func-diag'
+  scope: func
+  properties: {
+    workspaceId: logAnalytics.id
+    logs: [
+      {
+        category: 'FunctionAppLogs'
+        enabled: true
+      }
+      {
+        category: 'AppServiceHTTPLogs'
+        enabled: true
+      }
+      {
+        category: 'AppServiceConsoleLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
+  }
+}
+*/
