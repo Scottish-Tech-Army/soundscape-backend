@@ -2,7 +2,15 @@
 
 ## Logging
 
-Logs can be found by going to the Log Analytics Workspace in the portal, and entering various selection strings.
+Logs can be found as follows.
+
+- In the [Azure portal](https://portal.azure.com), find the resource group.
+
+- Select the Log Analytics Workspace, and click on it.
+
+- On the left hand panel click on `Logs`
+
+- Enter your search string; see below.
 
 ### Ingestion VMs
 
@@ -22,7 +30,7 @@ The ingestion of data is done by a VM that is started once a week then shuts dow
     IngestLogs_CL
     ~~~
 
-### Function app
+### Ingest trigger function app
 
 Function App logs show when the timer (or manual) function triggered to start an ingestion. This includes both logs from the system running the function and from the function itself (though the functions contain only one line, typically).
 
@@ -43,4 +51,45 @@ ContainerAppConsoleLogs_CL
 
 ## Metrics
 
-*To be provided*
+Logs can be found as follows.
+
+- In the [Azure portal](https://portal.azure.com), find the resource group.
+
+- Select the Log Analytics Workspace, and click on it.
+
+- On the left hand panel click on `Metrics`
+
+- The default scope is the LAW itself, which is not very interesting. Click on `Scope` to change it to the right resource.
+
+### VM metrics
+
+- If you click down to the VMSS or to the running VM instance, you can see (for example) CPU usage, memory free, and network usage used by ingestion.
+
+### Ingest trigger function app
+
+About the only interesting metric here is `On Demand Function Execution Count`, which counts numbers of executions, and shows when the job triggered.
+
+### Tile server app
+
+The tile server container app contains a few useful metrics.
+
+- `CPU Usage` is obviously the CPU.
+
+- `Replica Count` is the number of instances.
+
+- `Network In Bytes` and `Network Out Bytes` are the network traffic.
+
+*There are no request count metrics, because I have not yet plumbed them in. This turns out to be a little fiddly.*
+
+### Database
+
+The database has interesting metrics including the following.
+
+- `CPU percent` is the percentage of CPU used.
+
+- `Memory percent` is the percentage of memory used.
+
+- `Disk IOPS Consumed Percentage` is disk load percentage
+
+- `Storage used` is disk space in use.
+

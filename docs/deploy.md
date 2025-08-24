@@ -2,6 +2,16 @@
 
 This document describes how to deploy a new deployment. It does not cover the global shared resources (which are assumed to exist).
 
+The process is as follows.
+
+- Check some [prerequisites](#prerequisites)
+
+- [Set up your deployment in Azure](#deploying-in-azure).
+
+- [Test that it all works](#testing-that-your-deployment-works).
+
+- [Cut over live traffic to your new deployment](#switching-over-to-your-deployment).
+
 ## Prerequisites
 
 Before you can initially create a deployment, you need the following.
@@ -18,7 +28,7 @@ Before you can initially create a deployment, you need the following.
 
 - An Azure subscription. This will contain the various components that get deployed.
 
-## Setting up resources in Azure
+## Deploying in Azure
 
 Follow the following steps.
 
@@ -64,6 +74,14 @@ Follow the following steps.
     bash scripts/functionapp.sh
     ~~~
 
+### Redeploy gotchas
+
+If you redeploy the various bicep templates, some bad things happen. I should really fix these up.
+
+- If you reload the `deploy` template, the DB password is changed. This means that all of the `tilesrv` containers restart, and any running ingestion job fails.
+
+- If you reload the `vm` template, any running ingestion job is cancelled as the VMSS is scaled down.
+
 ## Testing that your deployment works
 
 *To be provided*
@@ -72,10 +90,3 @@ Follow the following steps.
 
 *To be provided - change front door*
 
-## Redeploy gotchas
-
-If you redeploy the various bicep templates, some bad things happen. I should really fix these up.
-
-- If you reload the `deploy` template, the DB password is changed. This means that all of the `tilesrv` containers restart, and any running ingestion job fails.
-
-- If you reload the `vm` template, any running ingestion job is cancelled as the VMSS is scaled down.
