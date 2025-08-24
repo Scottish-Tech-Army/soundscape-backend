@@ -1,5 +1,5 @@
-@description('Suffix for the deployment, e.g. dev, prod, etc.')
-param suffix string
+@description('Prefix for the deployment, e.g. dev, prod, etc.')
+param prefix string
 
 @description('Name and RG of the Azure Container Registry')
 param registryName string
@@ -11,49 +11,59 @@ param versionTag string
 @description('Name of the Azure Container Registry UAMI - pre-existing, and should be supplied as a parameter really')
 param registryUAMIName string = 'mi-ssp-dev-uks-acrpull'
 
-@description('Key vault name')
-param keyVaultName string = '${suffix}-vlt-${uniqueString(resourceGroup().id)}'
-
-@description('Name of the Container Apps Environment (managed environment).')
-param containerAppEnvName string = '${suffix}-container-apps-env'
-
-@description('Registry URL')
-param registryUrl string = '${registryName}.azurecr.io'
-
-@description('Tilesrv image')
-param tilesrvImage string = '${registryName}.azurecr.io/soundscape/tilesrv:${versionTag}'
-
-@description('Name of the virtual network')
-param vnetName string = '${suffix}-vnet'
-
-@description('Address range for the VNet')
-param vnetAddressPrefix string = '10.1.0.0/16'
-
-@description('Address range and name for the database subnet')
-param dbSubnetPrefix string = '10.1.0.0/24'
-param dbSubnetName string = 'db-subnet'
-
-@description('Address range and name for the Container Apps subnet')
-param containerAppSubnetPrefix string = '10.1.32.0/20'
-param containerAppSubnetName string = 'app-subnet'
-
-@description('Address range and name for the VM subnet')
-param vmSubnetPrefix string = '10.1.16.0/20'
-param vmSubnetName string = 'vm-subnet'
-
-@description('Azure DB for PostgreSQL Flexible Server name')
-param dbServiceName string = '${suffix}-database'
-
-@description('Log Analytics workspace name')
-param logAnalyticsWorkspaceName string = '${suffix}-law-${uniqueString(resourceGroup().id)}'
-
+// These two are params because for one reason or another they cannot be vars.
 // The DB admin password gets reset (but plumbed through) on every redeployment, to a random value.
+// This is declared as a param because secure params cannot be vars.
 @description('DB admin password')
 @secure()
 param adminPassword string = newGuid() // Random string
 
+// utcNow is only valid as a param default. This is to force a revision on each deployment.
 @description('Revision bump for the Container Apps')
 param revisionSuffix string = utcNow('yyyyMMddHHmmss')
+
+// Variables that are calculated from the above
+@description('Key vault name')
+var keyVaultName string = '${prefix}-vlt-${uniqueString(resourceGroup().id)}'
+
+@description('Name of the Container Apps Environment (managed environment).')
+var containerAppEnvName string = '${prefix}-container-apps-env'
+
+@description('Registry URL')
+var registryUrl string = '${registryName}.azurecr.io'
+
+@description('Tilesrv image')
+var tilesrvImage string = '${registryName}.azurecr.io/soundscape/tilesrv:${versionTag}'
+
+@description('Name of the virtual network')
+var vnetName string = '${prefix}-vnet'
+
+@description('Address range for the VNet')
+var vnetAddressPrefix string = '10.1.0.0/16'
+
+@description('Address range and name for the database subnet')
+var dbSubnetPrefix string = '10.1.0.0/24'
+var dbSubnetName string = 'db-subnet'
+
+@description('Address range and name for the Container Apps subnet')
+var containerAppSubnetPrefix string = '10.1.32.0/20'
+var containerAppSubnetName string = 'app-subnet'
+
+@description('Address range and name for the VM subnet')
+var vmSubnetPrefix string = '10.1.16.0/20'
+var vmSubnetName string = 'vm-subnet'
+
+@description('Azure DB for PostgreSQL Flexible Server name')
+var dbServiceName string = '${prefix}-db-${uniqueString(resourceGroup().id)}'
+
+@description('Log Analytics workspace name')
+var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
+
+@description('App insights name')
+var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
+
+@description('Tilesrv Container App name')
+var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id)}'
 
 // Get the UAMI from the other subscription
 resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
@@ -65,7 +75,7 @@ resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-
 var registryUamiResourceId = registryUami.id
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
-  name: '${suffix}-uami'
+  name: '${prefix}-uami'
   location: resourceGroup().location
 }
 
@@ -225,6 +235,9 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2025-02-02-preview' 
     vnetConfiguration: {
       infrastructureSubnetId: containerSubnetId
     }
+    appInsightsConfiguration: {
+      connectionString: appInsights.properties.ConnectionString
+    }
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
@@ -240,6 +253,18 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
   name: logAnalyticsWorkspaceName
   location: resourceGroup().location
   properties: {}
+}
+
+// Application Insights linked to the existing Log Analytics workspace
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: appInsightsName
+  location: resourceGroup().location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    //Flow_Type: 'Redfield'
+    WorkspaceResourceId: logAnalytics.id
+  }
 }
 
 // Grant UAMI rights to publish to LAW
@@ -300,11 +325,9 @@ resource customTable 'Microsoft.OperationalInsights/workspaces/tables@2025-02-01
   }
 }
 
-// Azure Container Apps Job
-
 // Container Apps
 resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' = {
-  name: 'tilesrv'
+  name: tilesrvAppName
   location: resourceGroup().location
   identity: {
     type: 'SystemAssigned, UserAssigned'
@@ -357,30 +380,13 @@ resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' = {
           imageType: 'ContainerImage'
           name: 'tilesrv'
           env: [
-            {
-              name: 'APP_PORT'
-              value: '8080'
-            }
-            {
-              name: 'POSTGIS_HOST'
-              value: '${dbServiceName}.postgres.database.azure.com'
-            }
-            {
-              name: 'POSTGIS_PORT'
-              value: '5432'
-            }
-            {
-              name: 'POSTGIS_USER'
-              value: 'pgadmin'
-            }
-            {
-              name: 'POSTGIS_PASSWORD'
-              secretRef: 'postgres-pw'
-            }
-            {
-              name: 'POSTGIS_DBNAME'
-              value: 'osm'
-            }
+            { name: 'APP_PORT',            value: '8080' }
+            { name: 'POSTGIS_HOST',        value: '${dbServiceName}.postgres.database.azure.com' }
+            { name: 'POSTGIS_PORT',        value: '5432' }
+            { name: 'POSTGIS_USER',        value: 'pgadmin' }
+            { name: 'POSTGIS_PASSWORD',    secretRef: 'postgres-pw' }
+            { name: 'POSTGIS_DBNAME',      value: 'osm' }
+
           ]
           resources: {
             cpu: json('0.5')

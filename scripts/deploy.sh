@@ -13,7 +13,7 @@ az group create --location ${REGION} --resource-group ${RG}
 
 az deployment group create \
     --resource-group ${RG} --template-file templates/deploy.bicep \
-    --parameters suffix=${SUFFIX} \
+    --parameters prefix=${PREFIX} \
                  versionTag=${VERSION} \
                  registryName=${REGISTRYNAME} \
                  registryRG=${REGISTRYRG} --debug --verbose # Uncomment for debugging

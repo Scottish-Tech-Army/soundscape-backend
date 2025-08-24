@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 # Before running this, you must be logged into your account, with the correct subscription selected.
 echo "Build and push Azure function"
 pushd trigger
-func azure functionapp publish ${SUFFIX}-scale-func --python
+func azure functionapp publish ${FUNCAPPNAME} --python
 popd
 
 echo "SUCCESS"

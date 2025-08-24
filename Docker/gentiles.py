@@ -37,7 +37,7 @@ class StatCounter(object):
 
     def report(self):
         f = '# HELP {name} {help}\n# TYPE {name} counter\n{name} {value}\n'
-        s = f.format(name=self.name, help = self.help, value = self.value)
+        s = f.format(name=self.name, help=self.help, value=self.value)
         return s
 
 class StatHistogram(object):
@@ -250,13 +250,12 @@ async def app_factory():
     if args.verbose:
         app.middlewares.append(logger_middleware)
     app.middlewares.append(error_middleware)
-    #app['dsn'] = args.dsn
     app['dsn'] = make_osm_dsn()
     if connection_pooling:
         logger.info('Using connection pooling with DSN: %s', app['dsn'])
         app['pool'] = await aiopg.create_pool(app['dsn'], minsize=0, pool_recycle=30*60)
 
-    # assume ingress addding /tiles/
+    # Assume ingress addding /tiles/
     app.add_routes([web.get(r'/{zoom:\d+}/{x:\d+}/{y:\d+}.json', tile_handler),
                     web.get('/probe/alive', alive_handler),
                     web.get('/metrics', metrics_handler)])
@@ -282,7 +281,6 @@ def main():
 
     parser = argparse.ArgumentParser(description='tile generator for Soundscape')
     parser.add_argument('--server', nargs=1, type=int, default=8080, help='server port')
-    parser.add_argument('--dsn', type=str, help='specify dsn', default='dbname=osm')
     parser.add_argument('--verbose', '-v', action='store_true', help='verbose')
     parser.add_argument('--telemetry', action='store_true', help='enable telemetry')
 

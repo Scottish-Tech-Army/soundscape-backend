@@ -58,6 +58,12 @@ Follow the following steps.
     bash scripts/vm.sh
     ~~~
 
+- Deploy the function app code.
+
+    ~~~bash
+    bash scripts/functionapp.sh
+    ~~~
+
 ## Testing that your deployment works
 
 *To be provided*
@@ -65,3 +71,11 @@ Follow the following steps.
 ## Switching over to your deployment
 
 *To be provided - change front door*
+
+## Redeploy gotchas
+
+If you redeploy the various bicep templates, some bad things happen. I should really fix these up.
+
+- If you reload the `deploy` template, the DB password is changed. This means that all of the `tilesrv` containers restart, and any running ingestion job fails.
+
+- If you reload the `vm` template, any running ingestion job is cancelled as the VMSS is scaled down.

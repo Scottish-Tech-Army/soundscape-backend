@@ -18,6 +18,6 @@ popd
 echo "Create deployment"
 az deployment group create \
     --resource-group ${RG} --template-file templates/vm.bicep \
-    --parameters suffix=${SUFFIX} storageName=${STORAGE} --debug --verbose
+    --parameters prefix=${PREFIX} functionAppName=${FUNCAPPNAME} --debug --verbose
 
 echo "SUCCESS"

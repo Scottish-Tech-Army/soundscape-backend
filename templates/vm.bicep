@@ -1,48 +1,56 @@
-@description('Suffix for the deployment, e.g. dev, prod, etc.')
-param suffix string
+// Variables that must be passed in
+@description('Prefix for the deployment, e.g. dev, prod, etc.')
+param prefix string
 
-@description('Storage account name for function app')
-param storageName string
+@description('Function app name')
+param functionAppName string
 
-@description('Name of the virtual network and subnet')
-param vnetName string = '${suffix}-vnet'
-param vmSubnetName string = 'vm-subnet'
-
-@description('Azure DB for PostgreSQL Flexible Server name')
-param dbServiceName string = '${suffix}-database'
-
+// Variables that could probably be changed
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
-//param genRegions string = 'planet'
+param genRegions string = 'planet'
 //param genRegions string = 'europe'
-param genRegions string = 'canada'
+//param genRegions string = 'canada'
 
-@description('Key vault name')
-param keyVaultName string = '${suffix}-vlt-${uniqueString(resourceGroup().id)}'
-
-@description('Log Analytics workspace name')
-param logAnalyticsWorkspaceName string = '${suffix}-law-${uniqueString(resourceGroup().id)}'
-
-// VM specific parameters
+// From here on, things that never change, so just vars
 @description('ssh key')
 var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
 
+@description('Storage account name for function app')
+var storageName string = 'stor${uniqueString(resourceGroup().id)}'
+
+@description('Name of the virtual network and subnet')
+var vnetName string = '${prefix}-vnet'
+var vmSubnetName string = 'vm-subnet'
+
+@description('Azure DB for PostgreSQL Flexible Server name')
+var dbServiceName string = '${prefix}-db-${uniqueString(resourceGroup().id)}'
+
+@description('Key vault name')
+var keyVaultName string = '${prefix}-vlt-${uniqueString(resourceGroup().id)}'
+
+@description('Log Analytics workspace name')
+var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
+
+@description('App insights name')
+var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
+
 @description('VM size supporting ephemeral NVMe OS disk')
-//param vmSize string = 'Standard_L8s_v3'
-//param vmSize string = 'Standard_L8s'
-//param vmSize string = 'Standard_E4ds_v4'
-param vmSize string = 'Standard_E8ds_v4'
+//var vmSize string = 'Standard_L8s_v3'
+//var vmSize string = 'Standard_L8s'
+//var vmSize string = 'Standard_E4ds_v4'
+var vmSize string = 'Standard_E8ds_v4'
 
 @description('VMSS name')
-param vmssName string = 'ingest-vmss'
+var vmssName string = 'ingest-vmss'
 
 @description('Azure user name')
-param adminUsername string = 'azureuser'
+var adminUsername string = 'azureuser'
 
 @description('Trigger schedule in cron format, e.g. "0 0 9 * * 1" for every Monday at 09:00 GMT')
-param triggerSchedule string = '0 0 9 * * 1'
+var triggerSchedule string = '0 0 9 * * 1'
 
 @description('Files TGZ file as base64 encoded string')
-param filesTgz string = loadFileAsBase64('../build/files.tgz')
+var filesTgz string = loadFileAsBase64('../build/files.tgz')
 
 // Get existing resources
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' existing = {
@@ -55,12 +63,17 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-09-01' existing 
 }
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
-  name: '${suffix}-uami'
+  name: '${prefix}-uami'
 }
 
 // Get LA workspace keys
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: logAnalyticsWorkspaceName
+}
+
+// Application Insights
+resource appInsights 'Microsoft.Insights/components@2020-02-02' existing = {
+  name: appInsightsName
 }
 
 // Build cloud init, now we have retrieved the existing resources
@@ -144,9 +157,6 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
                       name: 'vmssPip'
                       properties: {
                         idleTimeoutInMinutes: 15
-                        //dnsSettings: {
-                        //  domainNameLabel: 'jobvm-${uniqueString(resourceGroup().id)}'
-                        //}
                       }
                     }
                   }
@@ -280,8 +290,7 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
 }
 
 // Azure function that triggers weekly updates
-var planName        = '${suffix}-plan'
-var functionAppName = '${suffix}-scale-func'
+var planName        = '${prefix}-plan'
 
 // 1) Storage Account for FUNCTIONS runtime
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
@@ -419,36 +428,15 @@ resource func 'Microsoft.Web/sites@2024-11-01' = {
   }
 }
 
-// Application Insights linked to the existing Log Analytics workspace
-resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: '${suffix}-func-insights'
-  location: resourceGroup().location
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    //Flow_Type: 'Redfield'
-    WorkspaceResourceId: logAnalytics.id
-  }
-}
-
 // Optional: Diagnostic settings from Function App to Log Analytics (platform logs/metrics)
-/*
 resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: '${suffix}-func-diag'
+  name: '${prefix}-func-diag'
   scope: func
   properties: {
     workspaceId: logAnalytics.id
     logs: [
       {
         category: 'FunctionAppLogs'
-        enabled: true
-      }
-      {
-        category: 'AppServiceHTTPLogs'
-        enabled: true
-      }
-      {
-        category: 'AppServiceConsoleLogs'
         enabled: true
       }
     ]
@@ -460,4 +448,3 @@ resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
     ]
   }
 }
-*/
