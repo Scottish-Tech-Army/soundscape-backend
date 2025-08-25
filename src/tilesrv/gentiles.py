@@ -26,14 +26,36 @@ from psycopg2.extensions import make_dsn
 
 from aiohttp import web
 
+# Metrics imports
+from opentelemetry.sdk.resources import Resource
+from opentelemetry import metrics as otel_metrics
+from opentelemetry import trace as otel_trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.instrumentation.aiohttp_server import AioHttpServerInstrumentor
+from azure.monitor.opentelemetry.exporter import (
+    AzureMonitorTraceExporter,
+    AzureMonitorMetricExporter,
+)
+
 class StatCounter(object):
     def __init__(self, name, help):
         self.name = name
         self.help = help
         self.value = 0
 
+        meter = otel_metrics.get_meter("tilesrv", version="1.0.0")
+        self.counter = meter.create_counter(
+            name=name,
+            description=name,
+            unit="1"
+        )
+
     def inc(self):
         self.value += 1
+        self.counter.add(1)
 
     def report(self):
         f = '# HELP {name} {help}\n# TYPE {name} counter\n{name} {value}\n'
@@ -301,6 +323,22 @@ def main():
         tile_handler = tile_handler_pooling
     else:
         tile_handler = tile_handler_no_pooling
+
+    # Set up the OpenTelemetry components
+    resource = Resource.create({"service.name": "tilesrv"})
+
+    # Tracing
+    tp = TracerProvider(resource=resource)
+    tp.add_span_processor(BatchSpanProcessor(AzureMonitorTraceExporter()))
+    otel_trace.set_tracer_provider(tp)
+
+    # Metrics
+    reader = PeriodicExportingMetricReader(AzureMonitorMetricExporter(), export_interval_millis=60000)
+    mp = MeterProvider(resource=resource, metric_readers=[reader])
+    otel_metrics.set_meter_provider(mp)
+
+    # Auto-instrument aiohttp
+    AioHttpServerInstrumentor().instrument()
 
     web.run_app(app_factory())
 

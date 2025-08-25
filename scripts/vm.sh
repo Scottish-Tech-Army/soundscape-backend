@@ -10,8 +10,8 @@ cd "$(dirname "$0")/.."
 
 # Build the tar file of scripts
 mkdir -p build
-pushd Docker
-tar -zcvf ../build/files.tgz requirements.txt ingest_simple.py tilefunc.sql postgis-vt-util.sql config.json mapping.yml extracts/
+pushd src/ingest
+tar -zcvf ../../build/files.tgz requirements-ingest.txt ingest.py tilefunc.sql postgis-vt-util.sql config.json mapping.yml extracts/
 popd
 
 # Create the group

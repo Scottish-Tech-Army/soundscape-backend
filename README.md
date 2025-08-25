@@ -1,5 +1,8 @@
-# soundscape-backend
-Code for the backend services for soundscape
+# Soundscape Backend
+
+Code for the backend services for Soundscape running in Azure.
+
+*To be rewritten - this entire document is out of date.*
 
 ![architecture](soundscape-backend.png)
 
@@ -10,11 +13,11 @@ The backend of Soundscape consists of four parts:
 3. Tile service that allows the database to be queried and outputs a .json file in GeoJSON format.
 4. Ingestion Updates service that takes any change files from OSM (.ocz) and applies them to the database in a two minute cycle.
 
-If you want to have a local dev environment running in Docker. Then clone the repo, navigate to Docker/ and from a terminal: 
+If you want to have a local dev environment running in Docker. Then clone the repo, navigate to Docker/ and from a terminal:
 
 docker compose up
 
-This will spin up a stack containing four Docker containers with the services described above. You will be able to perform a quick test that it is working by using a browser/curl/whatever to hit the Tile service which is listening on 8080 and it should respond with a GeoJSON file for the Washington Capitol Building: 
+This will spin up a stack containing four Docker containers with the services described above. You will be able to perform a quick test that it is working by using a browser/curl/whatever to hit the Tile service which is listening on 8080 and it should respond with a GeoJSON file for the Washington Capitol Building:
 
 http://localhost:8080/16/18748/25072.json
 
@@ -30,23 +33,20 @@ Imposm then performs a transform of the OSM data using the mapping.yml file and 
 
 The final steps that Imposm takes are reading the intermediate format and writing the data to the PostgreSQL database. It then performs indexing of the data to improve performance.
 
-# Ingestion Service Updates
-
-Imposm can be configured to perform updates to the database as the OSM data is updated at source. The configuration file is config.json which tells Imposm where and when to get the updates and the Python file which uses that is ingest_diffs.py. If you have set this up with the Docker Compose file then it will be off by default and you will need to bring it up if you want updates. The update service depends on the files contained in imposm_cache which were generated on the initial import process and you should not make any changes to mapping.yml or it will corrupt the database.
 
 # PostgreSQL with PostGIS extensions
 
-The database is used for storage of the transformed data. Imposm creates a database 'osm' and within that there are three schema: 
+The database is used for storage of the transformed data. Imposm creates a database 'osm' and within that there are three schema:
 1. import
 2. production
 3. backup.
 
-The schemas consist of three tables: 
+The schemas consist of three tables:
 1. osm_entrances
 2. osm_places
 3. osm_roads
 
-There is a PostgreSQL function (soundscape_tile) that the Tile service uses to retrieve data:  
+There is a PostgreSQL function (soundscape_tile) that the Tile service uses to retrieve data:
 
 tilefunc.sql
 

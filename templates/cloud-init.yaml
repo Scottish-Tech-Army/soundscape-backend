@@ -51,7 +51,7 @@ write_files:
       tar -xzf /opt/ingest/files.tgz -C ${INGEST}
 
       # Create venv and install deps
-      python3 -m venv ${INGEST}/venv && ${INGEST}/venv/bin/pip install --no-cache-dir -r $INGEST/requirements.txt
+      python3 -m venv ${INGEST}/venv && ${INGEST}/venv/bin/pip install --no-cache-dir -r $INGEST/requirements-ingest.txt
 
   - path: /opt/ingest/ingest.sh
     permissions: '0700'
@@ -74,7 +74,7 @@ write_files:
 
       # Unset -e, so we can catch the error and log it
       set +e
-      python3 -u ${INGEST}/ingest_simple.py --imposm ${INGEST}/imposm3/imposm --mapping ${INGEST}/mapping.yml --extracts ${INGEST}/extracts/extracts-${GEN_REGIONS}.json \
+      python3 -u ${INGEST}/ingest.py --imposm ${INGEST}/imposm3/imposm --mapping ${INGEST}/mapping.yml --extracts ${INGEST}/extracts/extracts-${GEN_REGIONS}.json \
         --basedir ${TILES} --verbose --config ${INGEST}/config.json 2>&1 | \
         sed -uE 's/^\[([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}:[0-9]{2})Z\]/\1 \2/' > ${LOGFILE}
       RETCODES=("${PIPESTATUS[@]}")

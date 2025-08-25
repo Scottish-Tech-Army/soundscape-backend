@@ -14,8 +14,8 @@ COPY --from=installer /staging/ /
 
 ENV PYTHONUNBUFFERED=true TILESRV=/tilesrv
 
-COPY requirements.txt gentiles.py $TILESRV/
+COPY requirements-tilesrv.txt gentiles.py $TILESRV/
 
-RUN pip3 install -r $TILESRV/requirements.txt
+RUN pip3 install -r $TILESRV/requirements-tilesrv.txt
 
 ENTRYPOINT python3 /tilesrv/gentiles.py --verbose

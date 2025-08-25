@@ -35,6 +35,9 @@ var registryUrl string = '${registryName}.azurecr.io'
 @description('Tilesrv image')
 var tilesrvImage string = '${registryName}.azurecr.io/soundscape/tilesrv:${versionTag}'
 
+//@description('Metrics image')
+//var metricsImage string = '${registryName}.azurecr.io/soundscape/metrics:${versionTag}'
+
 @description('Name of the virtual network')
 var vnetName string = '${prefix}-vnet'
 
@@ -385,7 +388,7 @@ resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' = {
             { name: 'POSTGIS_USER',        value: 'pgadmin' }
             { name: 'POSTGIS_PASSWORD',    secretRef: 'postgres-pw' }
             { name: 'POSTGIS_DBNAME',      value: 'osm' }
-
+            { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
           ]
           resources: {
             cpu: json('0.5')

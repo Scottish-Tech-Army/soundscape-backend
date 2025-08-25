@@ -79,7 +79,23 @@ The tile server container app contains a few useful metrics.
 
 - `Network In Bytes` and `Network Out Bytes` are the network traffic.
 
-*There are no request count metrics, because I have not yet plumbed them in. This turns out to be a little fiddly.*
+To see request counter metrics, you need to go to the Application Insights resource in the resource group.
+
+- Click on `Metrics` in that resource.
+
+- Leave `scope` as the Application Insights resource.
+
+- Within the `Application Insights standard metrics` namespace, you will find:
+
+    - `Server requests` - the count of server requests
+
+    - `Failed requests` - the count of error message sent
+
+- Within the `azure.applicationinsights` namespace, you will find:
+
+    - `tile_served_count` - the number of tiles successfully returned
+
+    - `tile_exception_count` - the number of failures to generate a tile
 
 ### Database
 

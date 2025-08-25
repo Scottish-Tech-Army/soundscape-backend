@@ -24,8 +24,9 @@ ENV PYTHONUNBUFFERED=true INGEST=/ingest TILES=/tiles
 COPY --from=imposm /ingest/ $INGEST/
 COPY --from=installer /staging/ /
 
-COPY requirements.txt ingest_diffs.py config.json mapping.yml $INGEST/
+COPY ../ingest/config.json ../ingest/mapping.yml $INGEST/
+COPY requirements-diffs.txt ingest_diffs.py $INGEST/
 
-RUN /usr/bin/pip3 install -r $INGEST/requirements.txt
+RUN /usr/bin/pip3 install -r $INGEST/requirements-diffs.txt
 
 CMD python3 $INGEST/ingest_diffs.py --imposm $INGEST/imposm3/imposm --mapping $INGEST/mapping.yml --basedir $TILES --verbose --config $INGEST/config.json

@@ -11,7 +11,7 @@
 # Helpful tool for finding other tile coordinates (the /z/x/y.json numbers in the
 # above URL where z is zoom level we only do 16): https://tools.geofabrik.de/map/#16/38.8912/-77.0199&type=Geofabrik_Standard&grid=1
 #
-# If you want to see the GeoJSON file getting tranformed into something you can visualize. 
+# If you want to see the GeoJSON file getting tranformed into something you can visualize.
 # Then you can copy and paste the data into the tool below (make sure that you are putting the data into the "features": [] section):
 # https://geojson.tools/
 version: '3.8'
