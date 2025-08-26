@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 
 # Before running this, you must be logged into your account, with the correct subscription selected.
 echo "Build and push Azure function"
-pushd trigger
+pushd src/trigger
 func azure functionapp publish ${FUNCAPPNAME} --python
 popd
 

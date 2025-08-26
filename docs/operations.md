@@ -1,5 +1,7 @@
 # Operations processes
 
+**TODO: clean this up. It has some useful logging and metrics info, but does not cover testing (which is mentioned in deploy.md) and should have some level of description of Azure Front Door config and diags.**
+
 ## Logging
 
 Logs can be found as follows.
@@ -15,7 +17,6 @@ Logs can be found as follows.
 ### Ingestion VMs
 
 The ingestion of data is done by a VM that is started once a week then shuts down again when complete, and generates logs. *These logs do not appear until some time after the VM is created - typically at least ten minutes.*
-
 
 - The high level operations of the VM that does the ingestion, showing ingestion start and completion, can be monitored as follows.
 
