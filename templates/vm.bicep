@@ -5,6 +5,9 @@ param prefix string
 @description('Function app name')
 param functionAppName string
 
+@description('Storage account name')
+param storageName string
+
 // Variables that could probably be changed
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
 param genRegions string = 'planet'
@@ -14,9 +17,6 @@ param genRegions string = 'planet'
 // From here on, things that never change, so just vars
 @description('ssh key')
 var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
-
-@description('Storage account name for function app')
-var storageName string = 'stor${uniqueString(resourceGroup().id)}'
 
 @description('Name of the virtual network and subnet')
 var vnetName string = '${prefix}-vnet'
@@ -34,11 +34,15 @@ var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGro
 @description('App insights name')
 var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
 
+@description('Tilesrv Container App name')
+var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id)}'
+
 @description('VM size supporting ephemeral NVMe OS disk')
 //var vmSize string = 'Standard_L8s_v3'
 //var vmSize string = 'Standard_L8s'
 //var vmSize string = 'Standard_E4ds_v4'
-var vmSize string = 'Standard_E8ds_v4'
+//var vmSize string = 'Standard_E8ds_v4'
+var vmSize string = 'Standard_E16ds_v4'
 
 @description('VMSS name')
 var vmssName string = 'ingest-vmss'
@@ -48,9 +52,6 @@ var adminUsername string = 'azureuser'
 
 @description('Trigger schedule in cron format, e.g. "0 0 9 * * 1" for every Monday at 09:00 GMT')
 var triggerSchedule string = '0 0 9 * * 1'
-
-@description('Files TGZ file as base64 encoded string')
-var filesTgz string = loadFileAsBase64('../build/files.tgz')
 
 // Get existing resources
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' existing = {
@@ -76,6 +77,11 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' existing = {
   name: appInsightsName
 }
 
+// Tilesrv Container App
+resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' existing = {
+  name: tilesrvAppName
+}
+
 // Build cloud init, now we have retrieved the existing resources
 // We then interpolate a block of environment variables into the cloud-init file
 @description('Cloud init file before substitution')
@@ -89,11 +95,15 @@ var envLines = [
   'export CLIENT_ID=${uami.properties.clientId}'
   'export VMSS_NAME=${vmssName}'
   'export RG=${resourceGroup().name}'
+  'export TILESRV_APP_URL=https://${tilesrvApp.properties.configuration.ingress.fqdn}'
+  'export STORAGE_ACCOUNT_NAME=${storageName}'
+  'export UPLOAD_CONTAINER_NAME=${uploadContainerName}'
+  'export DOWNLOAD_CONTAINER_NAME=${downloadContainerName}'
 ]
 var envBlock = join(envLines, '\n      ')
 
 @description('Cloud init file after substitution')
-var cloudInitRendered = replace(replace(cloudInitRaw, '{{ENV_BLOCK}}', envBlock), '{{FILES_TGZ}}', filesTgz)
+var cloudInitRendered = replace(cloudInitRaw, '{{ENV_BLOCK}}', envBlock)
 
 // Create the new resources
 resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
@@ -258,7 +268,10 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
       logFiles: [
         {
           name: 'jobLogs'
-          filePatterns: ['/opt/ingest/logs/*.log']
+          filePatterns: [
+            '/opt/ingest/logs/*.log'
+            '/opt/ingest/logs/*.csv'
+          ]
           format: 'text'
           settings: {
             text: { recordStartTimestampFormat: 'YYYY-MM-DD HH:MM:SS' }
@@ -293,26 +306,30 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
 var planName        = '${prefix}-plan'
 
 // 1) Storage Account for FUNCTIONS runtime
-resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
   name: storageName
-  location: resourceGroup().location
-  sku: { name: 'Standard_LRS' }
-  kind: 'StorageV2'
 }
 
 // Grab the first storage account key
 var storageKey = storage.listKeys().keys[0].value
 
-// Blob service and storage in that account
-var containerName = 'functionapp'
+// Blob service and storage in that account for the function app code and uploads
+var functionContainerName = 'functionapp'
+var uploadContainerName = 'uploads'
+var downloadContainerName = 'downloads'
 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' existing = {
   name: 'default'
   parent: storage
 }
 
-resource container 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: containerName
+resource functionContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: functionContainerName
+  parent: blobService
+}
+
+resource uploadContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: uploadContainerName
   parent: blobService
 }
 
@@ -358,7 +375,7 @@ resource plan 'Microsoft.Web/serverfarms@2021-02-01' = {
 }
 
 // 3) Function App
-resource func 'Microsoft.Web/sites@2024-11-01' = {
+resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
   name: functionAppName
   location: resourceGroup().location
   kind: 'functionapp,linux,flex'
@@ -383,7 +400,7 @@ resource func 'Microsoft.Web/sites@2024-11-01' = {
         storage: {
           // Package location
           type: 'BlobContainer' // Pick most recent blob from this container
-          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${containerName}'
+          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${functionContainerName}'
 
           // Auth model for the package fetch (UAMI)
           authentication: {
@@ -431,7 +448,7 @@ resource func 'Microsoft.Web/sites@2024-11-01' = {
 // Optional: Diagnostic settings from Function App to Log Analytics (platform logs/metrics)
 resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: '${prefix}-func-diag'
-  scope: func
+  scope: functionApp
   properties: {
     workspaceId: logAnalytics.id
     logs: [

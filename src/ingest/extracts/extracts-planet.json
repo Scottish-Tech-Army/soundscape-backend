@@ -1,97 +1,31 @@
 [
-	{
-	"name": "japan",
-	"url": "http://download.geofabrik.de/asia/japan-latest.osm.pbf",
+  {
+	"name": "africa",
+	"url": "https://download.geofabrik.de/africa-latest.osm.pbf"
+  },
+  {
+	"name": "asia",
+	"url": "http://download.geofabrik.de/asia-latest.osm.pbf"
+  },
+  {
+	"name": "australia-oceania",
+	"url": "http://download.geofabrik.de/australia-oceania-latest.osm.pbf"
+  },
+  {
+	"name": "central-america",
+	"url": "https://download.geofabrik.de/central-america-latest.osm.pbf"
+  },
+  {
+	"name": "europe",
+	"url": "https://download.geofabrik.de/europe-latest.osm.pbf",
 	"bbox": []
-	},
-	{
-	"name": "australia",
-	"url": "http://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf",
-	"bbox": []
-    },
-	{
-	"name": "new-zealand",
-	"url": "http://download.geofabrik.de/australia-oceania/new-zealand-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "denmark",
-	"url": "http://download.geofabrik.de/europe/denmark-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "finland",
-	"url": "http://download.geofabrik.de/europe/finland-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "france",
-	"url": "http://download.geofabrik.de/europe/france-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "germany",
-	"url": "http://download.geofabrik.de/europe/germany-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "greece",
-	"url": "http://download.geofabrik.de/europe/greece-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "great-britain",
-	"url": "http://download.geofabrik.de/europe/great-britain-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "ireland-and-northern-ireland",
-	"url": "http://download.geofabrik.de/europe/ireland-and-northern-ireland-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "italy",
-	"url": "http://download.geofabrik.de/europe/italy-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "netherlands",
-	"url": "http://download.geofabrik.de/europe/netherlands-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "norway",
-	"url": "http://download.geofabrik.de/europe/norway-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "portugal",
-	"url": "http://download.geofabrik.de/europe/portugal-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "spain",
-	"url": "http://download.geofabrik.de/europe/spain-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "sweden",
-	"url": "http://download.geofabrik.de/europe/sweden-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "brazil",
-	"url": "http://download.geofabrik.de/south-america/brazil-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "canada",
-	"url": "http://download.geofabrik.de/north-america/canada-latest.osm.pbf",
-	"bbox": []
-	},
-	{
-	"name": "us",
-	"url": "http://download.geofabrik.de/north-america/us-latest.osm.pbf",
-	"bbox": []
-	}
+  },
+  {
+	"name": "north-america",
+	"url": "https://download.geofabrik.de/north-america-latest.osm.pbf"
+  },
+  {
+	"name": "south-america",
+	"url": "https://download.geofabrik.de/south-america-latest.osm.pbf"
+  }
 ]

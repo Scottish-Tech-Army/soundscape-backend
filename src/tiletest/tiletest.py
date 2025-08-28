@@ -8,19 +8,19 @@ import os
 import random
 import requests
 import sys
+import time
 
 # This is the test tooling for the tile server.
 # Set up parser at top for readability
 parser = argparse.ArgumentParser(description='Test tooling for tile server testing')
 parser.add_argument('--base-url', type=str, help='Base URL', required=True)
 parser.add_argument('--count', type=int, help='Number of requests to issue; 0 for run through entire file', default=0)
-parser.add_argument('--report-every', type=int, help='Report every N tests', default=10)
+parser.add_argument('--report-every', type=int, help='Report every N tests', default=50)
 parser.add_argument('--log-level', type=str, help='Log level', default='info')
 parser.add_argument('--output', type=str, help='Output directory', default='/tmp')
 parser.add_argument('--shuffle', action='store_true', help='Shuffle order of test cases')
 parser.add_argument('--casesfile', type=str, help='CSV file of test cases', default='all-cities-with-population.csv') # from https://www.geoapify.com/most-populated-cities-in-the-world/
-parser.add_argument('--countryfile', type=str, help='CSV file of countries', default='countries.csv')
-parser.add_argument('--includedonly', action='store_true', help='Only test included countries')
+parser.add_argument('--sleep', type=int, help='Sleep this many seconds after each request', default=0)
 
 # Set up the logger globally
 logger = logging.getLogger()
@@ -30,25 +30,13 @@ class Summary:
         self.total = 0
         self.success = 0
         self.errors = 0
-        self.success_included = 0
-        self.success_excluded = 0
-        self.error_included = 0
-        self.error_excluded = 0
         self.total_time_ms = 0
 
-    def add_result(self, included, success, time_ms=None):
+    def add_result(self, success, time_ms=None):
         if success:
             self.success += 1
-            if included:
-                self.success_included += 1
-            else:
-                self.success_excluded += 1
         else:
             self.errors += 1
-            if included:
-                self.error_included += 1
-            else:
-                self.error_excluded += 1
         self.total += 1
 
         if success:
@@ -75,18 +63,19 @@ class OutputRecorder:
             logger.error("Output path %s is not a directory.", output_dir)
             raise NotADirectoryError(f"Output directory {output_dir} is not a directory.")
 
-        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
         self.csv_filename = os.path.join(output_dir, f"tiletest_{timestamp}.csv")
         logger.info("CSV output file will be: %s", self.csv_filename)
 
         with open(self.csv_filename, 'w') as f:
             writer = csv.writer(f)
-            writer.writerow(["name", "country", "included", "url", "retcode", "time_ms", "data_size", "error"])
+            writer.writerow(["time", "name", "country", "url", "retcode", "time_ms", "data_size", "error"])
 
-    def record(self, name, country, included, url, retcode, time_ms, data_size, error=None):
+    def record(self, name, country, url, retcode, time_ms, data_size, error=None):
         with open(self.csv_filename, 'a') as f:
+            timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
             writer = csv.writer(f)
-            writer.writerow([name, country, included, url, retcode, time_ms, data_size, error if error else ""])
+            writer.writerow([timestamp, name, country, url, retcode, time_ms, data_size, error if error else ""])
 
     def record_summary(self, summary: Summary):
         with open(self.csv_filename, 'a') as f:
@@ -94,11 +83,7 @@ class OutputRecorder:
             writer.writerow([])
             writer.writerow(["Total tests", summary.total])
             writer.writerow(["Successful tests", summary.success])
-            writer.writerow(["Successful tests (included)", summary.success_included])
-            writer.writerow(["Successful tests (excluded)", summary.success_excluded])
             writer.writerow(["Errored tests", summary.errors])
-            writer.writerow(["Errored tests (included)", summary.error_included])
-            writer.writerow(["Errored tests (excluded)", summary.error_excluded])
             writer.writerow(["Total time (ms)", summary.total_time_ms])
             if summary.total == 0:
                 avg_time = 0
@@ -106,8 +91,7 @@ class OutputRecorder:
                 avg_time = summary.total_time_ms / summary.success
             writer.writerow(["Average time for successes (ms)", f"{avg_time:.2f}"])
 
-
-def read_test_cases(cases_file, country_file, shuffle=False):
+def read_test_cases(cases_file, shuffle=False):
     logger.info("Reading test cases from %s", cases_file)
     test_cases = []
     with open(cases_file, newline='') as csvfile:
@@ -119,42 +103,7 @@ def read_test_cases(cases_file, country_file, shuffle=False):
         logging.info("Shuffling test cases")
         random.shuffle(test_cases)
 
-    countries = {}
-    with open(country_file, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            country = row['Country']
-            included = row['Included'].lower()
-            if included == 'true':
-                countries[country] = True
-            elif included == 'false':
-                countries[country] = False
-            else:
-                logger.error("Invalid value (%s) for included for %s in countries file %s", included, country, country_file)
-                raise ValueError(f"Invalid value ({included}) for included for {country} in countries file {country_file}")
-
-    # Now clean up some data
-    unmatched = []
-    final_cases = []
-
-    for case in test_cases:
-        country = case['country']
-        if country in unmatched:
-            # Already know this country is unmatched
-            continue
-        if country not in countries:
-            unmatched.append(country)
-            logger.warning("Throwing out country %s as not in countries file", country)
-            continue
-
-        case['included'] = countries[country]
-
-        if args.includedonly and not case['included']:
-            continue
-
-        final_cases.append(case)
-
-    return final_cases
+    return test_cases
 
 def get_xy_tile(latitude, longitude, zoom=16):
     # Get tile coordinates from lat/long
@@ -185,6 +134,10 @@ def run_test_cases(args, test_cases, recorder):
             logger.info("Completed %d of %d tests", i + 1, num_tests)
             summary.report()
 
+        if args.sleep:
+            logger.debug("Sleeping for %d seconds", args.sleep)
+            time.sleep(args.sleep)
+
     logger.info("All tests completed.")
     summary.report()
     recorder.record_summary(summary)
@@ -211,16 +164,17 @@ def run_single_test_case(args, test_case, summary, recorder):
         retcode = response.status_code
         data = response.content
         data_size = len(data)
+        if retcode == 200:
+            try:
+                json_data = response.json()
+            except Exception as e:
+                error = f"Invalid JSON: {e}"
+                retcode = -1
+        else:
+            error = response.text
     except Exception as e:
         error = str(e)
         retcode = -1
-
-    if error is None and retcode == 200:
-        try:
-            json.loads(data)
-        except Exception as e:
-            error = f"Invalid JSON: {e}"
-            retcode = -1
 
     end_time = datetime.datetime.now()
     time_ms = int((end_time - start_time).total_seconds() * 1000)
@@ -228,7 +182,6 @@ def run_single_test_case(args, test_case, summary, recorder):
     recorder.record(
         test_case['name'],
         test_case['country'],
-        test_case['included'],
         url,
         retcode,
         time_ms,
@@ -236,7 +189,7 @@ def run_single_test_case(args, test_case, summary, recorder):
         error
     )
 
-    summary.add_result(test_case['included'], error is None and retcode == 200, time_ms)
+    summary.add_result(error is None and retcode == 200, time_ms)
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -245,6 +198,6 @@ if __name__ == '__main__':
     logger.setLevel(loglevel)
     logger.warning('Test tooling started')
 
-    test_cases = read_test_cases(args.casesfile, args.countryfile, args.shuffle)
+    test_cases = read_test_cases(args.casesfile, args.shuffle)
     recorder = OutputRecorder(args.output)
     run_test_cases(args, test_cases, recorder)

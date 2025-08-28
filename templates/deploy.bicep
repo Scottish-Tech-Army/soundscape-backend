@@ -8,6 +8,9 @@ param registryRG string
 @description('Version tag for the images')
 param versionTag string
 
+@description('Storage account name')
+param storageName string
+
 @description('Name of the Azure Container Registry UAMI - pre-existing, and should be supplied as a parameter really')
 param registryUAMIName string = 'mi-ssp-dev-uks-acrpull'
 
@@ -67,6 +70,9 @@ var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup
 
 @description('Tilesrv Container App name')
 var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id)}'
+
+@description('Name of the storage container for downloads')
+var downloadContainerName = 'downloads'
 
 // Get the UAMI from the other subscription
 resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
@@ -190,7 +196,7 @@ resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: dbServiceName
   location: resourceGroup().location
   sku: {
-    name: 'Standard_D2ds_v4'
+    name: 'Standard_D2ds_v4' // 2 vCPU, 8GB RAM
     tier: 'GeneralPurpose'
   }
   properties: {
@@ -199,7 +205,7 @@ resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
       role: 'Primary'
     }
     storage: {
-      storageSizeGB: 256
+      storageSizeGB: 1024 // It would be nicer to use less and let it grow, but if we make it too small, then it stops being idempotent as it cannot shrink
       // For some reason, this does not work, so sticking with regular premium SSD
       //iops: 3000
       //throughput: 125
@@ -415,3 +421,22 @@ resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' = {
     }
   }
 }
+
+// Storage account used by function app and uploads
+resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+  name: storageName
+  location: resourceGroup().location
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+}
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
+  name: 'default'
+  parent: storage
+}
+
+resource downloadContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: downloadContainerName
+  parent: blobService
+}
+

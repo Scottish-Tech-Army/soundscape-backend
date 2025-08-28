@@ -16,6 +16,7 @@ az deployment group create \
     --parameters prefix=${PREFIX} \
                  versionTag=${VERSION} \
                  registryName=${REGISTRYNAME} \
-                 registryRG=${REGISTRYRG} --debug --verbose # Uncomment for debugging
+                 registryRG=${REGISTRYRG} \
+                 storageName=${STORAGENAME} --debug --verbose
 
 echo "SUCCESS"

@@ -12,12 +12,9 @@ packages:
   - python3-pip
   - python3-setuptools
   - python3-venv
+  - python-is-python3
 
 write_files:
-  - path: /opt/ingest/files.tgz
-    encoding: b64
-    content: |
-      {{FILES_TGZ}}
   - path: /opt/ingest/env.sh
     permissions: '0700'
     content: |
@@ -47,7 +44,14 @@ write_files:
       mkdir -p ${INGEST}/imposm3
       wget -q -O - https://github.com/omniscale/imposm3/releases/download/v$IMPOSM_BINARY_RELEASE/imposm-$IMPOSM_BINARY_RELEASE-linux-x86-64.tar.gz | tar -xz --strip-components=1 -C ${INGEST}/imposm3
 
-      # Extract the files
+      # Download files from storage account.
+      az login --identity
+      az storage blob download-batch \
+        --auth-mode login \
+        --account-name ${STORAGE_ACCOUNT_NAME} \
+        --destination /opt/ingest \
+        --source ${DOWNLOAD_CONTAINER_NAME} \
+        --pattern files.tgz
       tar -xzf /opt/ingest/files.tgz -C ${INGEST}
 
       # Create venv and install deps
@@ -70,7 +74,13 @@ write_files:
       }
 
       LOGFILE="${INGEST}/logs/ingest_$(date +%Y%m%d_%H%M%S).log"
-      svclog "Ingest job started - output to ${LOGFILE}"
+      svclog "Ingest job starting - output to ${LOGFILE}"
+
+      pushd ${INGEST}/tiletest
+      TESTLOG="${INGEST}/logs/tiletest_$(date +%Y%m%d_%H%M%S).log"
+      nohup bash ${INGEST}/tiletest/tiletest.sh > ${TESTLOG} 2>&1 &
+      svclog "Tile perf test started in background, logging to ${TESTLOG}"
+      popd
 
       # Unset -e, so we can catch the error and log it
       set +e
@@ -95,11 +105,18 @@ write_files:
       # Obliterate the VM after completion
       svclog "Goodbye cruel world"
 
+      # Upload logs to the storage account
+      az login --identity
+      az storage blob upload-batch \
+        --auth-mode login \
+        --account-name ${STORAGE_ACCOUNT_NAME} \
+        --destination ${UPLOAD_CONTAINER_NAME} \
+        --source ${INGEST}/logs
+
       # Sleep for 600 seconds so logs are flushed. Mad overkill, but that's Azure logging delays for you.
       sleep 600
 
       # Nuke the VM once and for all
-      az login --identity
       az vmss scale --resource-group ${RG} --name ${VMSS_NAME} --new-capacity 0
 
 runcmd:

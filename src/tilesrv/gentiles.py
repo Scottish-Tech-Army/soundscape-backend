@@ -134,7 +134,8 @@ tile_query = """
     SELECT * from soundscape_tile(%(zoom)s, %(tile_x)s, %(tile_y)s)
 """
 
-timeout_set = "set statement_timeout=2000"
+# Set timeout to 4 seconds
+timeout_set = "set statement_timeout=4000"
 
 def tile_name(zoom, x, y,):
     return '{0}/{1}/{2}.json'.format(zoom, x, y)
