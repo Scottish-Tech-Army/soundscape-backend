@@ -104,23 +104,15 @@ ContainerAppConsoleLogs_CL
 
 ## Metrics
 
-Logs can be found as follows.
+Metrics can be found as follows.
 
-- In the [Azure portal](https://portal.azure.com), find the resource group.
+- In the [Azure portal](https://portal.azure.com), find the resource you care about.
 
-- Select the Log Analytics Workspace, and click on it.
+- Click on it.
 
 - On the left hand panel click on `Metrics`
 
-- The default scope is the LAW itself, which is not very interesting. Click on `Scope` to change it to the right resource.
-
-### VM metrics
-
-- If you click down to the VMSS or to the running VM instance, you can see (for example) CPU usage, memory free, and network usage used by ingestion.
-
-### Ingest trigger function app
-
-About the only interesting metric here is `On Demand Function Execution Count`, which counts numbers of executions, and shows when the job triggered.
+(You can also find all this if you go digging around in the Log Analytics Workspace, setting `scope` correctly, but it is easier to go through the resource itself.)
 
 ### Tile server app
 
@@ -142,13 +134,7 @@ To see request counter metrics, you need to go to the Application Insights resou
 
     - `Server requests` - the count of server requests
 
-    - `Failed requests` - the count of error message sent
-
-- Within the `azure.applicationinsights` namespace, you will find:
-
-    - `tile_served_count` - the number of tiles successfully returned
-
-    - `tile_exception_count` - the number of failures to generate a tile
+    - `Failed requests` - the count of errors sent
 
 ### Database
 
@@ -161,4 +147,12 @@ The database has interesting metrics including the following.
 - `Disk IOPS Consumed Percentage` is disk load percentage
 
 - `Storage used` is disk space in use.
+
+### VM metrics
+
+- If you click down to the VMSS or to the running VM instance, you can see (for example) CPU usage, memory free, and network usage used by ingestion.
+
+### Ingest trigger function app
+
+About the only interesting metric here is `On Demand Function Execution Count`, which counts numbers of executions, and shows when the job triggered.
 

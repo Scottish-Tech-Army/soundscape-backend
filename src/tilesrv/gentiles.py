@@ -46,16 +46,8 @@ class StatCounter(object):
         self.help = help
         self.value = 0
 
-        meter = otel_metrics.get_meter("tilesrv", version="1.0.0")
-        self.counter = meter.create_counter(
-            name=name,
-            description=name,
-            unit="1"
-        )
-
     def inc(self):
         self.value += 1
-        self.counter.add(1)
 
     def report(self):
         f = '# HELP {name} {help}\n# TYPE {name} counter\n{name} {value}\n'
@@ -333,13 +325,10 @@ def main():
     tp.add_span_processor(BatchSpanProcessor(AzureMonitorTraceExporter()))
     otel_trace.set_tracer_provider(tp)
 
-    # Metrics
-    reader = PeriodicExportingMetricReader(AzureMonitorMetricExporter(), export_interval_millis=60000)
-    mp = MeterProvider(resource=resource, metric_readers=[reader])
-    otel_metrics.set_meter_provider(mp)
-
-    # Auto-instrument aiohttp
-    AioHttpServerInstrumentor().instrument()
+    # Instrument aiohttp using the tracer and meter providers we created.
+    AioHttpServerInstrumentor().instrument(
+        tracer_provider=tp
+    )
 
     web.run_app(app_factory())
 
