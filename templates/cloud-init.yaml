@@ -70,7 +70,7 @@ write_files:
       # Service log utility function
       svclog() {
         # %F is YYYY-MM-DD, %T is HH:MM:SS
-        printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "${INGEST}/logs/svc.log"
+        printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "${INGEST}/logs/svc-${HOSTNAME}.log"
       }
 
       LOGFILE="${INGEST}/logs/ingest_$(date +%Y%m%d_%H%M%S).log"

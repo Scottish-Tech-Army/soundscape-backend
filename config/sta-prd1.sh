@@ -11,6 +11,9 @@ export VERSION=latest
 export FUNCAPPNAME=43b33bef8aa2c4eebbf3
 export STORAGENAME=f36fae7714bdb5fb1e1e
 
+# Global shared diagnostics viewing tooling
+export DIAGSRG=rg-diags
+
 # This subscription stuff is purely to make sure we are using the right Azure subscription.
 export SUBSCRIPTION=b9ba9683-feef-47c8-bcc0-08e791dc1493
 

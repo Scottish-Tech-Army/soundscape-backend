@@ -42,7 +42,8 @@ var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id
 //var vmSize string = 'Standard_L8s'
 //var vmSize string = 'Standard_E4ds_v4'
 //var vmSize string = 'Standard_E8ds_v4'
-var vmSize string = 'Standard_E16ds_v4'
+//var vmSize string = 'Standard_E16ds_v4'
+var vmSize string = 'Standard_E20ds_v5'
 
 @description('VMSS name')
 var vmssName string = 'ingest-vmss'
@@ -67,7 +68,7 @@ resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' exis
   name: '${prefix}-uami'
 }
 
-// Get LA workspace keys
+// Get LA workspace
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: logAnalyticsWorkspaceName
 }
@@ -125,6 +126,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           caching: 'ReadOnly'
           diffDiskSettings: {
             option: 'Local' // Ephemeral OS on NVMe
+            placement: 'ResourceDisk' // Needs to be CacheDisk (the default) for v4 SKUs
           }
         }
         imageReference: {

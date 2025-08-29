@@ -196,7 +196,7 @@ resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: dbServiceName
   location: resourceGroup().location
   sku: {
-    name: 'Standard_D2ds_v4' // 2 vCPU, 8GB RAM
+    name: 'Standard_D2ds_v5' // 2 vCPU, 8GB RAM
     tier: 'GeneralPurpose'
   }
   properties: {

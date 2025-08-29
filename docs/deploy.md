@@ -74,6 +74,14 @@ Follow the following steps.
     bash scripts/functionapp.sh
     ~~~
 
+## Deploying log queries
+
+There are some saved queries shared across all deployments. These exist in a single resource group, and so you should not need to change these. If you make changes, you can deploy them as follows.
+
+~~~bash
+bash scripts/functionapp.sh
+~~~
+
 ### Redeploy gotchas
 
 If you redeploy the various bicep templates, some bad things happen. I should really fix these up.

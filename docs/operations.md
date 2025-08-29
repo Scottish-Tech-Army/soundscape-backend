@@ -12,7 +12,11 @@ Logs can be found as follows.
 
 - On the left hand panel click on `Logs`
 
-- Enter your search string; see below.
+- Select your search string.
+
+    - You can just manually enter search strings if you like.
+
+    - Alternatively a number of standard queries have been saved off for use. Click on the query hub, and ensure that the Soundscape Query Pack (only) has been selected, and then select your query from the query button to the left of the window; if you type in "soundscape" you will find only the Soundscape related queries.
 
 ### Ingestion VMs
 
@@ -22,7 +26,7 @@ The ingestion of data is done by a VM that is started once a week then shuts dow
 
     ~~~kql
     IngestLogs_CL
-    | where FilePath contains "svc.log"
+    | where FilePath contains "svc"
     | order by TimeGenerated desc
 
 
@@ -40,7 +44,7 @@ The ingestion of data is done by a VM that is started once a week then shuts dow
     IngestLogs_CL
     | where FilePath matches regex @"tiletest.*\.log"
     | order by TimeGenerated desc
-
+    ~~~
 
     and the raw data for every request
 
@@ -69,11 +73,11 @@ The ingestion of data is done by a VM that is started once a week then shuts dow
         | extend
                 City       = tostring(fields[1]),
                 Country    = tostring(fields[2]),
-                URL        = tostring(fields[4]),
-                StatusCode = toint(fields[5]),
-                Time_ms    = toint(fields[6]),
-                DataSize   = toint(fields[7]),
-                Error      = tostring(fields[8])
+                URL        = tostring(fields[3]),
+                StatusCode = toint(fields[4]),
+                Time_ms    = toint(fields[5]),
+                DataSize   = toint(fields[6]),
+                Error      = tostring(fields[7])
         | project-away fields
         | where StatusCode != 200 or Error != ""
         | order by TimeGenerated desc
