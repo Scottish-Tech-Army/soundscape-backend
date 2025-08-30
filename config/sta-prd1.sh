@@ -1,5 +1,5 @@
 # Parameters in use
-export PREFIX=scl
+export PREFIX=scx
 export RG=rg-${PREFIX}
 export REGION=uksouth
 export REGISTRYNAME=acrsspdevuks

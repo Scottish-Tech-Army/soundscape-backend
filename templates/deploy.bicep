@@ -198,6 +198,8 @@ resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   sku: {
     name: 'Standard_D2ds_v5' // 2 vCPU, 8GB RAM
     tier: 'GeneralPurpose'
+    //name: 'B2ms' // Cheaper, but unlikely to handle load
+    //tier: 'Burstable'
   }
   properties: {
     version: '15'
@@ -205,7 +207,7 @@ resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
       role: 'Primary'
     }
     storage: {
-      storageSizeGB: 1024 // It would be nicer to use less and let it grow, but if we make it too small, then it stops being idempotent as it cannot shrink
+      storageSizeGB: 512 // It would be nicer to use less and let it grow, but if we make it too small, then it stops being idempotent as it cannot shrink
       // For some reason, this does not work, so sticking with regular premium SSD
       //iops: 3000
       //throughput: 125

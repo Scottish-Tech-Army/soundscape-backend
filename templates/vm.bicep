@@ -83,6 +83,10 @@ resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' existing = 
   name: tilesrvAppName
 }
 
+resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' existing = {
+  name: dbServiceName
+}
+
 // Build cloud init, now we have retrieved the existing resources
 // We then interpolate a block of environment variables into the cloud-init file
 @description('Cloud init file before substitution')
@@ -463,6 +467,356 @@ resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
       {
         category: 'AllMetrics'
         enabled: true
+      }
+    ]
+  }
+}
+
+// Dashboard with some plausible metrics
+resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
+  location: resourceGroup().location
+  name: resourceGroup().name
+  properties: {
+    lenses: [
+      {
+        order: 0
+        parts: [
+          {
+            position: {
+              x: 0
+              y: 0
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsights.id
+                          }
+                          name: 'requests/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Server requests'
+                            resourceDisplayName: tilesrvAppName
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: appInsights.id
+                          }
+                          name: 'requests/failed'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Failed requests'
+                            resourceDisplayName: tilesrvAppName
+                          }
+                        }
+                      ]
+                      title: 'Tile server requests and failures'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 6
+              y: 0
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: tilesrvApp.id
+                          }
+                          name: 'CpuPercentage'
+                          aggregationType: 4
+                          namespace: 'microsoft.app/containerapps'
+                          metricVisualization: {
+                            displayName: 'CPU Usage Percentage (Preview)'
+                            resourceDisplayName: tilesrvAppName
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: tilesrvApp.id
+                          }
+                          name: 'MemoryPercentage'
+                          aggregationType: 4
+                          namespace: 'microsoft.app/containerapps'
+                          metricVisualization: {
+                            displayName: 'Memory Percentage (Preview)'
+                            resourceDisplayName: tilesrvAppName
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: tilesrvApp.id
+                          }
+                          name: 'Replicas'
+                          aggregationType: 3
+                          namespace: 'microsoft.app/containerapps'
+                          metricVisualization: {
+                            displayName: 'Replica Count'
+                            resourceDisplayName: tilesrvAppName
+                          }
+                        }
+                      ]
+                      title: 'Tile server CPU, memory and replica count'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 12
+              y: 0
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: functionApp.id
+                          }
+                          name: 'OnDemandFunctionExecutionCount'
+                          aggregationType: 1
+                          namespace: 'microsoft.web/sites'
+                          metricVisualization: {
+                            displayName: 'On Demand Function Execution Count'
+                            resourceDisplayName: functionAppName
+                          }
+                        }
+                      ]
+                      title: 'Ingestion trigger On Demand Function Execution Count'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 0
+              y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: dbService.id
+                          }
+                          name: 'cpu_percent'
+                          aggregationType: 4
+                          namespace: 'microsoft.dbforpostgresql/flexibleservers'
+                          metricVisualization: {
+                            displayName: 'CPU percent'
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: dbService.id
+                          }
+                          name: 'memory_percent'
+                          aggregationType: 4
+                          namespace: 'microsoft.dbforpostgresql/flexibleservers'
+                          metricVisualization: {
+                            displayName: 'Memory percent'
+                          }
+                        }
+                      ]
+                      title: 'Database CPU and memory'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: false
+                      }
+                    }
+                  }
+                }
+              }
+              filters: {
+                MsPortalFx_TimeRange: {
+                  model: {
+                    format: 'local'
+                    granularity: 'auto'
+                    relative: '1440m'
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 6
+              y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: dbService.id
+                          }
+                          name: 'storage_used'
+                          aggregationType: 4
+                          namespace: 'microsoft.dbforpostgresql/flexibleservers'
+                          metricVisualization: {
+                            displayName: 'Storage used'
+                            resourceDisplayName: dbServiceName
+                          }
+                        }
+                      ]
+                      title: 'Database storage use'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     ]
   }
