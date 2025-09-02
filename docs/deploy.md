@@ -96,5 +96,64 @@ If you redeploy the various bicep templates, some bad things happen. I should re
 
 ## Switching over to your deployment
 
-*To be provided - change front door*
+### Setting up Azure Front Door
+
+To change over your deployment, perform the following steps.
+
+- Go the Azure Front Door instance in the portal. All instructions are related to that resource.
+
+- Select `Origin Groups` on the left panel, and create a new `Origin Group` (which is a place where traffic can end up). That group should have the following features.
+
+    - Name it after your deployment. For example, the `p01` deployment can sensibly be named `p01-tilesrv`.
+
+    - Single Origin within it, which should be your Azure Container App (select `Container App` as the title, and pick the container app URL from the list).
+
+    - Allow HTTP health probes on the `/metrics` path.
+
+    - Within the origin, do *not* enable subject name validation.
+
+- Within the (single existing) endpoint, there should be two `route` instances, one for live traffic () and one for testing (`tst-soundscape`). First test your deployment by setting up the test configuration to point to your new deployment.
+
+    - The matching pattern must be `/tiles/*`, with origin path `/` (so `/tiles` requests go to the root on the tile server app).
+
+    - It should be enabled.
+
+    - Compression and caching must be enabled, with the `Use query string` option.
+
+    - The origin group should be the *production* origin group.
+
+You now could in principle route traffic to your new deployment. We first point a test domain (`tst.soundscape.scottishtecharmy.org`) at the endpoint, then the real domains later.
+
+*To be added - how do you cut a domain over?*
+
+### Testing
+
+Now we test. To validate that a domain is working, you should do the following.
+
+- Pick a directory where you will run all your tests (and where all your outputs will go), and switch to it.
+
+- From that directory, run the following command.
+
+    ~~~bash
+    for i in prd2 tst soundscape
+    do
+        nohup bash /ROOT_OF_REPO/scripts/loadtest.sh DOMAIN &
+    done
+    ~~~
+
+    You can check the output log file in that directory (tail it - the command takes a long time) to make sure that no errors are being reported.
+
+- You should see that all three domains are fine.
+
+### Cutting over
+
+Now you cut things over.
+
+- Go to the test route, `tst-soundscape`, and change the origin group to the new origin group. This should not cause any traffic interruption in the `tst` domain; check the logs for a few minutes. You can also sanity check instantly with
+
+    ~~~bash
+    time curl -i https://tst.soundscape.scottishtecharmy.org/tiles/16/32127/21794.json
+    ~~~
+
+- If that works, cut the main route over, again ensuring that a running load test is not affected.
 

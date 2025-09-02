@@ -48,6 +48,7 @@ class Summary:
         else:
             avg_time = self.total_time_ms / self.total
 
+        logger.info("REPORT SUMMARY")
         logger.info("Total tests: %d", self.total)
         logger.info("Successful tests: %d", self.success)
         logger.info("Errored tests: %d", self.errors)
@@ -76,20 +77,6 @@ class OutputRecorder:
             timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
             writer = csv.writer(f)
             writer.writerow([timestamp, name, country, url, retcode, time_ms, data_size, error if error else ""])
-
-    def record_summary(self, summary: Summary):
-        with open(self.csv_filename, 'a') as f:
-            writer = csv.writer(f)
-            writer.writerow([])
-            writer.writerow(["Total tests", summary.total])
-            writer.writerow(["Successful tests", summary.success])
-            writer.writerow(["Errored tests", summary.errors])
-            writer.writerow(["Total time (ms)", summary.total_time_ms])
-            if summary.total == 0:
-                avg_time = 0
-            else:
-                avg_time = summary.total_time_ms / summary.success
-            writer.writerow(["Average time for successes (ms)", f"{avg_time:.2f}"])
 
 def read_test_cases(cases_file, shuffle=False):
     logger.info("Reading test cases from %s", cases_file)
@@ -140,7 +127,6 @@ def run_test_cases(args, test_cases, recorder):
 
     logger.info("All tests completed.")
     summary.report()
-    recorder.record_summary(summary)
 
 def run_single_test_case(args, test_case, summary, recorder):
     try:

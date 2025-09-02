@@ -126,3 +126,45 @@ module functionApp './query.bicep' = {
   }
 }
 
+module frontDoor './query.bicep' = {
+  name: 'frontDoor'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Soundscape Front Door metrics'
+    queryDescription: 'Front door metrics'
+    query: '''
+    AzureMetrics
+    | where ResourceProvider == 'MICROSOFT.CDN'
+    | where MetricName in ("RequestCount", "OriginRequestCount", "ResponseSize", "TotalLatency", "OriginLatency")
+    | extend MetricKey = case(
+        MetricName == "RequestCount", "RequestCount",
+        MetricName == "OriginRequestCount", "OriginRequestCount",
+        MetricName == "ResponseSize", "ResponseSize",
+        MetricName == "TotalLatency", "TotalLatency",
+        MetricName == "OriginLatency", "OriginLatency",
+        "Other"
+    )
+    | summarize
+        RequestCount = sumif(Total, MetricKey == "RequestCount"),
+        OriginRequestCount = sumif(Total, MetricKey == "OriginRequestCount"),
+        ResponseSizeTotal = sumif(Total, MetricKey == "ResponseSize"),
+        ResponseSizeCount = sumif(Count, MetricKey == "ResponseSize"),
+        TotalLatencyTotal = sumif(Total, MetricKey == "TotalLatency"),
+        TotalLatencyCount = sumif(Count, MetricKey == "TotalLatency"),
+        MaxTotalLatency = maxif(Maximum, MetricKey == "TotalLatency"),
+        OriginLatencyTotal = sumif(Total, MetricKey == "OriginLatency"),
+        OriginLatencyCount = sumif(Count, MetricKey == "OriginLatency"),
+        MaxOriginLatency = maxif(Maximum, MetricKey == "OriginLatency")
+        by bin(TimeGenerated, 60m)
+    | extend
+        MeanResponseSize = iif(ResponseSizeCount > 0, ResponseSizeTotal / ResponseSizeCount, 0.0),
+        MeanTotalLatency = iif(TotalLatencyCount > 0, TotalLatencyTotal / TotalLatencyCount, 0.0),
+        MeanOriginLatency = iif(OriginLatencyCount > 0, OriginLatencyTotal / OriginLatencyCount, 0.0)
+    | project TimeGenerated, RequestCount, OriginRequestCount,
+              MeanResponseSize, MeanTotalLatency, MaxTotalLatency,
+              MeanOriginLatency, MaxOriginLatency
+    | order by TimeGenerated asc
+    '''
+  }
+}
+

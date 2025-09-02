@@ -156,3 +156,49 @@ The database has interesting metrics including the following.
 
 About the only interesting metric here is `On Demand Function Execution Count`, which counts numbers of executions, and shows when the job triggered.
 
+## Front door metrics
+
+These are stored in the LAW in the shared resource group, `rg-ssp-shared-dev-uks`. All Front Door metrics are shown by this query (in the `Logs` view of the LAW, not the `Metrics` view, because reasons).
+
+~~~kql
+AzureMetrics
+| where ResourceProvider == 'MICROSOFT.CDN'
+| order by TimeGenerated desc
+| project-away ResourceId, Resource, ResourceGroup, ResourceProvider, SubscriptionId, TimeGrain, Type, _ResourceId, TenantId, SourceSystem
+~~~
+
+The above shows a big jumbled mess of metrics. For a good summary of useful metrics, you can try this query (which is in the Soundscape shared queries).
+
+~~~kql
+AzureMetrics
+| where ResourceProvider == 'MICROSOFT.CDN'
+| where MetricName in ("RequestCount", "OriginRequestCount", "ResponseSize", "TotalLatency", "OriginLatency")
+| extend MetricKey = case(
+    MetricName == "RequestCount", "RequestCount",
+    MetricName == "OriginRequestCount", "OriginRequestCount",
+    MetricName == "ResponseSize", "ResponseSize",
+    MetricName == "TotalLatency", "TotalLatency",
+    MetricName == "OriginLatency", "OriginLatency",
+    "Other"
+)
+| summarize
+    RequestCount = sumif(Total, MetricKey == "RequestCount"),
+    OriginRequestCount = sumif(Total, MetricKey == "OriginRequestCount"),
+    ResponseSizeTotal = sumif(Total, MetricKey == "ResponseSize"),
+    ResponseSizeCount = sumif(Count, MetricKey == "ResponseSize"),
+    TotalLatencyTotal = sumif(Total, MetricKey == "TotalLatency"),
+    TotalLatencyCount = sumif(Count, MetricKey == "TotalLatency"),
+    MaxTotalLatency = maxif(Maximum, MetricKey == "TotalLatency"),
+    OriginLatencyTotal = sumif(Total, MetricKey == "OriginLatency"),
+    OriginLatencyCount = sumif(Count, MetricKey == "OriginLatency"),
+    MaxOriginLatency = maxif(Maximum, MetricKey == "OriginLatency")
+    by bin(TimeGenerated, 60m)
+| extend
+    MeanResponseSize = iif(ResponseSizeCount > 0, ResponseSizeTotal / ResponseSizeCount, 0.0),
+    MeanTotalLatency = iif(TotalLatencyCount > 0, TotalLatencyTotal / TotalLatencyCount, 0.0),
+    MeanOriginLatency = iif(OriginLatencyCount > 0, OriginLatencyTotal / OriginLatencyCount, 0.0)
+| project TimeGenerated, RequestCount, OriginRequestCount,
+          MeanResponseSize, MeanTotalLatency, MaxTotalLatency,
+          MeanOriginLatency, MaxOriginLatency
+| order by TimeGenerated asc
+~~~
