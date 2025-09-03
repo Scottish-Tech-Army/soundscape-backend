@@ -1,0 +1,13 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+FROM ubuntu:latest as final
+
+ENV IMPOSM_BINARY_RELEASE=0.14.2
+
+RUN apt-get update && apt-get upgrade -y && apt-get install curl wget postgresql-client-common postgresql-client-16 jq -y
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+RUN mkdir -p /imposm3 && wget -q -O - https://github.com/omniscale/imposm3/releases/download/v$IMPOSM_BINARY_RELEASE/imposm-$IMPOSM_BINARY_RELEASE-linux-x86-64.tar.gz | tar -xz --strip-components=1 -C /imposm3
+
+ENTRYPOINT tail -f /dev/null

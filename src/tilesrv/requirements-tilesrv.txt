@@ -1,0 +1,14 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+aiohttp
+aiopg
+psycopg2-binary
+debugpy
+requests
+azure-identity
+azure-keyvault-secrets
+azure-monitor-opentelemetry
+opentelemetry-sdk
+opentelemetry-instrumentation-aiohttp-server
+

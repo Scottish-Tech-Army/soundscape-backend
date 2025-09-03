@@ -1,0 +1,32 @@
+[
+	{
+	"name": "japan",
+	"url": "http://download.geofabrik.de/asia/japan-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "australia",
+	"url": "http://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf",
+	"bbox": []
+    },
+	{
+	"name": "new-zealand",
+	"url": "http://download.geofabrik.de/australia-oceania/new-zealand-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "brazil",
+	"url": "http://download.geofabrik.de/south-america/brazil-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "canada",
+	"url": "http://download.geofabrik.de/north-america/canada-latest.osm.pbf",
+	"bbox": []
+	},
+	{
+	"name": "us",
+	"url": "http://download.geofabrik.de/north-america/us-latest.osm.pbf",
+	"bbox": []
+	}
+]

@@ -1,0 +1,127 @@
+#cloud-config
+package_update: true
+packages:
+  - curl
+  - wget
+  - unzip
+  - postgresql-client-common
+  - postgresql-client-16
+  - jq
+  - sysstat
+  - python3
+  - python3-pip
+  - python3-setuptools
+  - python3-venv
+  - python-is-python3
+
+write_files:
+  - path: /opt/ingest/env.sh
+    permissions: '0700'
+    content: |
+      #!/bin/bash
+      # Environment variables for the ingest job
+      export IMPOSM_BINARY_RELEASE=0.14.2
+      export POSTGIS_USER=pgadmin
+      export POSTGIS_DBNAME=osm
+      export POSTGIS_PORT=5432
+      export PYTHONUNBUFFERED=true
+      export INGEST=/opt/ingest
+      export TILES=/mnt
+      {{ENV_BLOCK}}
+  - path: /opt/ingest/setup.sh
+    permissions: '0700'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      . /opt/ingest/env.sh
+
+      mkdir -p ${INGEST}/logs
+
+      # Install Azure CLI
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      # Install imposm
+      mkdir -p ${INGEST}/imposm3
+      wget -q -O - https://github.com/omniscale/imposm3/releases/download/v$IMPOSM_BINARY_RELEASE/imposm-$IMPOSM_BINARY_RELEASE-linux-x86-64.tar.gz | tar -xz --strip-components=1 -C ${INGEST}/imposm3
+
+      # Download files from storage account.
+      az login --identity
+      az storage blob download-batch \
+        --auth-mode login \
+        --account-name ${STORAGE_ACCOUNT_NAME} \
+        --destination /opt/ingest \
+        --source ${DOWNLOAD_CONTAINER_NAME} \
+        --pattern files.tgz
+      tar -xzf /opt/ingest/files.tgz -C ${INGEST}
+
+      # Create venv and install deps
+      python3 -m venv ${INGEST}/venv && ${INGEST}/venv/bin/pip install --no-cache-dir -r $INGEST/requirements-ingest.txt
+
+  - path: /opt/ingest/ingest.sh
+    permissions: '0700'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      . /opt/ingest/env.sh
+
+      # Ensure venv Python is default for CMD and any shell-in debugging
+      PATH="/opt/ingest/venv/bin:$PATH"
+
+      # Service log utility function
+      svclog() {
+        # %F is YYYY-MM-DD, %T is HH:MM:SS
+        printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "${INGEST}/logs/svc-${HOSTNAME}.log"
+      }
+
+      LOGFILE="${INGEST}/logs/ingest_$(date +%Y%m%d_%H%M%S).log"
+      svclog "Ingest job starting - output to ${LOGFILE}"
+
+      pushd ${INGEST}/tiletest
+      TESTLOG="${INGEST}/logs/tiletest_$(date +%Y%m%d_%H%M%S).log"
+      nohup bash ${INGEST}/tiletest/tiletest.sh > ${TESTLOG} 2>&1 &
+      svclog "Tile perf test started in background, logging to ${TESTLOG}"
+      popd
+
+      # Unset -e, so we can catch the error and log it
+      set +e
+      python3 -u ${INGEST}/ingest.py --imposm ${INGEST}/imposm3/imposm --mapping ${INGEST}/mapping.yml --extracts ${INGEST}/extracts/extracts-${GEN_REGIONS}.json \
+        --basedir ${TILES} --verbose --config ${INGEST}/config.json 2>&1 | \
+        sed -uE 's/^\[([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}:[0-9]{2})Z\]/\1 \2/' > ${LOGFILE}
+      RETCODES=("${PIPESTATUS[@]}")
+      RC1=${RETCODES[0]:-0}
+      RC2=${RETCODES[1]:-0}
+      set -e # Again, bomb out on error
+
+      if [ ${RC1} -ne 0 ]; then
+          svclog "Ingest job failed with return code ${RC1}. Check logs at ${LOGFILE}"
+          exit ${RC1}
+      elif [ ${RC2} -ne 0 ]; then
+          svclog "sed error with return code ${RC2}. Check logs at ${LOGFILE}"
+          exit ${RC2}
+      else
+        svclog "Ingest job succeeded - full logs at ${LOGFILE}"
+      fi
+
+      # Obliterate the VM after completion
+      svclog "Goodbye cruel world"
+
+      # Upload logs to the storage account
+      az login --identity
+      az storage blob upload-batch \
+        --auth-mode login \
+        --account-name ${STORAGE_ACCOUNT_NAME} \
+        --destination ${UPLOAD_CONTAINER_NAME} \
+        --source ${INGEST}/logs
+
+      # Sleep for 600 seconds so logs are flushed. Mad overkill, but that's Azure logging delays for you.
+      sleep 600
+
+      # Nuke the VM once and for all
+      az vmss scale --resource-group ${RG} --name ${VMSS_NAME} --new-capacity 0
+
+runcmd:
+  - [ bash, /opt/ingest/setup.sh ]
+  - [ chown, -R, azureuser:azureuser, /opt/ingest ]
+  - [ chmod, '0777', /mnt ]
+  - [ chmod, '0755', /opt/ingest/ingest.sh ]
+  - [ su, '-', azureuser, -c, /opt/ingest/ingest.sh ]

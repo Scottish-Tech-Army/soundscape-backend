@@ -1,0 +1,31 @@
+[
+  {
+	"name": "africa",
+	"url": "https://download.geofabrik.de/africa-latest.osm.pbf"
+  },
+  {
+	"name": "asia",
+	"url": "http://download.geofabrik.de/asia-latest.osm.pbf"
+  },
+  {
+	"name": "australia-oceania",
+	"url": "http://download.geofabrik.de/australia-oceania-latest.osm.pbf"
+  },
+  {
+	"name": "central-america",
+	"url": "https://download.geofabrik.de/central-america-latest.osm.pbf"
+  },
+  {
+	"name": "europe",
+	"url": "https://download.geofabrik.de/europe-latest.osm.pbf",
+	"bbox": []
+  },
+  {
+	"name": "north-america",
+	"url": "https://download.geofabrik.de/north-america-latest.osm.pbf"
+  },
+  {
+	"name": "south-america",
+	"url": "https://download.geofabrik.de/south-america-latest.osm.pbf"
+  }
+]
