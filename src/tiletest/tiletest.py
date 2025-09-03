@@ -21,6 +21,7 @@ parser.add_argument('--output', type=str, help='Output directory', default='/tmp
 parser.add_argument('--shuffle', action='store_true', help='Shuffle order of test cases')
 parser.add_argument('--casesfile', type=str, help='CSV file of test cases', default='all-cities-with-population.csv') # from https://www.geoapify.com/most-populated-cities-in-the-world/
 parser.add_argument('--sleep', type=int, help='Sleep this many seconds after each request', default=0)
+parser.add_argument('--break-cache', action='store_true', help='Add a random query string to each request to break caching')
 
 # Set up the logger globally
 logger = logging.getLogger()
@@ -144,6 +145,9 @@ def run_single_test_case(args, test_case, summary, recorder):
     error = None
     retcode = None
     data_size = 0
+
+    if args.break_cache:
+        url += f"?nocache={random.randint(1, 1_000_000)}"
 
     try:
         response = requests.get(url)

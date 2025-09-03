@@ -38,6 +38,7 @@ LOGFILE="${OUTDIR}/${DOMAIN}_$(date +%Y%m%d_%H%M%S).log"
 cd "$(dirname "$0")/.."
 pushd /home/plw/work/soundscape/soundscape-backend/src/tiletest
 python tiletest.py \
+    --break-cache \
     --output ${OUTDIR} --shuffle \
     --base-url ${TILESRV_APP_URL} > ${LOGFILE} 2>&1
 popd
