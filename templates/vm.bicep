@@ -688,11 +688,11 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
           {
             position: {
               x: 0
-              y: 4
+              y: 8
               colSpan: 6
               rowSpan: 4
             }
-            metadata: {
+           metadata: {
               inputs: []
               type: 'Extension/HubsExtension/PartType/MonitorChartPart'
               settings: {
@@ -749,21 +749,12 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                   }
                 }
               }
-              filters: {
-                MsPortalFx_TimeRange: {
-                  model: {
-                    format: 'local'
-                    granularity: 'auto'
-                    relative: '1440m'
-                  }
-                }
-              }
             }
           }
           {
             position: {
               x: 6
-              y: 4
+              y: 8
               colSpan: 6
               rowSpan: 4
             }
@@ -818,7 +809,73 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
           }
           {
             position: {
-              x: 12
+              x: 0
+              y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: '/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-ssp-shared-dev-uks/providers/Microsoft.Cdn/profiles/fpd-ssp-prd2-uks-01' // Hard coded - only one Front Door
+                          }
+                          name: 'RequestCount'
+                          aggregationType: 1
+                          namespace: 'microsoft.cdn/profiles'
+                          metricVisualization: {
+                            displayName: 'Total Request Count'
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: '/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-ssp-shared-dev-uks/providers/Microsoft.Cdn/profiles/fpd-ssp-prd2-uks-01' // Hard coded - only one Front Door
+                          }
+                          name: 'OriginRequestCount'
+                          aggregationType: 1
+                          namespace: 'microsoft.cdn/profiles'
+                          metricVisualization: {
+                            displayName: 'Origin Request Count'
+                          }
+                        }
+                      ]
+                      title: 'Total and Origin request counts for Front Door'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 6
               y: 4
               colSpan: 6
               rowSpan: 4
@@ -854,7 +911,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                           }
                         }
                       ]
-                      title: 'Total Latency and Origin Latency averages for Front Door'
+                      title: 'Total and Origin Latency averages for Front Door'
                       titleKind: 1
                       visualization: {
                         chartType: 2
