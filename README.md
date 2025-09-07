@@ -12,7 +12,7 @@ The repository is structured as follows.
 
     - [Operations processes](docs/operations.md) such as debugging and testing deployments
 
-- [scripts](scripts) contains scripts that allow you to deploy the solution, using all of the compenents below.
+- [scripts](scripts) contains scripts that allow you to deploy the solution, using all of the components below.
 
 - [config](config) contains configuration files that specify parameters for each deployment.
 
@@ -24,7 +24,9 @@ The repository is structured as follows.
 
     - [tilesrv](src/tilesrv) contains the tile serving app.
 
-    - [trigger](src/trigger) contains code for the Azure function that triggers periodic updates.
+    - [trigger](src/trigger) contains code for the Azure function that periodically (or on demand manually) triggers a new VM to be created to fully ingest a new set of data and apply it to the database.
+
+    - [vmcount](src/vmcount) contains code for the Azure function that counts the number of active VMs, used purely because this allows the dashboard to show it.
 
     - [debug](src/debug) contains a Dockerfile for a debug container. It is not used, but kept around for future use.
 

@@ -1,10 +1,28 @@
 # Operations processes
 
-**TODO: clean this up. It has some useful logging and metrics info, but does not cover testing (which is mentioned in deploy.md) and should have some level of description of Azure Front Door config and diags.**
+## Dashboard
 
-## Logging
+The deployment process creates a dashboard, named after the resource group as `rg-pNN`. You can view this in the portal. It displays graphs of the following.
 
-Logs can be found as follows.
+- Tile server requests reaching the deployment, with counts of success and errors. (Some errors are expected, notably 404s for random requests against the domain.)
+
+- Tile server CPU and memory usage.
+
+- Count of tile server instances and of trigger instances running.
+
+- Requests handled by Front Door (whether reaching this deployment or another one).
+
+- Front Door latency
+
+- Count of VMs running. This should be zero unless an ingestion is occurring.
+
+- Database CPU and memory usage.
+
+- Database storage usage.
+
+## Detailed monitoring
+
+All of the requests below are stored in a deployed query pack. To view them, do the following.
 
 - In the [Azure portal](https://portal.azure.com), find the resource group.
 
@@ -12,214 +30,46 @@ Logs can be found as follows.
 
 - On the left hand panel click on `Logs`
 
-- Select your search string.
+- Click on the `Queries` button to the left of the window.
 
-    - You can just manually enter search strings if you like.
+- Type in `Soundscape` in the search window. This will show all the relevant saved queries.
 
-    - Alternatively a number of standard queries have been saved off for use. Click on the query hub, and ensure that the Soundscape Query Pack (only) has been selected, and then select your query from the query button to the left of the window; if you type in "soundscape" you will find only the Soundscape related queries.
+- Click on the one you want to view, as listed below.
 
 ### Ingestion VMs
 
-The ingestion of data is done by a VM that is started once a week then shuts down again when complete, and generates logs. *These logs do not appear until some time after the VM is created - typically at least ten minutes.*
+The ingestion of data is done by a VM that is started once a week then shuts down again when complete, and generates logs. *These logs do not appear until some time after the VM is created - typically at least ten minutes.* The main logs for this VM are in the following queries.
 
-- The high level operations of the VM that does the ingestion, showing ingestion start and completion, can be monitored as follows.
+- `Soundscape ingestion - high level`: high level logs of when the ingestion started and finished.
 
-    ~~~kql
-    IngestLogs_CL
-    | where FilePath contains "svc"
-    | order by TimeGenerated desc
+- `Soundscape ingestion - detailed logs`: detailed logs of the ingestion process. These are very large, with logs at roughly one per minute intervals.
 
+When running, the ingestion VM runs a performance test to validate that all is well (the same one run during the cutover process). Results from this test can be viewed with the following queries.
 
-- If you want logs of the ingestion process, then you can do the following
+- `Soundscape summary of performance logs`: a summary of outputs so far, emitted every few minutes.
 
-    ~~~kql
-    IngestLogs_CL
-    | where FilePath !contains "tiletest"
-    | order by TimeGenerated desc
-    ~~~
+- `Soundscape detailed list of perf results`: a detailed view of every request, time taken, and result.
 
-- Alternatively, if you want to see how a summary of how performance runs are going, try this search.
+- `Soundscape detailed list of perf errors`: a detailed view of every request that failed.
 
-    ~~~kql
-    IngestLogs_CL
-    | where FilePath matches regex @"tiletest.*\.log"
-    | order by TimeGenerated desc
-    ~~~
+### Tile server
 
-    and the raw data for every request
+The tile server has a range of logs.
 
-    ~~~kql
-    IngestLogs_CL
-    | where FilePath matches regex @"tiletest.*\.csv"
-    | extend fields = parse_csv(RawData)
-    | extend
-            City       = tostring(fields[1]),
-            Country    = tostring(fields[2]),
-            URL        = tostring(fields[3]),
-            StatusCode = toint(fields[4]),
-            Time_ms    = toint(fields[5]),
-            DataSize   = toint(fields[6]),
-            Error      = tostring(fields[7])
-    | project-away fields
-    | order by TimeGenerated desc
-    ~~~
+- `Soundscape tilesrv access logs`: all access logs for the tile server, one per request. Does not include
 
-    Alternatively, for all of the tests that showed error results:
+- `Soundscape tilesrv access logs summary`: hourly summary of access logs. *This is very useful for getting an idea of whether all is well.*
 
-    ~~~kql
-    IngestLogs_CL
-        | where FilePath matches regex @"tiletest.*\.csv"
-        | extend fields = parse_csv(RawData)
-        | extend
-                City       = tostring(fields[1]),
-                Country    = tostring(fields[2]),
-                URL        = tostring(fields[3]),
-                StatusCode = toint(fields[4]),
-                Time_ms    = toint(fields[5]),
-                DataSize   = toint(fields[6]),
-                Error      = tostring(fields[7])
-        | project-away fields
-        | where StatusCode != 200 or Error != ""
-        | order by TimeGenerated desc
-    ~~~
+### Function app
 
-### Ingest trigger function app
+The function apps (that trigger VM creation for ingestion) generate logs when they run. They are not usually very important, but if you need them, they are shown here.
 
-Function App logs show when the timer (or manual) function triggered to start an ingestion. This includes both logs from the system running the function and from the function itself (though the functions contain only one line, typically).
+- `Soundscape function app logs`: all low level logs from Azure Functions.
 
-~~~kql
-AppTraces
-| order by TimeGenerated
-~~~
+### Front door logs
 
-### Tile server app
+Unlike the other logs, the Front Door logs do not appear in the log analytics workspace in the deployment RG, but in the one in the shared resource group `rg-ssp-shared-dev-uks`. There is one such query stored.
 
-The tile server which returns tiles (and is ultimately the entire point of this thing) has logs here.
+- `Soundscape Front Door metrics`: this shows an hourly summary of incoming traffic to Front Door.
 
-~~~kql
-ContainerAppConsoleLogs_CL
-| project TimeGenerated, _timestamp_d, ContainerName_s, ContainerId_s, Log_s
-| order by _timestamp_d
-~~~
-
-Access logs can be found from the following query (in the Log Analytics Workspace blade - it appears in the Application Insights blade, but with slightly different naming).
-
-~~~kql
-AppRequests
-| where Name !contains "metrics_handler"
-| project TimeGenerated, Url, Success, ResultCode, DurationMs
-~~~
-
-A summary of request counts and times for each return code can be found from the query below.
-
-~~~kql
-AppRequests
-| where Name !contains "metrics_handler"
-| summarize
-    RequestCount = count(),
-    TotalDurationMs = sum(DurationMs),
-    AvgDurationMs = avg(DurationMs)
-  by bin(TimeGenerated, 15m), ResultCode
-| order by TimeGenerated asc, ResultCode
-~~~
-
-## Metrics
-
-Metrics can be found as follows.
-
-- In the [Azure portal](https://portal.azure.com), find the resource you care about.
-
-- Click on it.
-
-- On the left hand panel click on `Metrics`
-
-(You can also find all this if you go digging around in the Log Analytics Workspace, setting `scope` correctly, but it is easier to go through the resource itself.)
-
-### Tile server app
-
-The tile server container app contains a few useful metrics.
-
-- `CPU Usage` is obviously the CPU.
-
-- `Replica Count` is the number of instances.
-
-- `Network In Bytes` and `Network Out Bytes` are the network traffic.
-
-To see request counter metrics, you need to go to the Application Insights resource in the resource group.
-
-- Click on `Metrics` in that resource.
-
-- Leave `scope` as the Application Insights resource.
-
-- Within the `Application Insights standard metrics` namespace, you will find:
-
-    - `Server requests` - the count of server requests
-
-    - `Failed requests` - the count of errors sent
-
-### Database
-
-The database has interesting metrics including the following.
-
-- `CPU percent` is the percentage of CPU used.
-
-- `Memory percent` is the percentage of memory used.
-
-- `Disk IOPS Consumed Percentage` is disk load percentage
-
-- `Storage used` is disk space in use.
-
-### VM metrics
-
-- If you click down to the VMSS or to the running VM instance, you can see (for example) CPU usage, memory free, and network usage used by ingestion.
-
-### Ingest trigger function app
-
-About the only interesting metric here is `On Demand Function Execution Count`, which counts numbers of executions, and shows when the job triggered.
-
-## Front door metrics
-
-These are stored in the LAW in the shared resource group, `rg-ssp-shared-dev-uks`. All Front Door metrics are shown by this query (in the `Logs` view of the LAW, not the `Metrics` view, because reasons).
-
-~~~kql
-AzureMetrics
-| where ResourceProvider == 'MICROSOFT.CDN'
-| order by TimeGenerated desc
-| project-away ResourceId, Resource, ResourceGroup, ResourceProvider, SubscriptionId, TimeGrain, Type, _ResourceId, TenantId, SourceSystem
-~~~
-
-The above shows a big jumbled mess of metrics. For a good summary of useful metrics, you can try this query (which is in the Soundscape shared queries).
-
-~~~kql
-AzureMetrics
-| where ResourceProvider == 'MICROSOFT.CDN'
-| where MetricName in ("RequestCount", "OriginRequestCount", "ResponseSize", "TotalLatency", "OriginLatency")
-| extend MetricKey = case(
-    MetricName == "RequestCount", "RequestCount",
-    MetricName == "OriginRequestCount", "OriginRequestCount",
-    MetricName == "ResponseSize", "ResponseSize",
-    MetricName == "TotalLatency", "TotalLatency",
-    MetricName == "OriginLatency", "OriginLatency",
-    "Other"
-)
-| summarize
-    RequestCount = sumif(Total, MetricKey == "RequestCount"),
-    OriginRequestCount = sumif(Total, MetricKey == "OriginRequestCount"),
-    ResponseSizeTotal = sumif(Total, MetricKey == "ResponseSize"),
-    ResponseSizeCount = sumif(Count, MetricKey == "ResponseSize"),
-    TotalLatencyTotal = sumif(Total, MetricKey == "TotalLatency"),
-    TotalLatencyCount = sumif(Count, MetricKey == "TotalLatency"),
-    MaxTotalLatency = maxif(Maximum, MetricKey == "TotalLatency"),
-    OriginLatencyTotal = sumif(Total, MetricKey == "OriginLatency"),
-    OriginLatencyCount = sumif(Count, MetricKey == "OriginLatency"),
-    MaxOriginLatency = maxif(Maximum, MetricKey == "OriginLatency")
-    by bin(TimeGenerated, 60m)
-| extend
-    MeanResponseSize = iif(ResponseSizeCount > 0, ResponseSizeTotal / ResponseSizeCount, 0.0),
-    MeanTotalLatency = iif(TotalLatencyCount > 0, TotalLatencyTotal / TotalLatencyCount, 0.0),
-    MeanOriginLatency = iif(OriginLatencyCount > 0, OriginLatencyTotal / OriginLatencyCount, 0.0)
-| project TimeGenerated, RequestCount, OriginRequestCount,
-          MeanResponseSize, MeanTotalLatency, MaxTotalLatency,
-          MeanOriginLatency, MaxOriginLatency
-| order by TimeGenerated asc
-~~~
+Note that full access logs are not available for Front Door; this is to save what is probably a tiny amount of money.
