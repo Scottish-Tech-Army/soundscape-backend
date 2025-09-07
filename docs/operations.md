@@ -102,6 +102,27 @@ ContainerAppConsoleLogs_CL
 | order by _timestamp_d
 ~~~
 
+Access logs can be found from the following query (in the Log Analytics Workspace blade - it appears in the Application Insights blade, but with slightly different naming).
+
+~~~kql
+AppRequests
+| where Name !contains "metrics_handler"
+| project TimeGenerated, Url, Success, ResultCode, DurationMs
+~~~
+
+A summary of request counts and times for each return code can be found from the query below.
+
+~~~kql
+AppRequests
+| where Name !contains "metrics_handler"
+| summarize
+    RequestCount = count(),
+    TotalDurationMs = sum(DurationMs),
+    AvgDurationMs = avg(DurationMs)
+  by bin(TimeGenerated, 15m), ResultCode
+| order by TimeGenerated asc, ResultCode
+~~~
+
 ## Metrics
 
 Metrics can be found as follows.

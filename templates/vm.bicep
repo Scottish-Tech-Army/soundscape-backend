@@ -2,8 +2,11 @@
 @description('Prefix for the deployment, e.g. dev, prod, etc.')
 param prefix string
 
-@description('Function app name')
-param functionAppName string
+@description('Trigger function app name')
+param triggerAppName string
+
+@description('Metric function app name')
+param metricAppName string
 
 @description('Storage account name')
 param storageName string
@@ -53,6 +56,9 @@ var adminUsername string = 'azureuser'
 
 @description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
 var triggerSchedule string = '0 0 10 * * 1'
+
+@description('Metric schedule in cron format, e.g. "*/5 * * * *" for every five minutes')
+var metricSchedule string = '*/5 * * * *'
 
 // Get existing resources
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' existing = {
@@ -308,8 +314,9 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
   }
 }
 
-// Azure function that triggers weekly updates
-var planName        = '${prefix}-plan'
+// Plans - every function app needs one.
+var triggerPlanName        = '${prefix}-plan'
+var metricPlanName        = '${prefix}-plan2'
 
 // 1) Storage Account for FUNCTIONS runtime
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
@@ -320,7 +327,8 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
 var storageKey = storage.listKeys().keys[0].value
 
 // Blob service and storage in that account for the function app code and uploads
-var functionContainerName = 'functionapp'
+var triggerContainerName = 'functionapp'
+var metricContainerName = 'metricapp'
 var uploadContainerName = 'uploads'
 var downloadContainerName = 'downloads'
 
@@ -329,8 +337,13 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01'
   parent: storage
 }
 
-resource functionContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: functionContainerName
+resource triggerContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: triggerContainerName
+  parent: blobService
+}
+
+resource metricContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: metricContainerName
   parent: blobService
 }
 
@@ -367,8 +380,21 @@ resource queueDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-0
 }
 
 // 2) Consumption (Dynamic) plan
-resource plan 'Microsoft.Web/serverfarms@2021-02-01' = {
-  name: planName
+resource triggerPlan 'Microsoft.Web/serverfarms@2021-02-01' = {
+  name: triggerPlanName
+  kind: 'functionapp'
+  location: resourceGroup().location
+  sku: {
+    tier: 'FlexConsumption'
+    name: 'FC1'
+  }
+  properties: {
+    reserved: true // Linux
+  }
+}
+
+resource metricPlan 'Microsoft.Web/serverfarms@2021-02-01' = {
+  name: metricPlanName
   kind: 'functionapp'
   location: resourceGroup().location
   sku: {
@@ -381,8 +407,8 @@ resource plan 'Microsoft.Web/serverfarms@2021-02-01' = {
 }
 
 // 3) Function App
-resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
-  name: functionAppName
+resource triggerApp 'Microsoft.Web/sites@2024-11-01' = {
+  name: triggerAppName
   location: resourceGroup().location
   kind: 'functionapp,linux,flex'
   identity: {
@@ -392,7 +418,7 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
     }
   }
   properties: {
-    serverFarmId: plan.id
+    serverFarmId: triggerPlan.id
     functionAppConfig: {
       runtime: {
         name: 'python'
@@ -406,7 +432,7 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
         storage: {
           // Package location
           type: 'BlobContainer' // Pick most recent blob from this container
-          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${functionContainerName}'
+          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${triggerContainerName}'
 
           // Auth model for the package fetch (UAMI)
           authentication: {
@@ -424,21 +450,14 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
         ]
       }
       appSettings: [
-        //{ name: 'AzureWebJobsStorage__accountName', value: storageName }
-        //{ name: 'AzureWebJobsStorage__credential',  value: 'managedidentity' }
-        //{ name: 'AzureWebJobsStorage__clientId',    value: uami.properties.clientId }
-        //{ name: 'AzureWebJobsStorage__blobServiceUri',  value: 'https://${storageName}.blob.${environment().suffixes.storage}' }
-        //{ name: 'AzureWebJobsStorage__queueServiceUri', value: 'https://${storageName}.queue.${environment().suffixes.storage}' }
-
         { name:  'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storageName};AccountKey=${storageKey};EndpointSuffix=${environment().suffixes.storage}' }
         { name: 'FUNCTIONS_EXTENSION_VERSION',      value: '~4' }
-        //{ name: 'SCM_DO_BUILD_DURING_DEPLOYMENT',   value: 'true' }
-        //{ name: 'WEBSITE_RUN_FROM_PACKAGE',         value: 'https://${storageName}.blob.${environment().suffixes.storage}/${containerName}/${blobName}' }
 
         // Diags settings
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',  value: appInsights.properties.ConnectionString }
         { name: 'APPINSIGHTS_INSTRUMENTATIONKEY',   value: appInsights.properties.InstrumentationKey }
-        { name: 'APPLICATIONINSIGHTS_ROLE_NAME',    value: functionAppName }
+        { name: 'APPLICATIONINSIGHTS_ROLE_NAME',    value: triggerAppName }
+
         // Variables passed to the code
         { name: 'UAMI_CLIENT_ID',                   value: uami.properties.clientId }
         { name: 'AZURE_SUBSCRIPTION_ID',            value: subscription().subscriptionId }
@@ -451,10 +470,71 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
   }
 }
 
+resource metricApp 'Microsoft.Web/sites@2024-11-01' = {
+  name: metricAppName
+  location: resourceGroup().location
+  kind: 'functionapp,linux,flex'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${uami.id}': {}
+    }
+  }
+  properties: {
+    serverFarmId: metricPlan.id
+    functionAppConfig: {
+      runtime: {
+        name: 'python'
+        version: '3.12'
+      }
+      scaleAndConcurrency: {
+        instanceMemoryMB: 2048
+        maximumInstanceCount: 40 // Seems to be required, and 40 is minimum value
+      }
+      deployment: {
+        storage: {
+          // Package location
+          type: 'BlobContainer' // Pick most recent blob from this container
+          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${metricContainerName}'
+
+          // Auth model for the package fetch (UAMI)
+          authentication: {
+            type: 'UserAssignedIdentity'
+            userAssignedIdentityResourceId: uami.id
+            // storageAccountConnectionStringName not required when using UAMI
+          }
+        }
+      }
+    }
+    siteConfig: {
+      cors: {
+        allowedOrigins: [
+          'https://portal.azure.com'    // allow portal XHR calls, required for testing
+        ]
+      }
+      appSettings: [
+        { name:  'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storageName};AccountKey=${storageKey};EndpointSuffix=${environment().suffixes.storage}' }
+        { name: 'FUNCTIONS_EXTENSION_VERSION',      value: '~4' }
+        // Diags settings
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',  value: appInsights.properties.ConnectionString }
+        { name: 'APPINSIGHTS_INSTRUMENTATIONKEY',   value: appInsights.properties.InstrumentationKey }
+        { name: 'APPLICATIONINSIGHTS_ROLE_NAME',    value: triggerAppName }
+        // Variables passed to the code
+        { name: 'UAMI_CLIENT_ID',                   value: uami.properties.clientId }
+        { name: 'AZURE_SUBSCRIPTION_ID',            value: subscription().subscriptionId }
+        { name: 'VMSS_RESOURCE_GROUP',              value: resourceGroup().name }
+        { name: 'VMSS_NAME',                        value: vmssName }
+        { name: 'VMSS_RESOURCE_ID',                 value: vmss.id }
+        { name: 'TRIGGER_SCHEDULE',                 value: metricSchedule }
+      ]
+    }
+  }
+}
+
 // Optional: Diagnostic settings from Function App to Log Analytics (platform logs/metrics)
 resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: '${prefix}-func-diag'
-  scope: functionApp
+  scope: triggerApp
   properties: {
     workspaceId: logAnalytics.id
     logs: [
@@ -469,6 +549,24 @@ resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
         enabled: true
       }
     ]
+  }
+}
+
+// Workbook that displays VMSS count
+var rawJson = loadTextContent('workbook.json')
+var serializedData = replace(rawJson, '{{LAW_ID}}', logAnalytics.id)
+var workbookDisplayName = '${prefix}-vmss-counter'
+
+resource workbook 'microsoft.insights/workbooks@2022-04-01' = {
+  name: guid(resourceGroup().id, workbookDisplayName)
+  location: resourceGroup().location
+  kind: 'shared'
+  properties: {
+    displayName: workbookDisplayName
+    serializedData: serializedData
+    version: '1.0'
+    sourceId: 'azure monitor'
+    category: 'workbook'
   }
 }
 
@@ -634,14 +732,14 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                       metrics: [
                         {
                           resourceMetadata: {
-                            id: functionApp.id
+                            id: triggerApp.id
                           }
                           name: 'OnDemandFunctionExecutionCount'
                           aggregationType: 1
                           namespace: 'microsoft.web/sites'
                           metricVisualization: {
                             displayName: 'On Demand Function Execution Count'
-                            resourceDisplayName: functionAppName
+                            resourceDisplayName: triggerAppName
                           }
                         }
                         {
@@ -688,11 +786,11 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
           {
             position: {
               x: 0
-              y: 4
+              y: 8
               colSpan: 6
               rowSpan: 4
             }
-            metadata: {
+           metadata: {
               inputs: []
               type: 'Extension/HubsExtension/PartType/MonitorChartPart'
               settings: {
@@ -749,21 +847,12 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                   }
                 }
               }
-              filters: {
-                MsPortalFx_TimeRange: {
-                  model: {
-                    format: 'local'
-                    granularity: 'auto'
-                    relative: '1440m'
-                  }
-                }
-              }
             }
           }
           {
             position: {
               x: 6
-              y: 4
+              y: 8
               colSpan: 6
               rowSpan: 4
             }
@@ -818,7 +907,73 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
           }
           {
             position: {
-              x: 12
+              x: 0
+              y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: '/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-ssp-shared-dev-uks/providers/Microsoft.Cdn/profiles/fpd-ssp-prd2-uks-01' // Hard coded - only one Front Door
+                          }
+                          name: 'RequestCount'
+                          aggregationType: 1
+                          namespace: 'microsoft.cdn/profiles'
+                          metricVisualization: {
+                            displayName: 'Total Request Count'
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: '/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-ssp-shared-dev-uks/providers/Microsoft.Cdn/profiles/fpd-ssp-prd2-uks-01' // Hard coded - only one Front Door
+                          }
+                          name: 'OriginRequestCount'
+                          aggregationType: 1
+                          namespace: 'microsoft.cdn/profiles'
+                          metricVisualization: {
+                            displayName: 'Origin Request Count'
+                          }
+                        }
+                      ]
+                      title: 'Total and Origin request counts for Front Door'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 6
               y: 4
               colSpan: 6
               rowSpan: 4
@@ -854,7 +1009,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                           }
                         }
                       ]
-                      title: 'Total Latency and Origin Latency averages for Front Door'
+                      title: 'Total and Origin Latency averages for Front Door'
                       titleKind: 1
                       visualization: {
                         chartType: 2
@@ -880,6 +1035,72 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                   }
                 }
               }
+            }
+          }
+          {
+            position: {
+              x: 12
+              y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'ComponentId'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'TimeContext'
+                  value: null
+                  isOptional: true
+                }
+                {
+                  name: 'ResourceIds'
+                  value: [
+                    'azure monitor'
+                  ]
+                  isOptional: true
+                }
+                {
+                  name: 'ConfigurationId'
+                  value: workbook.id
+                  isOptional: true
+                }
+                {
+                  name: 'Type'
+                  value: 'workbook'
+                  isOptional: true
+                }
+                {
+                  name: 'GalleryResourceType'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'PinName'
+                  value: 'p01-vmss-counter'
+                  isOptional: true
+                }
+                {
+                  // The alert user will notice that this ends up being duplicated between workbook and dashboard. That's poor, but we just let it be.
+                  name: 'StepSettings'
+                  value: '{"version":"KqlItem/1.0","query":"AppTraces\\n| order by TimeGenerated\\n| where Message contains \\"Current VMSS capacity\\"\\n| extend Capacity = toint(extract(@\\"METRIC: Current VMSS capacity: (\\\\d+)\\", 1, Message))\\n| project TimeGenerated, Capacity\\n","size":0,"aggregation":2,"title":"VM instance count","timeContext":{"durationMs":86400000},"queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-p01/providers/Microsoft.OperationalInsights/workspaces/p01-law-kxz6u7lykfofw"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","yAxis":["Capacity"],"seriesLabelSettings":[{"seriesName":"Capacity","label":"VM instance count"}],"ySettings":{"max":1,"label":""}}}'
+                  isOptional: true
+                }
+                {
+                  name: 'ParameterValues'
+                  value: {}
+                  isOptional: true
+                }
+                {
+                  name: 'Location'
+                  value: 'uksouth'
+                  isOptional: true
+                }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
             }
           }
         ]

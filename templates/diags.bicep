@@ -113,6 +113,40 @@ module tilesrvLogs './query.bicep' = {
   }
 }
 
+module tilesrvAccessLogs './query.bicep' = {
+  name: 'tilesrvAccessLogs'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Soundscape tilesrv access logs'
+    queryDescription: 'Access logs for tile server'
+    query: '''
+    AppRequests
+    | where Name contains "tile_handler"
+    | project TimeGenerated, Url, Success, ResultCode, DurationMs
+    | order by TimeGenerated desc
+    '''
+  }
+}
+
+module tilesrvAccessLogSummary './query.bicep' = {
+  name: 'tilesrvAccessLogSummary'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Soundscape tilesrv access logs summary'
+    queryDescription: 'Summary of access log counts for tile server'
+    query: '''
+    AppRequests
+    | where Name contains "tile_handler"
+    | summarize
+        RequestCount = count(),
+        TotalDurationMs = sum(DurationMs),
+        AvgDurationMs = avg(DurationMs)
+      by bin(TimeGenerated, 60m), ResultCode
+    | order by TimeGenerated desc, ResultCode
+    '''
+  }
+}
+
 module functionApp './query.bicep' = {
   name: 'functionApp'
   params: {
@@ -163,8 +197,7 @@ module frontDoor './query.bicep' = {
     | project TimeGenerated, RequestCount, OriginRequestCount,
               MeanResponseSize, MeanTotalLatency, MaxTotalLatency,
               MeanOriginLatency, MaxOriginLatency
-    | order by TimeGenerated asc
+    | order by TimeGenerated desc
     '''
   }
 }
-
