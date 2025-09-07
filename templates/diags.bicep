@@ -121,7 +121,7 @@ module tilesrvAccessLogs './query.bicep' = {
     queryDescription: 'Access logs for tile server'
     query: '''
     AppRequests
-    | where Name !contains "metrics_handler"
+    | where Name contains "tile_handler"
     | project TimeGenerated, Url, Success, ResultCode, DurationMs
     | order by TimeGenerated desc
     '''
@@ -136,7 +136,7 @@ module tilesrvAccessLogSummary './query.bicep' = {
     queryDescription: 'Summary of access log counts for tile server'
     query: '''
     AppRequests
-    | where Name !contains "metrics_handler"
+    | where Name contains "tile_handler"
     | summarize
         RequestCount = count(),
         TotalDurationMs = sum(DurationMs),

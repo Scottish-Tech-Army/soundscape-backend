@@ -36,7 +36,8 @@ echo "Create deployment"
 az deployment group create \
     --resource-group ${RG} --template-file templates/vm.bicep \
     --parameters prefix=${PREFIX} \
-                 functionAppName=${FUNCAPPNAME} \
+                 triggerAppName=${TRIGGERAPPNAME} \
+                 metricAppName=${METRICAPPNAME} \
                  storageName=${STORAGENAME} --debug --verbose
 
 echo "SUCCESS"

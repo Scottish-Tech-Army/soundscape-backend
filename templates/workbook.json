@@ -1,0 +1,52 @@
+{
+    "version": "Notebook/1.0",
+    "items": [
+        {
+            "type": 3,
+            "content": {
+                "version": "KqlItem/1.0",
+                "query": "AppTraces\n| order by TimeGenerated\n| where Message contains \"Current VMSS capacity\"\n| project TimeGenerated, Message\n| extend Capacity = toint(extract(@\"METRIC: Current VMSS capacity: (\\d+)\", 1, Message))\n",
+                "size": 0,
+                "aggregation": 2,
+                "timeContext": {
+                    "durationMs": 86400000
+                },
+                "queryType": 0,
+                "resourceType": "microsoft.operationalinsights/workspaces",
+                "crossComponentResources": [
+                    "{{LAW_ID}}"
+                ],
+                "visualization": "linechart",
+                "gridSettings": {
+                    "sortBy": [
+                        {
+                            "itemKey": "TimeGenerated",
+                            "sortOrder": 1
+                        }
+                    ]
+                },
+                "sortBy": [
+                    {
+                        "itemKey": "TimeGenerated",
+                        "sortOrder": 1
+                    }
+                ],
+                "chartSettings": {
+                    "xAxis": "TimeGenerated",
+                    "yAxis": [
+                        "Capacity"
+                    ],
+                    "showMetrics": false,
+                    "ySettings": {
+                        "max": 2
+                    }
+                }
+            },
+            "name": "query - 0"
+        }
+    ],
+    "isLocked": false,
+    "fallbackResourceIds": [
+        "azure monitor"
+    ]
+}

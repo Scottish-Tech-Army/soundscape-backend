@@ -8,7 +8,8 @@ export VERSION=v1.0
 
 # Globally unique function app name, used in both bicep and in scripts
 # A good way to generate this is "date | md5sum | head -c 20 && echo"
-export FUNCAPPNAME=1633d54ddd562f0f243b
+export TRIGGERAPPNAME=1633d54ddd562f0f243b
+export METRICAPPNAME=88ccd28908b25161a00b
 export STORAGENAME=fe6971508913740178df
 
 # Global shared diagnostics viewing tooling
