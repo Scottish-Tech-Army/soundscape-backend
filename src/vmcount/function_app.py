@@ -10,7 +10,7 @@ app = func.FunctionApp()
 TRIGGER_SCHEDULE = os.environ.get("TRIGGER_SCHEDULE", "*/5 * * * *")  # every 5 minutes by default
 
 @app.timer_trigger(schedule=TRIGGER_SCHEDULE, arg_name="timer")
-def timer_trigger(timer: func.TimerRequest):
+def vmcount(timer: func.TimerRequest):
     client_id = os.environ["UAMI_CLIENT_ID"]
     subscription_id = os.environ["AZURE_SUBSCRIPTION_ID"]
     rg = os.environ["VMSS_RESOURCE_GROUP"]

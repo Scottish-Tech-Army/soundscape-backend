@@ -1,0 +1,82 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36" version="28.2.0">
+  <diagram name="Page-1" id="6yGJ8HwaXGTKKi_LWNoY">
+    <mxGraphModel dx="1660" dy="920" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="XnoCxGlQ0LsC8XMJe73W-10" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
+          <mxGeometry x="80" y="200" width="320" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="XnoCxGlQ0LsC8XMJe73W-11" value="" style="whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
+          <mxGeometry x="420" y="198.5" width="320" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="XnoCxGlQ0LsC8XMJe73W-1" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/VM_Scale_Sets.svg;" parent="1" vertex="1">
+          <mxGeometry x="480" y="370" width="68" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="XnoCxGlQ0LsC8XMJe73W-2" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/containers/Container_Registries.svg;" parent="1" vertex="1">
+          <mxGeometry x="230" y="377" width="68" height="61" as="geometry" />
+        </mxCell>
+        <mxCell id="XnoCxGlQ0LsC8XMJe73W-3" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" parent="1" vertex="1">
+          <mxGeometry x="620" y="377" width="68" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="XnoCxGlQ0LsC8XMJe73W-4" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/databases/Azure_Database_PostgreSQL_Server.svg;" parent="1" vertex="1">
+          <mxGeometry x="620" y="258" width="48" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="XnoCxGlQ0LsC8XMJe73W-5" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/DNS_Zones.svg;" parent="1" vertex="1">
+          <mxGeometry x="130" y="376" width="64" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="XnoCxGlQ0LsC8XMJe73W-6" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/Front_Doors.svg;" parent="1" vertex="1">
+          <mxGeometry x="194" y="260" width="68" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="XnoCxGlQ0LsC8XMJe73W-9" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/other/Worker_Container_App.svg;" parent="1" vertex="1">
+          <mxGeometry x="470" y="260" width="68" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-1" value="DNS Zones" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="130" y="460" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-3" value="Deployment Instance Resource Group" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" parent="1" vertex="1">
+          <mxGeometry x="470" y="140" width="240" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-4" value="Azure Database for PostgreSQL" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="602" y="210" width="96" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-5" value="Function Apps" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="620" y="460" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-6" value="Ingestion: VM&lt;div&gt;Scale Set&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="460" y="460" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-7" value="Azure Front Door" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="178" y="220" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-8" value="Container registry" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="238" y="460" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-9" value="Tile Server&lt;div&gt;Container App&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="454" y="210" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-11" value="Shared Resource Group" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" parent="1" vertex="1">
+          <mxGeometry x="120" y="140" width="240" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-12" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;entryX=-0.029;entryY=0.521;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" target="XnoCxGlQ0LsC8XMJe73W-6" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="30" y="290" as="sourcePoint" />
+            <mxPoint x="90" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-13" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;entryX=-0.071;entryY=0.551;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1.021;exitY=0.509;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="XnoCxGlQ0LsC8XMJe73W-9" target="XnoCxGlQ0LsC8XMJe73W-4" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="630" y="40" as="sourcePoint" />
+            <mxPoint x="792" y="41" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Wf5-8NH168lDTOExUm7M-14" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;exitX=0.996;exitY=0.521;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="XnoCxGlQ0LsC8XMJe73W-6" target="XnoCxGlQ0LsC8XMJe73W-9" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="350" y="60" as="sourcePoint" />
+            <mxPoint x="512" y="61" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

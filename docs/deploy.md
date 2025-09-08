@@ -2,6 +2,14 @@
 
 This document describes how to deploy a new deployment. It does not cover the global shared resources (which are assumed to exist).
 
+The general model is as follows.
+
+- A new Resource Group is created in Azure, containing a complete database, tile server application, and all the other components.
+
+- After the new RG is created, the shared Front Door instance is cut over to point at it.
+
+- Once sufficient testing has been done, the old RG can be deleted.
+
 The process is as follows.
 
 - Check some [prerequisites](#prerequisites)
@@ -24,24 +32,57 @@ Before you can initially create a deployment, you need the following.
 
     - [Azure functions core tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=linux)
 
-    - Various scripts contained in this repo, which must be checked out.
+    - The contents of this repo checked out locally, to allow running of the various scripts.
 
-- An Azure subscription. This will contain the various components that get deployed.
+- Access to the Azure subscription which contains all of the resources in question.
 
 ## Deploying in Azure
 
-Follow the following steps.
+Follow the following steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
 
-- Set up a config file. *TODO: document with an example.*
+- Set up a config file. Production instances should be named `pNN` where `NN` is a two digit number that should be monotonically increasing, such as `p01`.
 
+    - The file should be in the [config](config) directory, and be named `sta-pNN.sh`
 
-- Source the config file.
+    - Contents should be as below; see comments.
+
+        ~~~bash
+        # Parameters in use
+        export PREFIX=p01           # As described above
+        export RG=rg-${PREFIX}      # Do not change
+        export REGION=uksouth       # Region - normally should not change
+        export REGISTRYNAME=acrsspdevuks # Do not change
+        export REGISTRYRG=rg-ssp-shared-dev-uks # Do not change
+        export VERSION=${PREFIX}    # Version of containers - make unique per deployment
+
+        # Globally unique names, used in both bicep and in scripts
+        # A good way to generate this is "date | md5sum | head -c 20 && echo"
+        export UNIQUESTRING=fe6971508913740178df   # Ensure globally unique
+        export STORAGENAME=${UNIQUESTRING}
+        export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
+        export METRICAPPNAME=vmcount-${UNIQUESTRING}
+
+        # Global shared diagnostics viewing tooling
+        export DIAGSRG=rg-diags     # Do not change
+
+        # Do not change from here down
+        # This subscription stuff is purely to make sure we are using the right Azure subscription.
+        export SUBSCRIPTION=b9ba9683-feef-47c8-bcc0-08e791dc1493
+
+        az account set --subscription ${SUBSCRIPTION}
+        if [ $? -ne 0 ]; then
+        echo "Failed to set Azure subscription."
+        exit 1
+        fi
+        ~~~
+
+ - Source the config file.
 
     ~~~bash
-    . config/my_config_file.sh
+    . config/sta_pNN.sh
     ~~~
 
-- Ensure that you have created an Azure subscription to use, and that you are logged into Azure, defaulting to that subscription.
+- Ensure that you logged into Azure, and using the correct subscription.
 
     ~~~bash
     az login --use-device-code
@@ -50,25 +91,25 @@ Follow the following steps.
 
     If necessary, you can log in using a different account, or use `az account set` to reset which subscription is in use.
 
-- Build and upload images.
+- Build and upload images. This creates container images of the specified version, and loads them into the shared repository.
 
     ~~~bash
     bash scripts/build.sh
     ~~~
 
-- Run the deploy script.
+- Run the deploy script. This deploys the database, tile server apps, and much of the core infrastructure.
 
     ~~~bash
     bash scripts/deploy.sh
     ~~~
 
-- Run the second half of the deployment (should combine with above).
+- Run the VM deployment script. This deploys all the peripheral (but necessary) components, including ingestion tooling, function apps, and dashboards.
 
     ~~~bash
     bash scripts/vm.sh
     ~~~
 
-- Deploy the function app code.
+- Deploy the function app code to the deployment.
 
     ~~~bash
     bash scripts/functionapp.sh
@@ -76,23 +117,41 @@ Follow the following steps.
 
 ## Deploying log queries
 
-There are some saved queries shared across all deployments. These exist in a single resource group, and so you should not need to change these. If you make changes, you can deploy them as follows.
+There are some saved queries shared across all deployments. These exist in a single resource group (shared across all deployments), and so you should not need to change these. If you make changes, you can deploy them as follows.
 
 ~~~bash
-bash scripts/functionapp.sh
+bash scripts/diags.sh
 ~~~
 
 ### Redeploy gotchas
 
-If you redeploy the various bicep templates, some bad things happen. I should really fix these up.
+If you redeploy the various bicep templates, some bad things happen.
 
-- If you reload the `deploy` template, the DB password is changed. This means that all of the `tilesrv` containers restart, and any running ingestion job fails.
+- If you reload the `deploy` template, the DB password is changed. This means that all of the `tilesrv` containers restart, and any running ingestion job fails (though this should be a short blip of a few seconds).
 
-- If you reload the `vm` template, any running ingestion job is cancelled as the VMSS is scaled down.
+- If you reload the `vm` template, any running ingestion job is cancelled as the VMSS is scaled down. This is benign so long as you are not in the middle of a multi-hour ingestion run.
 
-## Testing that your deployment works
+## Ingesting data and basic validation
 
-*To be provided*
+### Triggering ingestion
+
+Your deployment still does not work, because ingestion has not occurred. You can just wait until the weekly ingestion run happens, but a smarter idea is to kick it off manually.
+
+- Open the [Azure portal](https://portal.azure.com).
+
+- Find the resource group you just created (`rg-pNN`) and select it to view the list of resources in it.
+
+- Click on the Azure Function app that triggers ingestion - this is the one starting `trigger-`.
+
+- Click on `ingest-manual` from the list of functions.
+
+- In the `Code&Test` blade, click on `Test/Run`
+
+- This will cause a new subwindow to open with a big `Run` button. Click it.
+
+### Validating that your run has completed
+
+The ingestion will take around 8-10 hours. To monitor its progress, check the dashboard and the ingestion logs as described in the [operations document](operations.md).
 
 ## Switching over to your deployment
 
@@ -100,11 +159,11 @@ If you redeploy the various bicep templates, some bad things happen. I should re
 
 To change over your deployment, perform the following steps.
 
-- Go the Azure Front Door instance in the portal. All instructions are related to that resource.
+- Select the Azure Front Door instance (the only one, in the `fpd-ssp-prd2-uks-01` resource group) in the portal. All instructions are related to that resource.
 
 - Select `Origin Groups` on the left panel, and create a new `Origin Group` (which is a place where traffic can end up). That group should have the following features.
 
-    - Name it after your deployment. For example, the `p01` deployment can sensibly be named `p01-tilesrv`.
+    - Name it after your deployment. For example, the `pNN` deployment can sensibly be named `pNN-tilesrv`.
 
     - Single Origin within it, which should be your Azure Container App (select `Container App` as the title, and pick the container app URL from the list).
 
@@ -112,48 +171,79 @@ To change over your deployment, perform the following steps.
 
     - Within the origin, do *not* enable subject name validation.
 
-- Within the (single existing) endpoint, there should be two `route` instances, one for live traffic () and one for testing (`tst-soundscape`). First test your deployment by setting up the test configuration to point to your new deployment.
+- There should be two live endpoints, one for live traffic `fdr-appcontainer` and one for test traffic `tst.soundscape.scottishtecharmy.org`. Within each of these there are be routes.
 
-    - The matching pattern must be `/tiles/*`, with origin path `/` (so `/tiles` requests go to the root on the tile server app).
+    - You should not need to change any routes, but for reference the matching pattern must be `/tiles/*`, with origin path `/` (so `/tiles` requests go to the root on the tile server app).
 
     - It should be enabled.
 
     - Compression and caching must be enabled, with the `Use query string` option.
 
-    - The origin group should be the *production* origin group.
+- You should now configure test traffic to arrive at your new deployment.
 
-You now could in principle route traffic to your new deployment. We first point a test domain (`tst.soundscape.scottishtecharmy.org`) at the endpoint, then the real domains later.
+    - Click on `Front Door manager`
 
-*To be added - how do you cut a domain over?*
+    - Click the `tst.soundscape.scottishtecharmy.org` endpoint.
+
+    - Change the origin group to be the one for your new deployment.
+
+- Double check that the traffic is working - for example, the following
+
+    ~~~bash
+    curl -i https://tst.soundscape.scottishtecharmy.org/tiles/16/32127/21794.json?nocache=1234
+    ~~~
+
+    where you can change the `nocache` number to ensure that caching does not happen.
 
 ### Testing
 
-Now we test. To validate that a domain is working, you should do the following.
+Now we test properly. To validate that the test domain (and so your deployment) is working, you should do the following.
 
 - Pick a directory where you will run all your tests (and where all your outputs will go), and switch to it.
 
 - From that directory, run the following command.
 
     ~~~bash
-    for i in prd2 tst soundscape
-    do
-        nohup bash /ROOT_OF_REPO/scripts/loadtest.sh DOMAIN &
-    done
+    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh tst &
     ~~~
 
-    You can check the output log file in that directory (tail it - the command takes a long time) to make sure that no errors are being reported.
+    (Note that we are testing the `tst` subdomain here, which points at your new deployment.)
 
-- You should see that all three domains are fine.
+- Check results.
+
+    - There is an output log and a detailed CSV file of results that are being generated in your test directory. You can tail these, but you should not consider the test a success until it has fully completed.
+
+    - You should see load arriving at your deployment.
+
+    - Everything should just work (TM).
 
 ### Cutting over
 
-Now you cut things over.
+Now it is time to cut the traffic over.
 
-- Go to the test route, `tst-soundscape`, and change the origin group to the new origin group. This should not cause any traffic interruption in the `tst` domain; check the logs for a few minutes. You can also sanity check instantly with
+- Change to your directory.
+
+- From that directory, run the following command.
 
     ~~~bash
-    time curl -i https://tst.soundscape.scottishtecharmy.org/tiles/16/32127/21794.json
+    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh prd2 &
+    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh soundscape &
     ~~~
 
-- If that works, cut the main route over, again ensuring that a running load test is not affected.
+    (Note that we are now testing the live domains.) Double check that the tests are running correctly from the logs. The dashboard should show traffic in Front Door Manager, but (initially) not in your deployment.
 
+- While the test is running, cut over traffic.
+
+    - Click on `Front Door manager`
+
+    - Click the `fdr-appcontainer` endpoint.
+
+    - Change the origin group to be the one for your new deployment.
+
+- You are now live! Check that everything is working correctly.
+
+    - All output logs should continue not to show any errors.
+
+    - You should see load arriving at your deployment.
+
+    - Everything should just work (TM).
