@@ -44,6 +44,12 @@ write_files:
       mkdir -p ${INGEST}/imposm3
       wget -q -O - https://github.com/omniscale/imposm3/releases/download/v$IMPOSM_BINARY_RELEASE/imposm-$IMPOSM_BINARY_RELEASE-linux-x86-64.tar.gz | tar -xz --strip-components=1 -C ${INGEST}/imposm3
 
+      # Mount disk, needed only for v6 and later NVME disks
+      mdadm --create /dev/md0 --level=0 --raid-devices=3 /dev/nvme1n1 /dev/nvme2n1 /dev/nvme3n1
+      mkfs.ext4 /dev/md0
+      mkdir -p /mnt
+      mount /dev/md0 /mnt
+
       # Download files from storage account.
       az login --identity
       az storage blob download-batch \
