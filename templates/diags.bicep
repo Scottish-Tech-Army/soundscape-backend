@@ -160,6 +160,23 @@ module functionApp './query.bicep' = {
   }
 }
 
+module vmCount './query.bicep' = {
+  name: 'vmCount'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Soundscape VM instance count'
+    queryDescription: 'Capacity and VM instance counts for the ingestion scale set'
+    query: '''
+    AppTraces
+    | where Message contains "METRIC:"
+    | extend MetricName = extract(@"METRIC: ([\w ]+):", 1, Message)
+    | extend Value = toint(extract(@"METRIC: [\w ]+: (\d+)", 1, Message))
+    | extend Time = bin(TimeGenerated, 60m)
+    | evaluate pivot(MetricName, max(Value), Time)
+    '''
+  }
+}
+
 module frontDoor './query.bicep' = {
   name: 'frontDoor'
   params: {
@@ -198,6 +215,32 @@ module frontDoor './query.bicep' = {
               MeanResponseSize, MeanTotalLatency, MaxTotalLatency,
               MeanOriginLatency, MaxOriginLatency
     | order by TimeGenerated desc
+    '''
+  }
+}
+
+module frontDoorAccessLogSummary './query.bicep' = {
+  name: 'frontDoorAccessLogSummary'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Soundscape Front Door Access Log summary'
+    queryDescription: 'Front door access logs'
+    query: '''
+    AzureDiagnostics
+    | where Category == "FrontDoorAccessLog"
+    | extend User = strcat(clientIp_s, ":", clientPort_s)
+    | extend Time = bin(TimeGenerated, 24h)
+    | summarize
+        RequestCount = count(),
+        UserCount = dcount(User)
+        by Time, clientCountry_s, sni_s
+    | project
+        Time,
+        Country = clientCountry_s,
+        Domain = sni_s,
+        RequestCount,
+        UserCount
+    | order by Time desc
     '''
   }
 }
