@@ -228,6 +228,7 @@ module frontDoorAccessLogSummary './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
+    | where requestUri_s contains "tiles"
     | extend User = strcat(clientIp_s, ":", clientPort_s)
     | extend Time = bin(TimeGenerated, 24h)
     | summarize

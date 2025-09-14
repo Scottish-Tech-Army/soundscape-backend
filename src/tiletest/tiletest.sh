@@ -12,4 +12,3 @@ fi
 python tiletest.py \
     ${OUTPUT_DIR} --shuffle --sleep 5 \
     --base-url ${TILESRV_APP_URL}
-
