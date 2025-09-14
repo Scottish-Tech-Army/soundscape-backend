@@ -25,8 +25,18 @@ def vmcount(timer: func.TimerRequest):
     instance_count = vmss.sku.capacity
     logging.info("METRIC: Current VMSS capacity: %d", instance_count)
 
-    instances = list(client.virtual_machine_scale_set_vms.list(rg, vmss_name))
-    running_instances = [vm for vm in instances if vm.instance_view.statuses and any(
-        s.code == 'PowerState/running' for s in vm.instance_view.statuses)]
-    logging.info("METRIC: Live instance count: %d", len(running_instances))
-    logging.info("METRIC: Total instance count: %d", len(instances))
+    try:
+        instances = list(client.virtual_machine_scale_set_vms.list(rg, vmss_name))
+        instance_count = len(instances)
+
+        running_count = 0
+        for vm in instances:
+            iview = client.virtual_machine_scale_set_vms.get_instance_view(rg, vmss_name, vm.instance_id)
+            if iview.statuses and any(s.code == 'PowerState/running' for s in iview.statuses):
+                running_count += 1
+
+        logging.info("METRIC: Total instance count: %d", instance_count)
+        logging.info("METRIC: Live instance count: %d", running_count)
+    except Exception as e:
+        logging.error("Error fetching VM instances: %s", str(e))
+        return
