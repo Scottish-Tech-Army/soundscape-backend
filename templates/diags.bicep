@@ -241,7 +241,23 @@ module frontDoorAccessLogSummary './query.bicep' = {
         Domain = sni_s,
         RequestCount,
         UserCount
-    | order by Time desc
+    | order by Time desc, Country asc
+    '''
+  }
+}
+
+module frontDoorAccessLogErrors './query.bicep' = {
+  name: 'frontDoorAccessLogErrors'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Soundscape Front Door Errors'
+    queryDescription: 'Front door errors from access logs'
+    query: '''
+    AzureDiagnostics
+    | where Category == "FrontDoorAccessLog"
+    | where httpStatusCode_s != 200
+    | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s
+    | order by TimeGenerated asc
     '''
   }
 }
