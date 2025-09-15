@@ -192,27 +192,26 @@ resource vnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06
 }
 
 // Database
-resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
+// https://learn.microsoft.com/en-us/azure/templates/microsoft.dbforpostgresql/flexibleservers
+resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2025-06-01-preview' = {
   name: dbServiceName
   location: resourceGroup().location
   sku: {
     name: 'Standard_D2ds_v5' // 2 vCPU, 8GB RAM
     tier: 'GeneralPurpose'
-    //name: 'B2ms' // Cheaper, but unlikely to handle load
-    //tier: 'Burstable'
   }
   properties: {
-    version: '15'
+    version: '16'
     replica: {
       role: 'Primary'
     }
     storage: {
-      storageSizeGB: 512 // It would be nicer to use less and let it grow, but if we make it too small, then it stops being idempotent as it cannot shrink
-      // For some reason, this does not work, so sticking with regular premium SSD
-      //iops: 3000
-      //throughput: 125
-      //type: 'PremiumV2_LRS' // Enables Premium SSD v2, which is cheaper
-      autoGrow: 'Enabled'
+      storageSizeGB: 800
+      iops: 12000
+      throughput: 500
+      // https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/concepts-storage-premium-ssd-v2
+      type: 'PremiumV2_LRS' // Enables Premium SSD v2, which is cheaper
+      //autoGrow: 'Enabled' // Not supported for Premium SSD v2
     }
     network: {
       privateDnsZoneArmResourceId: pgDnsZone.id
