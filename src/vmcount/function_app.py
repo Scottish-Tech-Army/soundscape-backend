@@ -14,13 +14,29 @@ def vmcount(timer: func.TimerRequest):
     client_id = os.environ["UAMI_CLIENT_ID"]
     subscription_id = os.environ["AZURE_SUBSCRIPTION_ID"]
     rg = os.environ["VMSS_RESOURCE_GROUP"]
-    vmss = os.environ["VMSS_NAME"]
+    vmss_name = os.environ["VMSS_NAME"]
 
     client = ComputeManagementClient(
         credential=ManagedIdentityCredential(client_id=client_id),
         subscription_id=subscription_id
     )
 
-    vmss = client.virtual_machine_scale_sets.get(rg, vmss)
+    vmss = client.virtual_machine_scale_sets.get(rg, vmss_name)
     instance_count = vmss.sku.capacity
     logging.info("METRIC: Current VMSS capacity: %d", instance_count)
+
+    try:
+        instances = list(client.virtual_machine_scale_set_vms.list(rg, vmss_name))
+        instance_count = len(instances)
+
+        running_count = 0
+        for vm in instances:
+            iview = client.virtual_machine_scale_set_vms.get_instance_view(rg, vmss_name, vm.instance_id)
+            if iview.statuses and any(s.code == 'PowerState/running' for s in iview.statuses):
+                running_count += 1
+
+        logging.info("METRIC: Total instance count: %d", instance_count)
+        logging.info("METRIC: Live instance count: %d", running_count)
+    except Exception as e:
+        logging.error("Error fetching VM instances: %s", str(e))
+        return

@@ -7,7 +7,7 @@ echo "DIAGSRG: ${DIAGSRG}"
 cd "$(dirname "$0")/.."
 
 # Create the group
-az group create --location ${REGION} --resource-group ${DIAGSRG}
+az group create --location ${DIAGSREGION} --resource-group ${DIAGSRG}
 
 # Before running this, you must be logged into your account, with the correct subscription selected.
 az deployment group create \

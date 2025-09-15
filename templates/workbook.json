@@ -1,16 +1,80 @@
 {
     "version": "Notebook/1.0",
+    "parameters": {
+        "timeRange": {
+        "name": "timeRange",
+        "type": "TimeRange",
+        "value": "@Dashboard"
+        }
+    },
     "items": [
+        {
+        "type": 9,
+        "content": {
+            "version": "KqlParameterItem/1.0",
+            "parameters": [
+            {
+                "id": "e615d12e-e0bc-4dd9-80ab-a5b9d4ca8aa5",
+                "version": "KqlParameterItem/1.0",
+                "name": "TimeRange",
+                "label": "Time range picker",
+                "type": 4,
+                "isRequired": true,
+                "typeSettings": {
+                "selectableValues": [
+                    {
+                    "durationMs": 1800000
+                    },
+                    {
+                    "durationMs": 3600000
+                    },
+                    {
+                    "durationMs": 14400000
+                    },
+                    {
+                    "durationMs": 43200000
+                    },
+                    {
+                    "durationMs": 86400000
+                    },
+                    {
+                    "durationMs": 172800000
+                    },
+                    {
+                    "durationMs": 259200000
+                    },
+                    {
+                    "durationMs": 604800000
+                    },
+                    {
+                    "durationMs": 2592000000
+                    }
+                ],
+                "allowCustom": true
+                },
+                "timeContext": {
+                "durationMs": 86400000
+                },
+                "value": {
+                "durationMs": 604800000
+                }
+            }
+            ],
+            "style": "pills",
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces"
+        },
+        "name": "parameters - 2"
+        },
         {
             "type": 3,
             "content": {
                 "version": "KqlItem/1.0",
-                "query": "AppTraces\n| order by TimeGenerated\n| where Message contains \"Current VMSS capacity\"\n| project TimeGenerated, Message\n| extend Capacity = toint(extract(@\"METRIC: Current VMSS capacity: (\\d+)\", 1, Message))\n",
+                "query": "{{QUERY}}",
                 "size": 0,
                 "aggregation": 2,
-                "timeContext": {
-                    "durationMs": 86400000
-                },
+                "title": "VM instance counts",
+                "timeContextFromParameter": "TimeRange",
                 "queryType": 0,
                 "resourceType": "microsoft.operationalinsights/workspaces",
                 "crossComponentResources": [
@@ -33,12 +97,8 @@
                 ],
                 "chartSettings": {
                     "xAxis": "TimeGenerated",
-                    "yAxis": [
-                        "Capacity"
-                    ],
-                    "showMetrics": false,
                     "ySettings": {
-                        "max": 2
+                        "max": 1
                     }
                 }
             },

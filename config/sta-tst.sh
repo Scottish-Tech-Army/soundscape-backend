@@ -1,18 +1,17 @@
 # Parameters in use
-export PREFIX=p01
+export PREFIX=xac
 export RG=rg-${PREFIX}
-export REGION=uksouth
+export REGION=northeurope # UK south does not support the cheaper disk types
 export REGISTRYNAME=acrsspdevuks
 export REGISTRYRG=rg-ssp-shared-dev-uks
 export VERSION=v1.0
 
 # Globally unique function app name, used in both bicep and in scripts
 # A good way to generate this is "date | md5sum | head -c 20 && echo"
-export UNIQUESTRING=fe6971508913740178df   # Ensure globally unique
+export UNIQUESTRING=8f1afdcde8e92f13dd85  # Ensure globally unique
 export STORAGENAME=${UNIQUESTRING}
 export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
 export METRICAPPNAME=vmcount-${UNIQUESTRING}
-
 
 # Global shared diagnostics viewing tooling
 export DIAGSREGION=uksouth

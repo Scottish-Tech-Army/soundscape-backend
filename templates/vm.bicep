@@ -14,8 +14,6 @@ param storageName string
 // Variables that could probably be changed
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
 param genRegions string = 'planet'
-//param genRegions string = 'europe'
-//param genRegions string = 'canada'
 
 // From here on, things that never change, so just vars
 @description('ssh key')
@@ -41,12 +39,8 @@ var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup
 var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id)}'
 
 @description('VM size supporting ephemeral NVMe OS disk')
-//var vmSize string = 'Standard_L8s_v3'
-//var vmSize string = 'Standard_L8s'
-//var vmSize string = 'Standard_E4ds_v4'
-//var vmSize string = 'Standard_E8ds_v4'
-//var vmSize string = 'Standard_E16ds_v4'
-var vmSize string = 'Standard_E20ds_v5'
+//var vmSize string = 'Standard_E20ds_v5' // Best if no spot
+var vmSize string = 'Standard_E20ds_v6' // For spot instances
 
 @description('VMSS name')
 var vmssName string = 'ingest-vmss'
@@ -55,7 +49,7 @@ var vmssName string = 'ingest-vmss'
 var adminUsername string = 'azureuser'
 
 @description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
-var triggerSchedule string = '0 0 10 * * 1'
+var triggerSchedule string = '0 0 16 * * 0'
 
 @description('Metric schedule in cron format, e.g. "*/5 * * * *" for every five minutes')
 var metricSchedule string = '*/5 * * * *'
@@ -136,7 +130,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           caching: 'ReadOnly'
           diffDiskSettings: {
             option: 'Local' // Ephemeral OS on NVMe
-            placement: 'ResourceDisk' // Needs to be CacheDisk (the default) for v4 SKUs
+            placement: 'NVMeDisk'
           }
         }
         imageReference: {
@@ -145,6 +139,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           sku:       'server'
           version:   'latest'
         }
+        diskControllerType: 'NVMe'
       }
       osProfile: {
         computerNamePrefix: 'ingest'
@@ -188,13 +183,9 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           }
         ]
       }
-      // priority: 'Spot' // xxx reinstate for spot
-      // evictionPolicy: 'Delete' // xxx reinstate for spot
+      priority: 'Spot' // Spot instance to save money
+      evictionPolicy: 'Delete' // If evicted, get rid of disks etc. completely; note that spotRestorePolicy is not set, so VMSS won't try to bring it back automatically
     }
-    // spotRestorePolicy: {  // xxx reinstate for spot
-    //   enabled: true
-    //   restoreTimeout: 'PT1H'
-    // }
   }
   identity: {
     type: 'UserAssigned'
@@ -275,7 +266,7 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
       }
     }
 
-    // 2) Point log files data source at that stream.
+    // 2) Point log files data source at that stream, and add perf counters
     dataSources: {
       logFiles: [
         {
@@ -289,6 +280,42 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
             text: { recordStartTimestampFormat: 'YYYY-MM-DD HH:MM:SS' }
           }
           streams: ['Custom-IngestLogs']
+        }
+      ]
+      performanceCounters: [
+        {
+          name: 'linuxPerfCounters'
+          streams: ['Microsoft-Perf']
+          samplingFrequencyInSeconds: 60
+          counterSpecifiers: [
+            // CPU
+            'Processor(*)\\% Processor Time'
+            'Processor(*)\\% User Time'
+            'Processor(*)\\% Privileged Time'
+            'Processor(*)\\Interrupts/sec'
+
+            // Memory
+            'Memory\\Available MBytes'
+            'Memory\\Pages/sec'
+            'Memory\\Page Faults/sec'
+            'Memory\\% Committed Bytes In Use'
+
+            // Disk
+            'LogicalDisk(*)\\% Free Space'
+            'LogicalDisk(*)\\Disk Transfers/sec'
+            'LogicalDisk(*)\\Disk Reads/sec'
+            'LogicalDisk(*)\\Disk Writes/sec'
+            'LogicalDisk(*)\\Avg. Disk sec/Transfer'
+            'LogicalDisk(*)\\Avg. Disk Queue Length'
+
+            // Network
+            'Network Interface(*)\\Bytes Total/sec'
+            'Network Interface(*)\\Packets/sec'
+            'Network Interface(*)\\Bytes Received/sec'
+            'Network Interface(*)\\Bytes Sent/sec'
+            'Network Interface(*)\\Packets Received/sec'
+            'Network Interface(*)\\Packets Sent/sec'
+          ]
         }
       ]
     }
@@ -306,11 +333,17 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
     // 4) Map stream to workspace.
     dataFlows: [
       {
-        streams:      ['Custom-IngestLogs']
+        streams: ['Custom-IngestLogs']
         destinations: ['workspace']
         outputStream: 'Custom-IngestLogs_CL'
       }
+      {
+        streams: ['Microsoft-Perf']
+        destinations: ['workspace']
+      }
     ]
+
+
   }
 }
 
@@ -553,9 +586,18 @@ resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
 }
 
 // Workbook that displays VMSS count
+@description('Escaped KQL query to use')
+var kqlQuery = loadTextContent('../build/vmquery-escaped.txt')
+@description('Raw JSON workbook')
 var rawJson = loadTextContent('workbook.json')
-var serializedData = replace(rawJson, '{{LAW_ID}}', logAnalytics.id)
+var tmpJson1 = replace(rawJson, '{{LAW_ID}}', logAnalytics.id)
+@description('JSON workbook with substitutions')
+var serializedData = replace(tmpJson1, '"{{QUERY}}"', kqlQuery)
 var workbookDisplayName = '${prefix}-vmss-counter'
+output kqlQueryOut string = kqlQuery
+output rawJsonOut string = rawJson
+output tmpJson1Out string = tmpJson1
+output serializedDataOut string = serializedData
 
 resource workbook 'microsoft.insights/workbooks@2022-04-01' = {
   name: guid(resourceGroup().id, workbookDisplayName)
@@ -1080,23 +1122,37 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 }
                 {
                   name: 'PinName'
-                  value: 'p01-vmss-counter'
+                  value: 'VM instance counts'
                   isOptional: true
                 }
                 {
                   // The alert user will notice that this ends up being duplicated between workbook and dashboard. That's poor, but we just let it be.
                   name: 'StepSettings'
-                  value: '{"version":"KqlItem/1.0","query":"AppTraces\\n| order by TimeGenerated\\n| where Message contains \\"Current VMSS capacity\\"\\n| extend Capacity = toint(extract(@\\"METRIC: Current VMSS capacity: (\\\\d+)\\", 1, Message))\\n| project TimeGenerated, Capacity\\n","size":0,"aggregation":2,"title":"VM instance count","timeContext":{"durationMs":86400000},"queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-p01/providers/Microsoft.OperationalInsights/workspaces/p01-law-kxz6u7lykfofw"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","yAxis":["Capacity"],"seriesLabelSettings":[{"seriesName":"Capacity","label":"VM instance count"}],"ySettings":{"max":1,"label":""}}}'
+                  value: '{"version":"KqlItem/1.0","query":${kqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{"max":1}}}'
                   isOptional: true
                 }
                 {
                   name: 'ParameterValues'
-                  value: {}
+                  value: {
+                    TimeRange: {
+                      type: 4
+                      value: {
+                        durationMs: 86400000
+                      }
+                      isPending: false
+                      isWaiting: false
+                      isFailed: false
+                      isGlobal: false
+                      labelValue: 'Last 24 hours'
+                      displayName: 'Time range picker'
+                      formattedValue: 'Last 24 hours'
+                    }
+                  }
                   isOptional: true
                 }
                 {
                   name: 'Location'
-                  value: 'uksouth'
+                  value: resourceGroup().location
                   isOptional: true
                 }
               ]

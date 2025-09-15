@@ -14,6 +14,9 @@ pushd src/ingest
 tar -zcvf ../../build/files.tgz requirements-ingest.txt ingest.py tilefunc.sql postgis-vt-util.sql config.json mapping.yml extracts/ ../tiletest/
 popd
 
+# Build the escaped query file.
+jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
+
 # Returns both key1 and key2; pick either
 echo "Getting storage account key"
 ACCOUNT_KEY=$(az storage account keys list \

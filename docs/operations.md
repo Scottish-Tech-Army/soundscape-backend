@@ -10,19 +10,29 @@ The deployment process creates a dashboard, named after the resource group as `r
 
 - Count of tile server instances and of trigger instances running.
 
-- Requests handled by Front Door (whether reaching this deployment or another one).
+- Requests handled by Front Door (whether reaching this deployment instance or another one). "Total" is the number reaching Front Door, while "Origin" is the number forwarded on to the back end instance.
 
-- Front Door latency
+- Front Door latency averages.
 
-- Count of VMs running. This should be zero unless an ingestion is occurring.
+- Count of VM instances. There are three counters covering the following.
+
+    - Capacity (how many VMs the VMSS is configured to run - zero normally, one when an ingestion is occurring).
+
+    - Total instances (how many VMs the VMSS actually has). This may differ from capacity if a spot instance has failed, or if the VMSS is in the middle of scaling.
+
+    - Live instances (how many VMs the VMSS actually has that are running normally). This may differ from total instances only if a VM has failed, or is in the process of starting up.
+
+    Generally, all three values should be zero, except when an ingestion occurs when they should all increase to one then return to zero after a few (typically ten) hours.
 
 - Database CPU and memory usage.
 
 - Database storage usage.
 
+Most of this data can be viewed in the detailed monitoring queries below, with more information.
+
 ## Detailed monitoring
 
-All of the requests below are stored in a deployed query pack. To view them, do the following.
+All of the requests listed here are stored in a deployed query pack. To view them, do the following.
 
 - In the [Azure portal](https://portal.azure.com), find the resource group.
 
@@ -52,6 +62,10 @@ When running, the ingestion VM runs a performance test to validate that all is w
 
 - `Soundscape detailed list of perf errors`: a detailed view of every request that failed.
 
+You can see how many VMs were running and when using the following.
+
+- `Soundscape VM instance count`: a view of VM capacity and instance counts over time.
+
 ### Tile server
 
 The tile server has a range of logs.
@@ -72,4 +86,7 @@ Unlike the other logs, the Front Door logs do not appear in the log analytics wo
 
 - `Soundscape Front Door metrics`: this shows an hourly summary of incoming traffic to Front Door.
 
-Note that full access logs are not available for Front Door; this is to save what is probably a tiny amount of money.
+- `Soundscape Front Door Access Log summary`: this shows a daily summary of incoming traffic, with counts based on parsed into country, URL, and unique users.
+
+- `Soundscape Front Door Errors`: this shows errors returned to clients by Front Door. Some number of 404 errors (for invalid URLs) and 499s (for client connection loss) are expected.
+
