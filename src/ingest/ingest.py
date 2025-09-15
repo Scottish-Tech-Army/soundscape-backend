@@ -84,22 +84,13 @@ def check_table(cursor, name, schema):
 
 def fetch_extracts(config, extracts):
     logger.info('Fetch extracts: %s', extracts)
-    fetched = False
     for e in extracts:
-        fetched_extract = fetch_extract(config, e['url'])
-        fetched = fetched or fetched_extract
+        fetch_extract(config, e['url'])
     logger.info('Fetch extracts completed')
-    return fetched
 
 def fetch_extract(config, url):
-    # Fetch an extract, which may already be present
+    # Fetch an extract
     local_pbf = os.path.join(f"{config.basedir}/{PBF_DIR}", os.path.basename(url))
-    logger.info('Fetching %s', url)
-
-    try:
-        before_token = os.path.getmtime(local_pbf)
-    except OSError:
-        before_token = None
 
     try:
         # We set a connection and data timeout of 15 and 60 respectively
@@ -115,14 +106,6 @@ def fetch_extract(config, url):
         raise
 
     logger.info('Download complete for %s', local_pbf)
-    if before_token == after_token:
-        return False
-    else:
-        return True
-
-def first_pbf_import(config, osm_extracts):
-    pbf_download_complete = fetch_extracts(config, osm_extracts)
-    return pbf_download_complete
 
 def connect_to_postgresdb(dsn):
     try:
@@ -174,10 +157,13 @@ def import_write(config):
     Write the OSM tables to the database. Note that these are not live data
     until they are rotated later.
     """
-    logger.info('Writing of OSM tables (incremental: %s): START', config.inc)
     dsn = make_osm_dsn()
     dsn_url = get_url_dsn(dsn)
-    logger.info('DSN URL: %s', dsn_url)
+
+    logger.info('Delete old backups if they exist')
+    delete_backup_tables(config, dsn_url)
+
+    logger.info('Writing of OSM tables (incremental: %s): START', config.inc)
     imposm_args = [
         config.imposm, 'import',
         '-mapping', config.mapping,
@@ -211,26 +197,27 @@ def import_rotate(config):
         imposm_args.extend(['-diff', '-diffdir', f"{config.basedir}/{DIFF_DIR}"])
     logger.info('Running command: %s', ' '.join(imposm_args))
     subprocess.run(imposm_args, check=True)
+
+    # Clean up backup tables
+    delete_backup_tables(config, dsn_url)
     logger.info('Table rotation: DONE')
 
-def run_diffs(config):
-    logger.info('Running diffs with imposm')
-    # config.json controls where the diffs are downloaded from and how often it runs (1h)
-    dsn = make_osm_dsn()
-    dsn_url = get_url_dsn(dsn)
-    logger.info('Diffs run - STARTED')
-    imposm_args = [config.imposm, 'run',
-                   '-config', config.config,
-                   '-mapping', config.mapping,
-                   '-connection', dsn_url,
-                   '-srid', '4326',
-                   '-cachedir', f"{config.basedir}/{CACHE_DIR}",
-                   '-diffdir', f"{config.basedir}/{DIFF_DIR}",
-                   '-expiretiles-dir', f"{config.basedir}/{EXPIRE_DIR}",
-                   '-expiretiles-zoom', '16']
-    logger.info('Running command: %s', ' '.join(imposm_args))
+def delete_backup_tables(config, dsn_url):
+    """
+    Remove old backup tables.
+
+    imposm creates these, but they just take up space and we never use them, so delete them.
+    """
+    logger.info('Deleting backup tables')
+    imposm_args = [
+        config.imposm, 'import',
+            '-mapping', config.mapping,
+            '-connection', dsn_url,
+            '-removebackup'
+        ]
+    logger.info('Backup deletion command: %s', ' '.join(imposm_args))
     subprocess.run(imposm_args, check=True)
-    logger.info('Diffs run - DONE')
+    logger.info('Backup tables deleted')
 
 def connect_to_osmdb(dsn, config, osm_extracts):
     """
@@ -244,19 +231,15 @@ def connect_to_osmdb(dsn, config, osm_extracts):
         provision_database(dsn_init, dsn)
 
         logger.info('Provisioning database complete - downloading')
-        download_complete = first_pbf_import(config, osm_extracts)
+        fetch_extracts(config, osm_extracts)
 
-        if download_complete:
-            logger.info('Download complete - reading, writing to tables')
-            # Let Imposm do its stuff: read, import, write to db, rotate tables
-            import_extracts(config, osm_extracts)
-            import_write(config)
-            import_rotate(config)
-            # This deploys the .sql files onto the soundscape database
-            provision_database_soundscape(dsn)
-            # Once we've run everything we want to setup diffs
-            # We want to get the diff file(s) and run Imposm (it writes the diffs to the production table). This is managed by the settings in config.json
-            # run_diffs(config)
+        logger.info('Download complete - reading, writing to tables')
+        # Let Imposm do its stuff: read, import, write to db, rotate tables
+        import_extracts(config, osm_extracts)
+        import_write(config)
+        import_rotate(config)
+        # This deploys the .sql files onto the soundscape database
+        provision_database_soundscape(dsn)
 
     except OperationalError as e:
         logger.warning('Unable to connect to "{0}: {1}": FAILED'.format(os.environ['POSTGIS_DBNAME'], e))
