@@ -14,8 +14,6 @@ param storageName string
 // Variables that could probably be changed
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
 param genRegions string = 'planet'
-//param genRegions string = 'europe'
-//param genRegions string = 'canada'
 
 // From here on, things that never change, so just vars
 @description('ssh key')
@@ -42,7 +40,7 @@ var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id
 
 @description('VM size supporting ephemeral NVMe OS disk')
 //var vmSize string = 'Standard_E20ds_v5' // Best if no spot
-var vmSize string = 'Standard_E32ds_v6' // For spot instances
+var vmSize string = 'Standard_E20ds_v6' // For spot instances
 
 @description('VMSS name')
 var vmssName string = 'ingest-vmss'
@@ -1124,23 +1122,37 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 }
                 {
                   name: 'PinName'
-                  value: 'p01-vmss-counter'
+                  value: 'VM instance counts'
                   isOptional: true
                 }
                 {
                   // The alert user will notice that this ends up being duplicated between workbook and dashboard. That's poor, but we just let it be.
                   name: 'StepSettings'
-                  value: '{"version":"KqlItem/1.0","query":${kqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContext":{"durationMs":86400000},"queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-p01/providers/Microsoft.OperationalInsights/workspaces/p01-law-kxz6u7lykfofw"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{"max":1}}}'
+                  value: '{"version":"KqlItem/1.0","query":${kqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{"max":1}}}'
                   isOptional: true
                 }
                 {
                   name: 'ParameterValues'
-                  value: {}
+                  value: {
+                    TimeRange: {
+                      type: 4
+                      value: {
+                        durationMs: 86400000
+                      }
+                      isPending: false
+                      isWaiting: false
+                      isFailed: false
+                      isGlobal: false
+                      labelValue: 'Last 24 hours'
+                      displayName: 'Time range picker'
+                      formattedValue: 'Last 24 hours'
+                    }
+                  }
                   isOptional: true
                 }
                 {
                   name: 'Location'
-                  value: 'uksouth'
+                  value: resourceGroup().location
                   isOptional: true
                 }
               ]
