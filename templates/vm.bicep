@@ -163,6 +163,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
             name: 'nic'
             properties: {
               primary: true
+              enableAcceleratedNetworking: true
               ipConfigurations: [
                 {
                   name: 'ipconfig'

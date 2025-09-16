@@ -143,7 +143,7 @@ Your deployment still does not work, because ingestion has not occurred. You can
 
 - Click on the Azure Function app that triggers ingestion - this is the one starting `trigger-`.
 
-- Click on `ingest-manual` from the list of functions.
+- Click on the only function in the list, `ingest-timer`.
 
 - In the `Code&Test` blade, click on `Test/Run`
 
@@ -165,13 +165,23 @@ To change over your deployment, perform the following steps.
 
     - Name it after your deployment. For example, the `pNN` deployment can sensibly be named `pNN-tilesrv`.
 
-    - Single Origin within it, which should be your Azure Container App (select `Container App` as the title, and pick the container app URL from the list).
+    - Add a single Origin within it.
+
+        - `Name` does not matter, but `pNN-container-app` is a sensible choice.
+
+        - `Origin Type` should be `Container Apps` from the dropdown.
+
+        - `Host name` should be the URL of the correct Azure Container App - if you have set the type correctly above, there is a dropdown list of valid Container Apps. Make sure you pick the one from your new instance, the one starting `pNN`.
+
+        - Disable `Certificate subject name validation`
+
+        - Leave the Origin enabled, and with everything else left as the defaults.
 
     - Allow HTTP health probes on the `/metrics` path.
 
     - Within the origin, do *not* enable subject name validation.
 
-- There should be two live endpoints, one for live traffic `fdr-appcontainer` and one for test traffic `tst.soundscape.scottishtecharmy.org`. Within each of these there are be routes.
+- The Front Door instance already has two live endpoints, one for live traffic `fdr-appcontainer` and one for test traffic `tst.soundscape.scottishtecharmy.org`. Within each of these there is a single route.
 
     - You should not need to change any routes, but for reference the matching pattern must be `/tiles/*`, with origin path `/` (so `/tiles` requests go to the root on the tile server app).
 
