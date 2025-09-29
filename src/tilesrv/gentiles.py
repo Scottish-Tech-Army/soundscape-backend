@@ -127,8 +127,8 @@ tile_query = """
     SELECT * from soundscape_tile(%(zoom)s, %(tile_x)s, %(tile_y)s)
 """
 
-# Set timeout to 15 seconds, necessary for some urban areas with dense infrastructure
-timeout_set = "set statement_timeout=15000"
+# Set timeout to 20 seconds. It sometimes seems that the DB is just very slow without obvious reason
+timeout_set = "set statement_timeout=20000"
 
 def tile_name(zoom, x, y,):
     return '{0}/{1}/{2}.json'.format(zoom, x, y)
