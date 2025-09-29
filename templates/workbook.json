@@ -73,7 +73,7 @@
                 "query": "{{QUERY}}",
                 "size": 0,
                 "aggregation": 2,
-                "title": "VM instance counts",
+                "title": "{{TITLE}}",
                 "timeContextFromParameter": "TimeRange",
                 "queryType": 0,
                 "resourceType": "microsoft.operationalinsights/workspaces",

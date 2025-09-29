@@ -257,7 +257,7 @@ module frontDoorAccessLogErrors './query.bicep' = {
     | where Category == "FrontDoorAccessLog"
     | where httpStatusCode_s != 200
     | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s
-    | order by TimeGenerated asc
+    | order by TimeGenerated desc
     '''
   }
 }
