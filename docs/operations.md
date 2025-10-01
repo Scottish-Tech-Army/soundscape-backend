@@ -90,5 +90,7 @@ Unlike the other logs, the Front Door logs do not appear in the log analytics wo
 
 - `Soundscape Front Door Access Log summary`: this shows a daily summary of incoming traffic, with counts based on parsed into country, URL, and unique users.
 
-- `Soundscape Front Door Errors`: this shows errors returned to clients by Front Door. Some number of 404 errors (for invalid URLs) and 499s (for client connection loss) are expected.
+- `Soundscape Front Door Access Logs`: this shows all access logs from Front Door, with some useful information.
+
+- `Soundscape Front Door Errors`: this is a subset of the access log view that only shows errors.
 
