@@ -103,6 +103,8 @@ Follow the following steps. Note that some of the scripts here take quite some t
     bash scripts/deploy.sh
     ~~~
 
+    *Very occasionally this fails with an error reporting `PrincipalNotFound`. If this occurs, just rerun the command. This is an intermittent timing issue caused by a managed identity being assigned a role before Entra has propagated its creation, and is resolved when the command is rerun.*
+
 - Run the VM deployment script. This deploys all the peripheral (but necessary) components, including ingestion tooling, function apps, and dashboards.
 
     ~~~bash
@@ -113,6 +115,12 @@ Follow the following steps. Note that some of the scripts here take quite some t
 
     ~~~bash
     bash scripts/functionapp.sh
+    ~~~
+
+- Clear out temporary build files. This is optional, but it avoids having random built artefacts lying around cluttering up the disk.
+
+    ~~~bash
+    bash scripts/code_clean.sh
     ~~~
 
 ## Deploying log queries
@@ -154,6 +162,8 @@ Your deployment still does not work, because ingestion has not occurred. You can
 The ingestion will take around 8-10 hours. To monitor its progress, check the dashboard and the ingestion logs as described in the [operations document](operations.md).
 
 ## Switching over to your deployment
+
+Having followed this process, you should cut traffic over to the new backend instance, which can be done as follows.
 
 ### Setting up Azure Front Door
 

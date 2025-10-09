@@ -207,7 +207,7 @@ resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2025-06-01-preview
     }
     storage: {
       // For Premium SSD v1, remove iops and throughput, and turn autoGrow back on
-      storageSizeGB: 850
+      storageSizeGB: 500
       iops: 12000
       throughput: 500
       // https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/concepts-storage-premium-ssd-v2

@@ -14,6 +14,12 @@ The deployment process creates a dashboard, named after the resource group as `r
 
 - Front Door latency averages.
 
+- Front Door error counts. These are of two categories - *Invalid requests* which are caused by script kiddies and crawlers, and are expected to fail, and *Valid requests* which are not expected to fail.
+
+- Database CPU and memory usage.
+
+- Database storage usage.
+
 - Count of VM instances. There are three counters covering the following.
 
     - Capacity (how many VMs the VMSS is configured to run - zero normally, one when an ingestion is occurring).
@@ -23,10 +29,6 @@ The deployment process creates a dashboard, named after the resource group as `r
     - Live instances (how many VMs the VMSS actually has that are running normally). This may differ from total instances only if a VM has failed, or is in the process of starting up.
 
     Generally, all three values should be zero, except when an ingestion occurs when they should all increase to one then return to zero after a few (typically ten) hours.
-
-- Database CPU and memory usage.
-
-- Database storage usage.
 
 Most of this data can be viewed in the detailed monitoring queries below, with more information.
 
@@ -88,5 +90,7 @@ Unlike the other logs, the Front Door logs do not appear in the log analytics wo
 
 - `Soundscape Front Door Access Log summary`: this shows a daily summary of incoming traffic, with counts based on parsed into country, URL, and unique users.
 
-- `Soundscape Front Door Errors`: this shows errors returned to clients by Front Door. Some number of 404 errors (for invalid URLs) and 499s (for client connection loss) are expected.
+- `Soundscape Front Door Access Logs`: this shows all access logs from Front Door, with some useful information.
+
+- `Soundscape Front Door Errors`: this is a subset of the access log view that only shows errors.
 

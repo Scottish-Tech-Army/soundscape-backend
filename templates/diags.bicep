@@ -246,6 +246,21 @@ module frontDoorAccessLogSummary './query.bicep' = {
   }
 }
 
+module frontDoorAccessLogs './query.bicep' = {
+  name: 'frontDoorAccessLogs'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Soundscape Front Door Access Logs'
+    queryDescription: 'All Front Door access logs'
+    query: '''
+    AzureDiagnostics
+    | where Category == "FrontDoorAccessLog"
+    | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
+    | order by TimeGenerated desc
+    '''
+  }
+}
+
 module frontDoorAccessLogErrors './query.bicep' = {
   name: 'frontDoorAccessLogErrors'
   params: {
@@ -256,8 +271,8 @@ module frontDoorAccessLogErrors './query.bicep' = {
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
     | where httpStatusCode_s != 200
-    | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s
-    | order by TimeGenerated asc
+    | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
+    | order by TimeGenerated desc
     '''
   }
 }

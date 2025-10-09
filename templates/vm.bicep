@@ -32,6 +32,12 @@ var keyVaultName string = '${prefix}-vlt-${uniqueString(resourceGroup().id)}'
 @description('Log Analytics workspace name')
 var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
 
+@description('Shared Log Analytics workspace name')
+var sharedLogAnalyticsWorkspaceName string = 'shared-691d6eaf8fcbac9533caaaf5116944f5'
+
+@description('Shared RG')
+var sharedRGName = 'rg-ssp-shared-dev-uks'
+
 @description('App insights name')
 var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
 
@@ -71,6 +77,12 @@ resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' exis
 // Get LA workspace
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: logAnalyticsWorkspaceName
+}
+
+// Get shared LA workspace
+resource sharedLogAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
+  name: sharedLogAnalyticsWorkspaceName
+  scope: resourceGroup(sharedRGName)
 }
 
 // Application Insights
@@ -586,30 +598,28 @@ resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   }
 }
 
-// Workbook that displays VMSS count
-@description('Escaped KQL query to use')
-var kqlQuery = loadTextContent('../build/vmquery-escaped.txt')
-@description('Raw JSON workbook')
-var rawJson = loadTextContent('workbook.json')
-var tmpJson1 = replace(rawJson, '{{LAW_ID}}', logAnalytics.id)
-@description('JSON workbook with substitutions')
-var serializedData = replace(tmpJson1, '"{{QUERY}}"', kqlQuery)
-var workbookDisplayName = '${prefix}-vmss-counter'
-output kqlQueryOut string = kqlQuery
-output rawJsonOut string = rawJson
-output tmpJson1Out string = tmpJson1
-output serializedDataOut string = serializedData
+var vmKqlQuery = loadTextContent('../build/vmquery-escaped.txt')
+var errorKqlQuery = loadTextContent('../build/error-escaped.txt')
 
-resource workbook 'microsoft.insights/workbooks@2022-04-01' = {
-  name: guid(resourceGroup().id, workbookDisplayName)
-  location: resourceGroup().location
-  kind: 'shared'
-  properties: {
-    displayName: workbookDisplayName
-    serializedData: serializedData
-    version: '1.0'
-    sourceId: 'azure monitor'
-    category: 'workbook'
+// Workbook for VMSS metrics
+module vmWorkbook './workbook.bicep' = {
+  name: 'vmWorkbook'
+  params: {
+    kqlQuery: vmKqlQuery
+    title: 'VM Instance Counts'
+    logAnalyticsId: logAnalytics.id
+    workbookDisplayName: '${prefix}-vmss-counter'
+  }
+}
+
+// Workbook for FrontDoor errors
+module errorWorkbook './workbook.bicep' = {
+  name: 'errorWorkbook'
+  params: {
+    kqlQuery: errorKqlQuery
+    title: 'VM Instance Counts'
+    logAnalyticsId: sharedLogAnalytics.id
+    workbookDisplayName: '${prefix}-error-counter'
   }
 }
 
@@ -1108,7 +1118,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 }
                 {
                   name: 'ConfigurationId'
-                  value: workbook.id
+                  value: errorWorkbook.outputs.id
                   isOptional: true
                 }
                 {
@@ -1123,13 +1133,92 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 }
                 {
                   name: 'PinName'
-                  value: 'VM instance counts'
+                  value: errorWorkbook.outputs.title
                   isOptional: true
                 }
                 {
-                  // The alert user will notice that this ends up being duplicated between workbook and dashboard. That's poor, but we just let it be.
                   name: 'StepSettings'
-                  value: '{"version":"KqlItem/1.0","query":${kqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{"max":1}}}'
+                  // Aggregation 0 is Sum, 1 is Min, 2 is Max, 3 is Avg, 4 is First, 5 is Last
+                  value: '{"version":"KqlItem/1.0","query":${errorKqlQuery},"size":0,"aggregation":0,"title":"Error counts","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${sharedLogAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated"}}'
+                  isOptional: true
+                }
+                {
+                  name: 'ParameterValues'
+                  value: {
+                    TimeRange: {
+                      type: 4
+                      value: {
+                        durationMs: 86400000
+                      }
+                      isPending: false
+                      isWaiting: false
+                      isFailed: false
+                      isGlobal: false
+                      labelValue: 'Last 24 hours'
+                      displayName: 'Time range picker'
+                      formattedValue: 'Last 24 hours'
+                    }
+                  }
+                  isOptional: true
+                }
+                {
+                  name: 'Location'
+                  value: resourceGroup().location
+                  isOptional: true
+                }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
+            }
+          }
+          {
+            position: {
+              x: 12
+              y: 8
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'ComponentId'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'TimeContext'
+                  value: null
+                  isOptional: true
+                }
+                {
+                  name: 'ResourceIds'
+                  value: [
+                    'azure monitor'
+                  ]
+                  isOptional: true
+                }
+                {
+                  name: 'ConfigurationId'
+                  value: vmWorkbook.outputs.id
+                  isOptional: true
+                }
+                {
+                  name: 'Type'
+                  value: 'workbook'
+                  isOptional: true
+                }
+                {
+                  name: 'GalleryResourceType'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'PinName'
+                  value: vmWorkbook.outputs.title
+                  isOptional: true
+                }
+                {
+                  name: 'StepSettings'
+                  value: '{"version":"KqlItem/1.0","query":${vmKqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{"max":1}}}'
                   isOptional: true
                 }
                 {
