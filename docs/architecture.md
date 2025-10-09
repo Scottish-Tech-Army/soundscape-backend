@@ -1,4 +1,4 @@
-# Architecture
+# iOS Architecture
 
 This repository contains code that allows the deployment of a back end for the [Soundscape iPhone app](https://apps.apple.com/gb/app/soundscape/id6459021379). The app calculates its location, converts that to OpenStreetMap tile format, and uses that to build an HTTP GET request that retrieves a JSON file of [OpenStreetMap](https://www.openstreetmap.org) data showing known locations in the area. The back end (this repository) constructs, stores, and returns that data.
 
@@ -75,3 +75,13 @@ The data in the database is downloaded and ingested from public data at [Geofabr
     - Once a week, a function app with a timer trigger increases the scale to 1, so a single VM is instantiated. This trigger can also be fired manually through the portal to force an update.
 
     - The VM when created installs and runs the ingestion jobs through cloud init. If the run is successful, the ingestion job scales the VMSS down again, and the VM disappears.
+
+# Android architecture
+
+There are three components to the Android architecture.
+
+1. There is a tileserver component that serves up tiles based on a protomap format, running in Cloudflare (but orchestrated from Azure).
+
+2. There is an offline maps download component that again runs in Cloudflare, orchestrated from Azure.
+
+3. There is a search component. This is not contained in this repository at all.

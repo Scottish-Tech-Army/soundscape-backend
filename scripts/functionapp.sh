@@ -1,5 +1,5 @@
 #!/bin/bash
-# Set up initial deployment.
+# Deploy function apps. This is used for both android and iOS deployments.
 set -euo pipefail
 echo "RG: ${RG}"
 

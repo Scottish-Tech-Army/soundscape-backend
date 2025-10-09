@@ -12,11 +12,8 @@ cd "$(dirname "$0")/.."
 az group create --location ${REGION} --resource-group ${RG}
 
 az deployment group create \
-    --resource-group ${RG} --template-file templates/deploy.bicep \
+    --resource-group ${RG} --template-file templates/androidbase.bicep \
     --parameters prefix=${PREFIX} \
-                 versionTag=${VERSION} \
-                 registryName=${REGISTRYNAME} \
-                 registryRG=${REGISTRYRG} \
                  storageName=${STORAGENAME} --debug --verbose
 
 echo "SUCCESS"

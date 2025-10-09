@@ -1,6 +1,6 @@
 # Soundscape Backend
 
-This repository contains code for the backend services for the Soundscape iPhone app running in Azure. It is structured as follows.
+This repository contains code for the backend services for the Soundscape app running in Azure. It is concerned with both iOS and Android apps.
 
 The repository is structured as follows.
 
@@ -8,9 +8,11 @@ The repository is structured as follows.
 
     - [Architecture](docs/architecture.md)
 
-    - [How to deploy the system](docs/deploy.md)
+    - [How to deploy an iOS backend](docs/iosdeploy.md)
 
-    - [Operations processes](docs/operations.md) such as debugging and testing deployments
+    - [How to deploy an Android backend](docs/androiddeploy.md)
+
+    - [Operations processes](docs/operations.md) such as debugging and testing deployments. *This is iOS only for now; TBD if it will be extended or another document created.*
 
 - [scripts](scripts) contains scripts that allow you to deploy the solution, using all of the components below.
 

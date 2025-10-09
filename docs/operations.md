@@ -44,9 +44,11 @@ All of the requests listed here are stored in a deployed query pack. To view the
 
 - Click on the `Queries` button to the left of the window.
 
-- Type in `Soundscape` in the search window. This will show all the relevant saved queries.
+- Type in `ios` or `android` in the search window. This will show all the relevant saved queries.
 
 - Click on the one you want to view, as listed below.
+
+*If the queries do not show up, this is because you have never selected the query pack. Instead of searching, click the three dots by the search window, click `Select Query Packs` and find the iOS or Android pack.*
 
 ### Ingestion VMs
 

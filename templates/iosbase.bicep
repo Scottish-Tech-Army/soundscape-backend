@@ -74,6 +74,9 @@ var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id
 @description('Name of the storage container for downloads')
 var downloadContainerName = 'downloads'
 
+@description('Name of the storage container for uploads')
+var uploadContainerName = 'uploads'
+
 // Get the UAMI from the other subscription
 resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
   name: registryUAMIName
@@ -435,6 +438,11 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
   name: 'default'
   parent: storage
+}
+
+resource uploadContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: uploadContainerName
+  parent: blobService
 }
 
 resource downloadContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {

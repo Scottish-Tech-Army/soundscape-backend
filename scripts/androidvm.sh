@@ -6,17 +6,14 @@ echo "RG: ${RG}"
 # This script must run from the parent directory of the scripts directory
 cd "$(dirname "$0")/.."
 
-# Before running this, you must be logged into your account, with the correct subscription selected.
+# Build the escaped query file.
+jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
 
 # Build the tar file of scripts
 mkdir -p build
-pushd src/ingest
-tar -zcvf ../../build/files.tgz requirements-ingest.txt ingest.py tilefunc.sql postgis-vt-util.sql config.json mapping.yml extracts/ ../tiletest/
+pushd src/pmtiles
+tar -zcvf ../../build/files.tgz *
 popd
-
-# Build the escaped query file.
-jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
-jq -Rs . templates/errorquery.txt > build/error-escaped.txt
 
 # Returns both key1 and key2; pick either
 echo "Getting storage account key"
@@ -38,7 +35,7 @@ az storage blob upload-batch \
 # Create the group
 echo "Create deployment"
 az deployment group create \
-    --resource-group ${RG} --template-file templates/vm.bicep \
+    --resource-group ${RG} --template-file templates/androidvm.bicep \
     --parameters prefix=${PREFIX} \
                  triggerAppName=${TRIGGERAPPNAME} \
                  metricAppName=${METRICAPPNAME} \

@@ -13,7 +13,6 @@ export STORAGENAME=${UNIQUESTRING}
 export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
 export METRICAPPNAME=vmcount-${UNIQUESTRING}
 
-
 # Global shared diagnostics viewing tooling
 export DIAGSREGION=uksouth
 export DIAGSRG=rg-diags

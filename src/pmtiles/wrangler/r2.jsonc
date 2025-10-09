@@ -1,0 +1,8 @@
+{
+  "r2_buckets": [
+    {
+      "bucket_name": "R2_BUCKET", // Interpolated with sed
+      "binding": "BUCKET" // Binding is never used, but required
+    }
+  ]
+}
