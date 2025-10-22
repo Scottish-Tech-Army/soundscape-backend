@@ -1,7 +1,8 @@
 {
     // Parameters for both workers
-    "name": "pmtiles",
-    "main": "dist/index.js",
+    // FIXME: make parametrisable
+    "name": "extracts",
+    "main": "streamer.js",
     "observability": {
         "enabled": true
     },
@@ -9,27 +10,29 @@
     "env": {
         // Parameters for live code
         "live": {
-            "name": "pmtiles",
+            "name": "extracts",
             "vars": {
-                "PMTILES_PATH": "${PMTILES_PATH}"
+                "ORIGIN_BASE_URL": "${EXTRACTS_URL}",
+                "CURRENT_DATESTAMP": "${DATESTAMP}"
             },
             "r2_buckets": [
                 {
                     "binding": "BUCKET",
-                    "bucket_name": "R2_BUCKET" // Interpolated with sed
+                    "bucket_name": "${EXTRACTS_BUCKET}"
                 }
             ]
         },
         // Parameters for test code
         "test": {
-            "name": "pmtiles-test",
+            "name": "extracts-test",
             "vars": {
-                "PMTILES_PATH": "${PMTILES_PATH}"
+                "ORIGIN_BASE_URL": "${EXTRACTS_URL}",
+                "CURRENT_DATESTAMP": "${DATESTAMP}"
             },
             "r2_buckets": [
                 {
                     "binding": "BUCKET",
-                    "bucket_name": "R2_BUCKET" // Interpolated with sed
+                    "bucket_name": "${EXTRACTS_BUCKET}"
                 }
             ]
         }

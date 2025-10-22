@@ -8,7 +8,8 @@ svclog "Extracts job starting"
 svclog "Creating R2 bucket"
 pushd ${BASE}/wrangler
 # Create the R2 bucket if it doesn't exist already
-sed -e "s/R2_BUCKET/${EXTRACTS_BUCKET}/g" r2.jsonc > wrangler.jsonc
+export R2_BUCKET=${EXTRACTS_BUCKET}
+envsubst < r2.jsonc > wrangler.jsonc
 wrangler r2 bucket info ${EXTRACTS_BUCKET} || wrangler r2 bucket create ${EXTRACTS_BUCKET}
 popd
 
@@ -24,16 +25,17 @@ sed -i 's|\./pmtiles|pmtiles|g' step2-generate-extracts-from-geojson.py
 python step2-generate-extracts-from-geojson.py \
     --input-tiles ${DATADIR}/${PMTILESFILE} \
     --outdir ${DATADIR}/extracts \
-    --output-geojson ${DATADIR}/extracts/manifest.geojson
+    --output-geojson ${DATADIR}/extracts/manifest.geojson \
+    --prefix "${DATESTAMP}-"
 
 # Gzip the manifest once.
 gzip ${DATADIR}/extracts/manifest.geojson
 
 cd ${DATADIR}/extracts
 
-# Upload the extracts to R2
-svclog "Copying to R2"
-rclone copy ${DATADIR}/extracts r2:${EXTRACTS_BUCKET}/${DATESTAMP} \
+# Upload all of the extracts to blob storage
+svclog "Copying to blob"
+rclone copy ${DATADIR}/extracts blob:${EXTRACTS_BUCKET}/${DATESTAMP} \
         --progress \
         --s3-upload-concurrency 32 \
         --s3-chunk-size 64M \
@@ -41,7 +43,14 @@ rclone copy ${DATADIR}/extracts r2:${EXTRACTS_BUCKET}/${DATESTAMP} \
         --retries 10 \
         --low-level-retries 20
 
-# xxx FIXME: cut over R2 routes - not implemented yet.
+svclog "Cut over worker to use extracts from ${DATESTAMP}"
+pushd ${BASE}/wrangler
+export EXTRACTS_URL="https://${EXTRACTS_STORAGE_ACCOUNT}.blob.core.windows.net/extracts" # FIXME: make parametrisable
+envsubst < extracts-worker.jsonc > wrangler.jsonc
+wrangler deploy --env test
+echo "Should do testing here - not implemented yet"
+wrangler deploy --env live
+popd
 
 # Return to wherever we started
 #. ${BASE}/bin/deactivate

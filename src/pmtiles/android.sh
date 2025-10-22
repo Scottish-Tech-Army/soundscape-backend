@@ -29,6 +29,8 @@ az storage blob upload-batch \
 --destination ${UPLOAD_CONTAINER_NAME} \
 --source ${BASE}/logs
 
+exit 0
+
 # Sleep for 600 seconds so logs are flushed. Mad overkill, but that's Azure logging delays for you.
 sleep 600
 

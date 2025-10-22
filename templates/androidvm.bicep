@@ -44,10 +44,11 @@ var downloadContainerName = 'downloads'
 @description('R2 bucket names')
 var pmtilesBucket = 'pmtiles'
 var extractsBucket = 'extracts'
+var extractsContainerName = extractsBucket // Code assumes this matches, and less confusing if so
 
 @description('Area to download - normally planet or monaco for local testing')
-var area = 'planet'
-//var area = 'monaco'
+//var area = 'planet'
+var area = 'monaco'
 
 // Get existing resources
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' existing = {
@@ -68,6 +69,68 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' exis
   name: logAnalyticsWorkspaceName
 }
 
+var extractsStorageAccountName = 'extracts${uniqueString(resourceGroup().id, resourceGroup().location)}'
+
+// Storage account with internet routing and public access enabled
+resource extractsStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: extractsStorageAccountName
+  location: resourceGroup().location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    // Enable public network access to the public endpoint
+    publicNetworkAccess: 'Enabled'
+
+    // Allow containers to set public access (required for anonymous blobs)
+    allowBlobPublicAccess: true
+
+    // Optional recommended settings
+    supportsHttpsTrafficOnly: true
+    minimumTlsVersion: 'TLS1_2'
+
+    // Internet routing preference for the public endpoint
+    routingPreference: {
+      routingChoice: 'InternetRouting'
+      publishMicrosoftEndpoints: false
+      publishInternetEndpoints: true
+    }
+  }
+}
+
+// Blob service as a parent for containers
+resource extractsBlob 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+  name: 'default'
+  parent: extractsStorage
+  properties: {}
+}
+
+// Public container (anonymous read)
+resource container 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  name: extractsContainerName
+  parent: extractsBlob
+  properties: {
+    // Options: 'Blob' (anonymous read of blobs only) or 'Container' (list + read)
+    publicAccess: 'Blob'
+    metadata: {}
+  }
+}
+
+// Let the UAMI do as it pleases to that blob
+resource blobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(extractsStorage.id, 'blob-contributor', uami.id)
+  scope: extractsStorage
+  properties: {
+    principalId: uami.properties.principalId
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+    )
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // Build cloud init, now we have retrieved the existing resources
 // We then interpolate a block of environment variables into the cloud-init file
 @description('Cloud init file before substitution')
@@ -84,6 +147,7 @@ var envLines = [
   'export DOWNLOAD_CONTAINER_NAME=${downloadContainerName}'
   'export PMTILES_BUCKET=${pmtilesBucket}'
   'export EXTRACTS_BUCKET=${extractsBucket}'
+  'export EXTRACTS_STORAGE_ACCOUNT=${extractsStorageAccountName}'
   'export AREA=${area}'
 ]
 var envBlock = join(envLines, '\n      ')

@@ -29,4 +29,17 @@ access_key_id = ${R2_ACCESS_KEY}
 secret_access_key = ${R2_SECRET}
 endpoint = https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com
 no_check_bucket = true
+
+[blob]
+type = azureblob
+
+# Storage account name (the one you created in Bicep)
+account = ${EXTRACTS_STORAGE_ACCOUNT}
+
+# Tell rclone to use Managed Identity instead of a key
+use_msi = true
+
+# Explicitly bind to your User‑Assigned Managed Identity
+# (replace with the actual client ID of your UAMI)
+msi_client_id = ${CLIENT_ID}
 EOF

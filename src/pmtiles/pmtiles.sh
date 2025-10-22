@@ -2,6 +2,7 @@
 set -euo pipefail
 . ${BASE}/utils.sh
 
+# DATESTAMP is a string something like "20251023-1513"
 export DATESTAMP=$(date +%Y%m%d-%H%M)
 export PMTILESFILE=${AREA}-$(DATESTAMP).pmtiles
 echo "export PMTILESFILE=${PMTILESFILE}" >> ${BASE}/env.sh
@@ -12,7 +13,8 @@ svclog "pmtiles job starting, for area ${AREA}, output ${PMTILESFILE}"
 svclog "Creating R2 bucket"
 pushd ${BASE}/wrangler
 # Create the R2 bucket if it doesn't exist already
-sed -e "s/R2_BUCKET/${PMTILES_BUCKET}/g" r2.jsonc > wrangler.jsonc
+export R2_BUCKET=${PMTILES_BUCKET}
+envsubst < r2.jsonc > wrangler.jsonc
 wrangler r2 bucket info ${PMTILES_BUCKET} || wrangler r2 bucket create ${PMTILES_BUCKET}
 popd
 
@@ -54,10 +56,9 @@ npx esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js
 mv dist ${BASE}/wrangler/
 
 svclog "Cut over worker to use ${PMTILESFILE}"
-export PMTILES_PATH=${PMTILESFILE} # Variable used by worker.jsonc
+export PMTILES_PATH=${PMTILESFILE} # Variable used by tiles-worker.jsonc
 pushd ${BASE}/wrangler
-# R2 bucket names cannot be interpolated, so we use sed to copy it in.
-sed -e "s/R2_BUCKET/${PMTILES_BUCKET}/g" worker.jsonc > wrangler.jsonc
+envsubst < tiles-worker.jsonc > wrangler.jsonc
 wrangler deploy --env test
 echo "Should do testing here - not implemented yet"
 wrangler deploy --env live

@@ -1,0 +1,39 @@
+{
+    // Parameters for both workers
+    // FIXME: make parametrisable
+    "name": "pmtiles",
+    "main": "dist/index.js",
+    "observability": {
+        "enabled": true
+    },
+
+    "env": {
+        // Parameters for live code
+        "live": {
+            "name": "pmtiles",
+            "vars": {
+                "PMTILES_PATH": "${PMTILES_PATH}"
+            },
+            "r2_buckets": [
+                {
+                    "binding": "BUCKET",
+                    "bucket_name": "${PMTILES_BUCKET}"
+                }
+            ]
+        },
+        // Parameters for test code
+        "test": {
+            "name": "pmtiles-test",
+            "vars": {
+                "PMTILES_PATH": "${PMTILES_PATH}"
+            },
+            "r2_buckets": [
+                {
+                    "binding": "BUCKET",
+                    "bucket_name": "${PMTILES_BUCKET}"
+                }
+            ]
+        }
+    },
+    "compatibility_date": "2025-10-12"
+}
