@@ -137,10 +137,10 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
         osDisk: {
           createOption: 'FromImage'
           caching: 'ReadOnly'
-          diffDiskSettings: {
-            option: 'Local' // Ephemeral OS on NVMe
-            placement: 'NVMeDisk'
+          managedDisk: {
+            storageAccountType: 'Premium_LRS'
           }
+          diskSizeGB: 64
         }
         imageReference: {
           publisher: 'Canonical'
