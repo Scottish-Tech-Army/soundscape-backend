@@ -1,7 +1,7 @@
 {
     // Parameters for both workers
-    // FIXME: make parametrisable
-    "name": "pmtiles",
+    // Note that bucket name and worker names match, for simplicity
+    "name": "${PMTILES_BUCKET}",
     "main": "dist/index.js",
     "observability": {
         "enabled": true
@@ -10,7 +10,7 @@
     "env": {
         // Parameters for live code
         "live": {
-            "name": "pmtiles",
+            "name": "${PMTILES_BUCKET}",
             "vars": {
                 "PMTILES_PATH": "${PMTILES_PATH}"
             },
@@ -23,7 +23,7 @@
         },
         // Parameters for test code
         "test": {
-            "name": "pmtiles-test",
+            "name": "${PMTILES_BUCKET}-test",
             "vars": {
                 "PMTILES_PATH": "${PMTILES_PATH}"
             },

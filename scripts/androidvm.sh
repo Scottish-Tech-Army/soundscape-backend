@@ -39,6 +39,8 @@ az deployment group create \
     --parameters prefix=${PREFIX} \
                  triggerAppName=${TRIGGERAPPNAME} \
                  metricAppName=${METRICAPPNAME} \
+                 pmtilesBucket=${PMTILES_BUCKET} \
+                 extractsBucket=${EXTRACTS_BUCKET} \
                  storageName=${STORAGENAME} --debug --verbose
 
 echo "SUCCESS"

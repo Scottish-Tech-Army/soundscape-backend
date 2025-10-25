@@ -10,6 +10,10 @@ export STORAGENAME=${UNIQUESTRING}
 export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
 export METRICAPPNAME=vmcount-${UNIQUESTRING}
 
+# Names of export and tiles storage buckets
+export EXPORTS_BUCKET=extracts
+export PMTILES_BUCKET=pmtiles
+
 # Global shared diagnostics viewing tooling
 export DIAGSREGION=northeurope
 export DIAGSRG=android-diags

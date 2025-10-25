@@ -11,6 +11,11 @@ param metricAppName string
 @description('Storage account name')
 param storageName string
 
+@description('R2 bucket names')
+param pmtilesBucket string
+param extractsBucket string
+var extractsContainerName = extractsBucket // Must match - some scripts assume it
+
 // From here on, things that never change, so just vars
 @description('ssh key')
 var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
@@ -40,11 +45,6 @@ var adminUsername string = 'azureuser'
 @description('Names of containers for upload and download')
 var uploadContainerName = 'uploads'
 var downloadContainerName = 'downloads'
-
-@description('R2 bucket names')
-var pmtilesBucket = 'pmtiles'
-var extractsBucket = 'extracts'
-var extractsContainerName = extractsBucket // Code assumes this matches, and less confusing if so
 
 @description('Area to download - normally planet or monaco for local testing')
 //var area = 'planet'

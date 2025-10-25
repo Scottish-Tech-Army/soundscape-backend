@@ -1,7 +1,7 @@
 {
     // Parameters for both workers
-    // FIXME: make parametrisable
-    "name": "extracts",
+    // Note that bucket name and worker names match, for simplicity
+    "name": "${EXTRACTS_BUCKET}",
     "main": "streamer.js",
     "observability": {
         "enabled": true
@@ -10,7 +10,7 @@
     "env": {
         // Parameters for live code
         "live": {
-            "name": "extracts",
+            "name": "${EXTRACTS_BUCKET}",
             "vars": {
                 "ORIGIN_BASE_URL": "${EXTRACTS_URL}",
                 "CURRENT_DATESTAMP": "${DATESTAMP}"
@@ -24,7 +24,7 @@
         },
         // Parameters for test code
         "test": {
-            "name": "extracts-test",
+            "name": "${EXTRACTS_BUCKET}-test",
             "vars": {
                 "ORIGIN_BASE_URL": "${EXTRACTS_URL}",
                 "CURRENT_DATESTAMP": "${DATESTAMP}"

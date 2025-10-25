@@ -45,7 +45,7 @@ rclone copy ${DATADIR}/extracts blob:${EXTRACTS_BUCKET}/${DATESTAMP} \
 
 svclog "Cut over worker to use extracts from ${DATESTAMP}"
 pushd ${BASE}/wrangler
-export EXTRACTS_URL="https://${EXTRACTS_STORAGE_ACCOUNT}.blob.core.windows.net/extracts" # FIXME: make parametrisable
+export EXTRACTS_URL="https://${EXTRACTS_STORAGE_ACCOUNT}.blob.core.windows.net/${EXTRACTS_BUCKET}"
 envsubst < extracts-worker.jsonc > wrangler.jsonc
 wrangler deploy --env test
 echo "Should do testing here - not implemented yet"

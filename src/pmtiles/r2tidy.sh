@@ -51,5 +51,4 @@ for LOCATION in "r2:${EXTRACTS_BUCKET}" "blob:${EXTRACTS_BUCKET}"; do
     fi
 done
 
-# FIXME: need to do a cleaner job on this tidy up
-# FIXME: this should be more parametrisable; assumes that the blob container has same name as R2 bucket, which is probably right but never enforced properly
+# FIXME: need to do a better job and reduce our storage use more

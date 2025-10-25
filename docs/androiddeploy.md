@@ -115,6 +115,10 @@ Follow the following steps. Note that some of the scripts here take quite some t
         export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
         export METRICAPPNAME=vmcount-${UNIQUESTRING}
 
+        # Names of export and tiles storage buckets
+        export EXPORTS_BUCKET=extracts
+        export PMTILES_BUCKET=pmtiles
+
         # Do not change from here down
         # This subscription stuff is purely to make sure we are using the right Azure subscription.
         export SUBSCRIPTION=b9ba9683-feef-47c8-bcc0-08e791dc1493
@@ -125,6 +129,12 @@ Follow the following steps. Note that some of the scripts here take quite some t
         exit 1
         fi
         ~~~
+
+        Some of these deserve more comment.
+
+        - `UNIQUESTRING` is just that - a unique string for this deployment used (for example) in storage account names.
+
+        - `EXPORTS_BUCKET` and `PMTILES_BUCKET` are the names of the R2 buckets storing exports and the main pmtiles file. These values are also part of the URL from which data is downloaded. The reason these are not just hardcoded is that this allows the construction of test deployments that do not clash with the production one.
 
  - Source the config file.
 
