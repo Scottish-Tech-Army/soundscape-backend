@@ -15,6 +15,10 @@ rclone lsf r2:${PMTILES_BUCKET} --include "*.pmtiles" | grep ${PMTILESFILE} > /d
 echo "Deleting pmtiles files not matching ${PMTILESFILE}"
 rclone delete r2:${PMTILES_BUCKET} --exclude ${PMTILESFILE}
 
+# Burn down pmtiles staging
+echo "Burn down pmtiles staging in blob storage"
+rclone delete blob:${PMTILES_BUCKET}/
+
 # Now do the extracts bucket
 echo "Checking for old extracts content"
 for LOCATION in "r2:${EXTRACTS_BUCKET}" "blob:${EXTRACTS_BUCKET}"; do
@@ -46,7 +50,7 @@ for LOCATION in "r2:${EXTRACTS_BUCKET}" "blob:${EXTRACTS_BUCKET}"; do
         # Do something with the remaining elements
         for x in "${ARRAY[@]}"; do
             echo "Delete ${x} from extracts bucket"
-            rclone purge ${LOCATION}/${x}/
+            rclone delete ${LOCATION}/${x}/
         done
     fi
 done

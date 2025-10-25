@@ -16,6 +16,7 @@ az login --identity
 
 export CLOUDFLARE_API_TOKEN=$(getsecret cloudflare-api-token)
 export CLOUDFLARE_ACCOUNT_ID=$(getsecret cloudflare-account-id)
+export CLOUDFLARE_SUBDOMAIN=$(getsecret cloudflare-subdomain)
 export R2_ACCESS_KEY=$(getsecret r2-access-key)
 export R2_SECRET=$(getsecret r2-secret)
 

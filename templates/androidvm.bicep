@@ -14,6 +14,7 @@ param storageName string
 @description('R2 bucket names')
 param pmtilesBucket string
 param extractsBucket string
+var tilesContainerName = pmtilesBucket // Must match - some scripts assume it
 var extractsContainerName = extractsBucket // Must match - some scripts assume it
 
 // From here on, things that never change, so just vars
@@ -107,8 +108,18 @@ resource extractsBlob 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01
 }
 
 // Public container (anonymous read)
-resource container 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+resource extractsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   name: extractsContainerName
+  parent: extractsBlob
+  properties: {
+    // Options: 'Blob' (anonymous read of blobs only) or 'Container' (list + read)
+    publicAccess: 'Blob'
+    metadata: {}
+  }
+}
+
+resource tileContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  name: tilesContainerName
   parent: extractsBlob
   properties: {
     // Options: 'Blob' (anonymous read of blobs only) or 'Container' (list + read)

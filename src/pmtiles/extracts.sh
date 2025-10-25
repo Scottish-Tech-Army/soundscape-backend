@@ -48,8 +48,28 @@ pushd ${BASE}/wrangler
 export EXTRACTS_URL="https://${EXTRACTS_STORAGE_ACCOUNT}.blob.core.windows.net/${EXTRACTS_BUCKET}"
 envsubst < extracts-worker.jsonc > wrangler.jsonc
 wrangler deploy --env test
-echo "Should do testing here - not implemented yet"
+
+svclog "Test that the extracts work"
+mkdir -p $DATADIR/extracts-test
+cd $DATADIR/extracts-test
+curl --fail-with-body https://${EXTRACTS_BUCKET}-test/${CLOUDFLARE_SUBDOMAIN}.workers.dev/manifest.geojson.gz -o manifest.geojson.gz
+diff manifest.geojson.gz $DATADIR/extracts/manifest.geojson.gz
+
+FILELIST=$(find ${DATADIR}/extracts -name "*.pmtiles" | shuf -n 3)
+for f in ${FILELIST}; do
+    FILENAME=$(basename $f)
+    echo "Testing extract ${FILENAME}"
+    curl --fail-with-body https://${EXTRACTS_BUCKET}-test/${CLOUDFLARE_SUBDOMAIN}.workers.dev/${FILENAME}?nodata
+done
+
+svclog "Promote worker to live and retest"
 wrangler deploy --env live
+FILELIST=$(find ${DATADIR}/extracts -name "*.pmtiles" | shuf -n 3)
+for f in ${FILELIST}; do
+    FILENAME=$(basename $f)
+    echo "Testing extract ${FILENAME}"
+    curl --fail-with-body https://${EXTRACTS_BUCKET}/${CLOUDFLARE_SUBDOMAIN}.workers.dev/${FILENAME}?nodata
+done
 popd
 
 # Return to wherever we started

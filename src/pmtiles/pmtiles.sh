@@ -37,15 +37,25 @@ bash build-map.sh ${AREA}
 svclog "Build completed - wrap up"
 ln map-to-serve/${AREA}.pmtiles ${DATADIR}/${PMTILESFILE}
 
-# Use rclone to copy the data to R2. This can take a while.
-svclog "Copying to R2 - may take a while"
-rclone copy ${DATADIR}/${PMTILESFILE} r2:${PMTILES_BUCKET} \
+# Use rclone to copy the data to blob store.
+svclog "Copying to blob store - may take a while"
+rclone copy ${DATADIR}/${PMTILESFILE} blob:${PMTILES_BUCKET}/${DATESTAMP} \
         --progress \
         --s3-upload-concurrency 32 \
         --s3-chunk-size 64M \
         --transfers 32 \
         --retries 10 \
         --low-level-retries 20
+
+# Now pull the data across using some cunning worker code.
+svclog "Cut data across using streaming worker - around half a minute per GB, so this is slow"
+pushd ${BASE}/wrangler
+export TILES_URL="https://${EXTRACTS_STORAGE_ACCOUNT}.blob.core.windows.net/${PMTILES_BUCKET}"
+envsubst < extracts-worker.jsonc > wrangler.jsonc
+wrangler deploy
+export WORKER_SUBDOMAIN=$(wrangler whoami | awk '{print $3}')
+curl --fail-with-body https://${PMTILES-BUCKET}-stream/${CLOUDFLARE_SUBDOMAIN}.workers.dev/${PMTILESFILE}?nodata
+popd
 
 svclog "Build the code"
 cd ${DATADIR}

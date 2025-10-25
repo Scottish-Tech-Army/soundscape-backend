@@ -82,6 +82,8 @@ Get secrets from Cloudflare and store them for later storage in a key vault.
 
     - Store off the API key.
 
+- Found your Cloudflare subdomain - the string after the worker name in the URL to access a worker in the account.
+
 - Create R2 access credentials. (This could use the same overpowered API token above, but we instead use a dedicated token.)
 
     - Select `R2 Object Storage` in the left hand pane.
@@ -159,6 +161,8 @@ Follow the following steps. Note that some of the scripts here take quite some t
         `cloudflare-account-id :` The Account ID for Cloudflare
 
         `cloudflare-api-token  :` The API token for Cloudflare
+
+        `cloudflare-subdomain  :` The subdomain for Cloudflare
 
         `r2-access-key         :` The R2 access key
 
