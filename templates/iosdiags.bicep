@@ -94,6 +94,7 @@ module ingDetail './query.bicep' = {
     query: '''
     IngestLogs_CL
     | where FilePath !contains "tiletest"
+    | project-reorder TimeGenerated, RawData, FilePath
     | order by TimeGenerated desc
     '''
   }
@@ -272,6 +273,21 @@ module frontDoorAccessLogErrors './query.bicep' = {
     | where Category == "FrontDoorAccessLog"
     | where httpStatusCode_s != 200
     | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
+    | order by TimeGenerated desc
+    '''
+  }
+}
+
+module sqlLogs './query.bicep' = {
+  name: 'sqlLogs'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'iOS SQL logs'
+    queryDescription: 'Raw logs from the SQL database'
+    query: '''
+    PGSQLServerLogs
+    | project-away ReplicaRole, Location, Type, _ResourceId, TenantId
+    | project-reorder TimeGenerated, Message
     | order by TimeGenerated desc
     '''
   }

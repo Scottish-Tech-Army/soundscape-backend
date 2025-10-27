@@ -210,7 +210,7 @@ resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2025-06-01-preview
     }
     storage: {
       // For Premium SSD v1, remove iops and throughput, and turn autoGrow back on
-      storageSizeGB: 500
+      storageSizeGB: 850
       iops: 12000
       throughput: 500
       // https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/concepts-storage-premium-ssd-v2
@@ -238,6 +238,39 @@ resource dbExtensions 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@
   properties: {
     value: 'postgis,hstore'
     source: 'user-override'
+  }
+}
+
+// Send diagnostics log from DB to Log Analytics
+resource dbDiags 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'send-postgres-logs'
+  scope: dbService
+  properties: {
+    workspaceId: logAnalytics.id
+    logs: [
+      {
+        category: 'PostgreSQLLogs'
+        enabled: true
+      }
+      {
+        category: 'PostgreSQLFlexSessions'
+        enabled: true
+      }
+      {
+        category: 'PostgreSQLFlexQueryStoreRuntime'
+        enabled: true
+      }
+      {
+        category: 'PostgreSQLFlexWaitStatistics'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
   }
 }
 

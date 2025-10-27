@@ -50,7 +50,9 @@ All of the requests listed here are stored in a deployed query pack. To view the
 
 *If the queries do not show up, this is because you have never selected the query pack. Instead of searching, click the three dots by the search window, click `Select Query Packs` and find the iOS or Android pack.*
 
-### Ingestion VMs
+### iOS logs
+
+#### Ingestion VMs
 
 The ingestion of data is done by a VM that is started once a week then shuts down again when complete, and generates logs. *These logs do not appear until some time after the VM is created - typically at least ten minutes.* The main logs for this VM are in the following queries.
 
@@ -70,7 +72,7 @@ You can see how many VMs were running and when using the following.
 
 - `Soundscape VM instance count`: a view of VM capacity and instance counts over time.
 
-### Tile server
+#### Tile server
 
 The tile server has a range of logs.
 
@@ -78,13 +80,13 @@ The tile server has a range of logs.
 
 - `Soundscape tilesrv access logs summary`: hourly summary of access logs. *This is very useful for getting an idea of whether all is well.*
 
-### Function app
+#### Function app
 
 The function apps (that trigger VM creation for ingestion) generate logs when they run. They are not usually very important, but if you need them, they are shown here.
 
 - `Soundscape function app logs`: all low level logs from Azure Functions.
 
-### Front door logs
+#### Front door logs
 
 Unlike the other logs, the Front Door logs do not appear in the log analytics workspace in the deployment RG, but in the one in the shared resource group `rg-ssp-shared-dev-uks`. There is one such query stored.
 
@@ -96,3 +98,8 @@ Unlike the other logs, the Front Door logs do not appear in the log analytics wo
 
 - `Soundscape Front Door Errors`: this is a subset of the access log view that only shows errors.
 
+#### PostGreSQL logs
+
+These logs show errors from the SQL database.
+
+- `iOS SQL Logs`: all SQL logs from PostGreSQL.
