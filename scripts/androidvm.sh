@@ -10,9 +10,12 @@ cd "$(dirname "$0")/.."
 jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
 
 # Build the tar file of scripts
-mkdir -p build
-pushd src/pmtiles
-tar -zcvf ../../build/files.tgz *
+rm -rf build/tmp build/files.tgz
+mkdir -p build/tmp
+cp -r src/pmtiles/* build/tmp/
+cp -r thirdparty/pmtiles/wrangler build/tmp/
+pushd build/tmp
+tar -zcvf ../files.tgz *
 popd
 
 # Returns both key1 and key2; pick either

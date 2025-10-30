@@ -50,16 +50,6 @@ rclone copy ${DATADIR}/${PMTILESFILE} r2:${PMTILES_BUCKET} \
 
 popd # leave DATADIR
 
-svclog "Build the code"
-cd ${DATADIR}
-rm -rf PMTiles
-git clone https://github.com/protomaps/PMTiles.git
-cd PMTiles/serverless/cloudflare
-# Install the pmtiles npm package
-npm i pmtiles
-# Build worker code
-npx esbuild src/index.ts --bundle --format=esm --outfile=${BASE}/wrangler/tiles.js
-
 svclog "Cut over worker to use ${PMTILESFILE}"
 export PMTILES_PATH="${PMTILESFILE}" # Variable used by tiles-worker.jsonc
 pushd ${BASE}/wrangler
