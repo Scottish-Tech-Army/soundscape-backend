@@ -14,7 +14,6 @@ param storageName string
 @description('R2 bucket names')
 param pmtilesBucket string
 param extractsBucket string
-var tilesContainerName = pmtilesBucket // Must match - some scripts assume it
 var extractsContainerName = extractsBucket // Must match - some scripts assume it
 
 @description('Area to download - normally planet or monaco for local testing')
@@ -111,16 +110,6 @@ resource transferBlob 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01
 // Public container (anonymous read)
 resource extractsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   name: extractsContainerName
-  parent: transferBlob
-  properties: {
-    // Options: 'Blob' (anonymous read of blobs only) or 'Container' (list + read)
-    publicAccess: 'Blob'
-    metadata: {}
-  }
-}
-
-resource tileContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: tilesContainerName
   parent: transferBlob
   properties: {
     // Options: 'Blob' (anonymous read of blobs only) or 'Container' (list + read)

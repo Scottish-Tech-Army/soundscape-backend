@@ -52,7 +52,7 @@ extracts-download-test() {
     mkdir -p $DATADIR/extracts-test
     pushd $DATADIR/extracts-test
 
-    curl -D - --fail-with-body "${URLBASE}/manifest.geojson.gz -o manifest.geojson.gz"
+    curl -D - --fail-with-body "${URLBASE}/manifest.geojson.gz" -o manifest.geojson.gz
     diff manifest.geojson.gz $DATADIR/extracts/manifest.geojson.gz
 
     FILELIST=$(find ${DATADIR}/extracts -name "*.pmtiles" | shuf -n 3)

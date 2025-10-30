@@ -7,17 +7,11 @@ set -euo pipefail
 svclog "R2 tidy job starting - sleep first to wait for existing requests to complete"
 sleep 60
 
-svclog "Burn down the contents of the pmtiles bucket"
-
 # Check that PMTILESFILE is present; if not error out.
+svclog "Burn down the contents of the pmtiles bucket"
 echo "Checking for presence of ${PMTILESFILE} in R2, then burning things down"
-rclone lsf "r2:${PMTILES_BUCKET}/${DATESTAMP}/" --include "*.pmtiles" | grep ${PMTILESFILE} > /dev/null
-rclone delete r2:${PMTILES_BUCKET} --exclude "${DATESTAMP}/**"
-rclone lsf "r2:${PMTILES_BUCKET}/${DATESTAMP}/" --include "*.pmtiles" | grep ${PMTILESFILE} > /dev/null
-
-# Burn down pmtiles staging
-echo "Burn down pmtiles staging in blob storage"
-rclone delete blob:${PMTILES_BUCKET}/
+rclone lsf "r2:${PMTILES_BUCKET}/" --include "*.pmtiles" | grep ${PMTILESFILE} > /dev/null
+rclone delete r2:${PMTILES_BUCKET} --exclude "${PMTILESFILE}"
 
 # Now do the extracts bucket
 echo "Checking for old extracts content"
