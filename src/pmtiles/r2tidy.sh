@@ -1,4 +1,5 @@
 #!/bin/bash
+# This job tidies up old resources in R2 and blob storage
 set -euo pipefail
 . ${BASE}/env.sh # Reload env.sh, as the previous script may have added to it
 . ${BASE}/utils.sh
@@ -8,12 +9,11 @@ sleep 60
 
 svclog "Burn down the contents of the pmtiles bucket"
 
-# Check that PMTILESFILE is present; if not this errors out.
-echo "Checking for presence of ${PMTILESFILE} in R2"
-rclone lsf r2:${PMTILES_BUCKET} --include "*.pmtiles" | grep ${PMTILESFILE} > /dev/null
-
-echo "Deleting pmtiles files not matching ${PMTILESFILE}"
-rclone delete r2:${PMTILES_BUCKET} --exclude ${PMTILESFILE}
+# Check that PMTILESFILE is present; if not error out.
+echo "Checking for presence of ${PMTILESFILE} in R2, then burning things down"
+rclone lsf "r2:${PMTILES_BUCKET}/${DATESTAMP}/" --include "*.pmtiles" | grep ${PMTILESFILE} > /dev/null
+rclone delete r2:${PMTILES_BUCKET} --exclude "${DATESTAMP}/**"
+rclone lsf "r2:${PMTILES_BUCKET}/${DATESTAMP}/" --include "*.pmtiles" | grep ${PMTILESFILE} > /dev/null
 
 # Burn down pmtiles staging
 echo "Burn down pmtiles staging in blob storage"
@@ -35,7 +35,7 @@ for LOCATION in "r2:${EXTRACTS_BUCKET}" "blob:${EXTRACTS_BUCKET}"; do
     set -- ${FILES}
     ARRAY=("$@")
 
-    # Only proceed if there are at least 3 and the last matches ${DATASTAMP}
+    # Only proceed if there are at least 3 and the last matches ${DATESTAMP}
     if (( ${#ARRAY[@]} < 3 )); then
         echo "Less than 3 items in ${LOCATION}; not deleting anything"
     elif [[ "${ARRAY[-1]}" != "$DATESTAMP" ]]; then
@@ -55,4 +55,4 @@ for LOCATION in "r2:${EXTRACTS_BUCKET}" "blob:${EXTRACTS_BUCKET}"; do
     fi
 done
 
-# FIXME: need to do a better job and reduce our storage use more
+# FIXME: need to do a better job and reduce our storage use more; we end up with two copies for a while.

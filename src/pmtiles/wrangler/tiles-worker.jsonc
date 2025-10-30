@@ -2,7 +2,7 @@
     // Parameters for both workers
     // Note that bucket name and worker names match, for simplicity
     "name": "${PMTILES_BUCKET}",
-    "main": "dist/index.js",
+    "main": "tiles.js",
     "observability": {
         "enabled": true
     },

@@ -27,7 +27,7 @@ mv pmtiles /usr/local/bin/
 popd
 
 # Set up venv for python
-# This is in fact not needed, so commented out unless we need to reinstate step1
+# FIXME: This is in fact not needed, so commented out unless we need to reinstate step1
 #python -m venv /opt/pmtiles/venv
 #. /opt/pmtiles/venv/bin/activate
 #pip install --upgrade pip

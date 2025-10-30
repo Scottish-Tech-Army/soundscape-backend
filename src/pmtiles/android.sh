@@ -19,7 +19,7 @@ bash ${BASE}/extracts.sh >> ${LOGFILE} 2>&1
 bash ${BASE}/r2tidy.sh >> ${LOGFILE} 2>&1
 
 # Obliterate the VM after completion
-svclog "Goodbye cruel world"
+svclog "Goodbye cruel world - uploading logs and deleting VM"
 
 # Upload logs to the storage account
 az login --identity
@@ -28,8 +28,6 @@ az storage blob upload-batch \
 --account-name ${STORAGE_ACCOUNT_NAME} \
 --destination ${UPLOAD_CONTAINER_NAME} \
 --source ${BASE}/logs
-
-exit 0
 
 # Sleep for 600 seconds so logs are flushed. Mad overkill, but that's Azure logging delays for you.
 sleep 600

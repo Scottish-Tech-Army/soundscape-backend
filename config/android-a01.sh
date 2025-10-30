@@ -11,8 +11,11 @@ export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
 export METRICAPPNAME=vmcount-${UNIQUESTRING}
 
 # Names of export and tiles storage buckets
-export EXPORTS_BUCKET=extracts
+export EXTRACTS_BUCKET=extracts
 export PMTILES_BUCKET=pmtiles
+
+# Area to use - should normally be "monaco" or "planet"
+export AREA=planet
 
 # Global shared diagnostics viewing tooling
 export DIAGSREGION=northeurope

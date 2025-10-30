@@ -37,6 +37,7 @@ echo "Create deployment"
 az deployment group create \
     --resource-group ${RG} --template-file templates/androidvm.bicep \
     --parameters prefix=${PREFIX} \
+                 area=${AREA} \
                  triggerAppName=${TRIGGERAPPNAME} \
                  metricAppName=${METRICAPPNAME} \
                  pmtilesBucket=${PMTILES_BUCKET} \

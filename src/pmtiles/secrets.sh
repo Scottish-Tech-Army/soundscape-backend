@@ -35,7 +35,7 @@ no_check_bucket = true
 type = azureblob
 
 # Storage account name (the one you created in Bicep)
-account = ${EXTRACTS_STORAGE_ACCOUNT}
+account = ${TRANSFER_STORAGE_ACCOUNT}
 
 # Tell rclone to use Managed Identity instead of a key
 use_msi = true

@@ -17,6 +17,9 @@ param extractsBucket string
 var tilesContainerName = pmtilesBucket // Must match - some scripts assume it
 var extractsContainerName = extractsBucket // Must match - some scripts assume it
 
+@description('Area to download - normally planet or monaco for local testing')
+param area string
+
 // From here on, things that never change, so just vars
 @description('ssh key')
 var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
@@ -47,10 +50,6 @@ var adminUsername string = 'azureuser'
 var uploadContainerName = 'uploads'
 var downloadContainerName = 'downloads'
 
-@description('Area to download - normally planet or monaco for local testing')
-//var area = 'planet'
-var area = 'monaco'
-
 // Get existing resources
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' existing = {
   name: vnetName
@@ -70,11 +69,13 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' exis
   name: logAnalyticsWorkspaceName
 }
 
-var extractsStorageAccountName = 'extracts${uniqueString(resourceGroup().id, resourceGroup().location)}'
+var transferStorageAccountName = 'transfer${uniqueString(resourceGroup().id, resourceGroup().location)}'
 
 // Storage account with internet routing and public access enabled
-resource extractsStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
-  name: extractsStorageAccountName
+// This is to allow transfer of files to Cloudflare on demand and without paying
+// full egress costs.
+resource transferStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: transferStorageAccountName
   location: resourceGroup().location
   sku: {
     name: 'Standard_LRS'
@@ -101,16 +102,16 @@ resource extractsStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 }
 
 // Blob service as a parent for containers
-resource extractsBlob 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+resource transferBlob 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   name: 'default'
-  parent: extractsStorage
+  parent: transferStorage
   properties: {}
 }
 
 // Public container (anonymous read)
 resource extractsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   name: extractsContainerName
-  parent: extractsBlob
+  parent: transferBlob
   properties: {
     // Options: 'Blob' (anonymous read of blobs only) or 'Container' (list + read)
     publicAccess: 'Blob'
@@ -120,7 +121,7 @@ resource extractsContainer 'Microsoft.Storage/storageAccounts/blobServices/conta
 
 resource tileContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   name: tilesContainerName
-  parent: extractsBlob
+  parent: transferBlob
   properties: {
     // Options: 'Blob' (anonymous read of blobs only) or 'Container' (list + read)
     publicAccess: 'Blob'
@@ -130,8 +131,8 @@ resource tileContainer 'Microsoft.Storage/storageAccounts/blobServices/container
 
 // Let the UAMI do as it pleases to that blob
 resource blobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(extractsStorage.id, 'blob-contributor', uami.id)
-  scope: extractsStorage
+  name: guid(transferStorage.id, 'blob-contributor', uami.id)
+  scope: transferStorage
   properties: {
     principalId: uami.properties.principalId
     roleDefinitionId: subscriptionResourceId(
@@ -158,7 +159,7 @@ var envLines = [
   'export DOWNLOAD_CONTAINER_NAME=${downloadContainerName}'
   'export PMTILES_BUCKET=${pmtilesBucket}'
   'export EXTRACTS_BUCKET=${extractsBucket}'
-  'export EXTRACTS_STORAGE_ACCOUNT=${extractsStorageAccountName}'
+  'export TRANSFER_STORAGE_ACCOUNT=${transferStorageAccountName}'
   'export AREA=${area}'
 ]
 var envBlock = join(envLines, '\n      ')
