@@ -25,10 +25,3 @@ wget https://github.com/protomaps/go-pmtiles/releases/download/v1.28.1/go-pmtile
 tar -xzf go-pmtiles_1.28.1_Linux_x86_64.tar.gz
 mv pmtiles /usr/local/bin/
 popd
-
-# Set up venv for python
-# FIXME: This is in fact not needed, so commented out unless we need to reinstate step1
-#python -m venv /opt/pmtiles/venv
-#. /opt/pmtiles/venv/bin/activate
-#pip install --upgrade pip
-#pip install -r /opt/pmtiles/requirements.txt

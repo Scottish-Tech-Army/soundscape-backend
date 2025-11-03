@@ -13,8 +13,6 @@ envsubst < r2.jsonc > wrangler.jsonc
 wrangler r2 bucket info ${EXTRACTS_BUCKET} || wrangler r2 bucket create ${EXTRACTS_BUCKET} --location weur
 popd
 
-# VENV commented out - does not seem that we need it.
-#. ${BASE}/venv/bin/activate
 pushd ${DATADIR}/planetiler-openmaptiles/soundscape-maps
 
 # Run the python script which will use the stock world_countries_and_city_groups.geojson which
