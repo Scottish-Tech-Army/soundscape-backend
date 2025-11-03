@@ -17,7 +17,7 @@ module vmHighLevel './query.bicep' = {
     query: '''
     pmtilesLogs_CL
     | where FilePath contains "svc"
-    | order by TimeGenerated desc
+    | order by TimeGenerated, RawData desc
     '''
   }
 }
@@ -30,7 +30,7 @@ module vmDetail './query.bicep' = {
     queryDescription: 'Low level logs of VM process'
     query: '''
     pmtilesLogs_CL
-    | where FilePath !contains "tiletest"
+    | where FilePath !contains "svc"
     | order by TimeGenerated desc
     '''
   }

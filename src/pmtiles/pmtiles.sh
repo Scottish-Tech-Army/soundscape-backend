@@ -15,7 +15,7 @@ pushd ${BASE}/wrangler
 # Create the R2 bucket if it doesn't exist already
 export R2_BUCKET=${PMTILES_BUCKET}
 envsubst < r2.jsonc > wrangler.jsonc
-wrangler r2 bucket info ${PMTILES_BUCKET} || wrangler r2 bucket create ${PMTILES_BUCKET}
+wrangler r2 bucket info ${PMTILES_BUCKET} || wrangler r2 bucket create ${PMTILES_BUCKET} --location weur
 popd # leave wrangler
 
 svclog "Setting up the code"
@@ -30,7 +30,7 @@ cd planetiler-openmaptiles
 bash scripts/regenerate-openmaptiles.sh
 
 # Build the map.
-svclog "Build the map - may take a while"
+svclog "Build the map - typically takes four hours for world"
 cd soundscape-maps
 bash build-map.sh ${AREA}
 
@@ -39,7 +39,7 @@ svclog "Build completed - wrap up"
 ln map-to-serve/${AREA}.pmtiles ${DATADIR}/${PMTILESFILE}
 
 # Use rclone to copy the data to R2.
-svclog "Copying to R2 - may take a while"
+svclog "Copying to R2"
 rclone copy ${DATADIR}/${PMTILESFILE} r2:${PMTILES_BUCKET} \
         --progress \
         --s3-upload-concurrency 32 \
@@ -47,6 +47,12 @@ rclone copy ${DATADIR}/${PMTILESFILE} r2:${PMTILES_BUCKET} \
         --transfers 32 \
         --retries 10 \
         --low-level-retries 20
+
+# List contents of the /mnt directory.
+echo "Contents of ${DATADIR}:"
+ls -lh ${DATADIR}
+df -h
+du -sh ${DATADIR}/*
 
 popd # leave DATADIR
 

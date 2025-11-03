@@ -27,6 +27,6 @@ export SUBSCRIPTION=4bf1580a-f73d-4821-8cdc-605925ba78e9
 
 az account set --subscription ${SUBSCRIPTION}
 if [ $? -ne 0 ]; then
-echo "Failed to set Azure subscription."
-exit 1
+  echo "Failed to set Azure subscription."
+  exit 1
 fi

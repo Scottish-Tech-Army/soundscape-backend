@@ -10,7 +10,7 @@ pushd ${BASE}/wrangler
 # Create the R2 bucket if it doesn't exist already
 export R2_BUCKET=${EXTRACTS_BUCKET}
 envsubst < r2.jsonc > wrangler.jsonc
-wrangler r2 bucket info ${EXTRACTS_BUCKET} || wrangler r2 bucket create ${EXTRACTS_BUCKET}
+wrangler r2 bucket info ${EXTRACTS_BUCKET} || wrangler r2 bucket create ${EXTRACTS_BUCKET} --location weur
 popd
 
 # VENV commented out - does not seem that we need it.
@@ -20,7 +20,7 @@ pushd ${DATADIR}/planetiler-openmaptiles/soundscape-maps
 # Run the python script which will use the stock world_countries_and_city_groups.geojson which
 # is now in git.
 # xxx FIXME: this sed stuff is nonsense.
-svclog "Build extracts - may take a while"
+svclog "Build extracts - may take 20 minutes or so for world"
 sed -i 's|\./pmtiles|pmtiles|g' step2-generate-extracts-from-geojson.py
 python step2-generate-extracts-from-geojson.py \
     --input-tiles ${DATADIR}/${PMTILESFILE} \
@@ -32,6 +32,12 @@ python step2-generate-extracts-from-geojson.py \
 gzip ${DATADIR}/extracts/manifest.geojson
 
 cd ${DATADIR}/extracts
+
+# List contents of the extracts directory.
+echo "Contents of ${DATADIR}/extracts:"
+ls -lh ${DATADIR}/extracts
+df -h
+du -sh ${DATADIR}/*
 
 # Upload all of the extracts to blob storage
 svclog "Copying to blob"
