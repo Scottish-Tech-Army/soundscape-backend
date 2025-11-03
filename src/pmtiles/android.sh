@@ -15,6 +15,11 @@ bash ${BASE}/pmtiles.sh >> ${LOGFILE} 2>&1
 # Run the extracts process
 bash ${BASE}/extracts.sh >> ${LOGFILE} 2>&1
 
+# Sleep for 600 seconds before cleaning things up. This means that any clients in the process of downloading extracts
+# are not impacted. After this, they just have start reloading again.
+svclog "Sleeping for 600 seconds before starting tidy process to allow existing downloads to complete"
+sleep 600
+
 # Tidy up old files in R2.
 bash ${BASE}/r2tidy.sh >> ${LOGFILE} 2>&1
 
@@ -28,9 +33,6 @@ az storage blob upload-batch \
 --account-name ${STORAGE_ACCOUNT_NAME} \
 --destination ${UPLOAD_CONTAINER_NAME} \
 --source ${BASE}/logs
-
-# Sleep for 600 seconds so logs are flushed. Mad overkill, but that's Azure logging delays for you.
-sleep 600
 
 # Nuke the VM once and for all
 az vmss scale --resource-group ${RG} --name ${VMSS_NAME} --new-capacity 0

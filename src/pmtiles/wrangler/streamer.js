@@ -4,6 +4,7 @@ export default {
     console.log(`Request URL: ${request.url}`);
     const url = new URL(request.url);
     let file = url.pathname.slice(1);
+    let banCache = false;
     const originBaseUrl = env.ORIGIN_BASE_URL;
     const currentDatestamp = env.CURRENT_DATESTAMP;
     console.log(`originBaseUrl: ${originBaseUrl}`);
@@ -22,6 +23,12 @@ export default {
     else {
       // Not prefixed - use latest directory
       console.log(`No prefix - use latest directory`);
+      // Special handling if file is exactly "manifest.geojson.gz"
+      if (file === "manifest.geojson.gz") {
+        console.log("Special case: manifest.geojson.gz so no caching allowed");
+        // You can add custom logic here, for now just return 404 or handle as needed
+        banCache = true;
+      }
       file = `${currentDatestamp}/${file}`;
     }
 
@@ -67,9 +74,23 @@ export default {
       return new Response("", { status: 204 });
     }
     else {
-      console.log(`Return data from R2`);
+      const headers = new Headers();
+      headers.set("Content-Type", object.httpMetadata?.contentType || "application/octet-stream")
+
+      let cacheControl;
+      if (banCache) {
+        // No caching
+        cacheControl = "no-store, no-cache, must-revalidate";
+      }
+      else {
+        // Cache for a week.
+        cacheControl = "public, max-age=604800, immutable";
+      }
+      headers.set("Cache-Control", cacheControl);
+
+      console.log(`Return data from R2 - cache header: ${cacheControl}`);
       return new Response(object.body, {
-        headers: { "Content-Type": object.httpMetadata?.contentType || "application/octet-stream" }
+        headers: headers
       });
     }
   }

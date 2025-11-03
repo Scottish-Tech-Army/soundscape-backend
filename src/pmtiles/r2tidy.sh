@@ -4,9 +4,6 @@ set -euo pipefail
 . ${BASE}/env.sh # Reload env.sh, as the previous script may have added to it
 . ${BASE}/utils.sh
 
-svclog "R2 tidy job starting - sleep first to wait for existing requests to complete"
-sleep 60
-
 # Check that PMTILESFILE is present; if not error out.
 svclog "Burn down the contents of the pmtiles bucket"
 echo "Checking for presence of ${PMTILESFILE} in R2, then burning things down"
@@ -29,16 +26,13 @@ for LOCATION in "r2:${EXTRACTS_BUCKET}" "blob:${EXTRACTS_BUCKET}"; do
     set -- ${FILES}
     ARRAY=("$@")
 
-    # Only proceed if there are at least 3 and the last matches ${DATESTAMP}
-    if (( ${#ARRAY[@]} < 3 )); then
-        echo "Less than 3 items in ${LOCATION}; not deleting anything"
+    # Only proceed if there are at least 2 and the last matches ${DATESTAMP}
+    if (( ${#ARRAY[@]} < 2 )); then
+        echo "Less than 2 items in ${LOCATION}; not deleting anything"
     elif [[ "${ARRAY[-1]}" != "$DATESTAMP" ]]; then
         echo "Last item not ${DATESTAMP} in ${LOCATION} - do nothing"
     else
-        # Drop the last element (matches $d)
-        unset 'ARRAY[-1]'
-
-        # Drop the new last element (the original second last)
+        # Drop the last element (matches the datestamp)
         unset 'ARRAY[-1]'
 
         # Do something with the remaining elements
@@ -48,5 +42,3 @@ for LOCATION in "r2:${EXTRACTS_BUCKET}" "blob:${EXTRACTS_BUCKET}"; do
         done
     fi
 done
-
-# FIXME: need to do a better job and reduce our storage use more; we end up with two copies for a while.
