@@ -13,10 +13,6 @@ export STORAGENAME=${UNIQUESTRING}
 export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
 export METRICAPPNAME=vmcount-${UNIQUESTRING}
 
-# Global shared diagnostics viewing tooling
-export DIAGSREGION=uksouth
-export DIAGSRG=rg-diags
-
 # This subscription stuff is purely to make sure we are using the right Azure subscription.
 export SUBSCRIPTION=b9ba9683-feef-47c8-bcc0-08e791dc1493
 

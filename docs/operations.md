@@ -32,7 +32,21 @@ The deployment process creates a dashboard, named after the resource group as `r
 
 Most of this data can be viewed in the detailed monitoring queries below, with more information.
 
-## Detailed monitoring
+## Detailed log monitoring
+
+A range of detailed diagnostics queries have been created which should allow easier checking of logs, with standard logs queries.
+
+### Deploying the tooling
+
+To deploy the tooling, run the following from the base of the repo. This need only be done once; it is safe to delete and recreate the resource group then redeploy the queries.
+
+~~~bash
+. scripts/diags-cfg.sh
+bash scripts/androiddiags.sh
+bash scripts/iosdiags.sh
+~~~
+
+### Using the queries
 
 All of the requests listed here are stored in a deployed query pack. To view them, do the following.
 
@@ -56,50 +70,70 @@ All of the requests listed here are stored in a deployed query pack. To view the
 
 The ingestion of data is done by a VM that is started once a week then shuts down again when complete, and generates logs. *These logs do not appear until some time after the VM is created - typically at least ten minutes.* The main logs for this VM are in the following queries.
 
-- `Soundscape ingestion - high level`: high level logs of when the ingestion started and finished.
+- `iOS ingestion - high level`: high level logs of when the ingestion started and finished.
 
-- `Soundscape ingestion - detailed logs`: detailed logs of the ingestion process. These are very large, with logs at roughly one per minute intervals.
+- `iOS ingestion - detailed logs`: detailed logs of the ingestion process. These are very large, with logs at roughly one per minute intervals.
 
 When running, the ingestion VM runs a performance test to validate that all is well (the same one run during the cutover process). Results from this test can be viewed with the following queries.
 
-- `Soundscape summary of performance logs`: a summary of outputs so far, emitted every few minutes.
+- `iOS summary of performance logs`: a summary of outputs so far, emitted every few minutes.
 
-- `Soundscape detailed list of perf results`: a detailed view of every request, time taken, and result.
+- `iOS detailed list of perf results`: a detailed view of every request, time taken, and result.
 
-- `Soundscape detailed list of perf errors`: a detailed view of every request that failed.
+- `iOS detailed list of perf errors`: a detailed view of every request that failed.
 
 You can see how many VMs were running and when using the following.
 
-- `Soundscape VM instance count`: a view of VM capacity and instance counts over time.
+- `iOS VM instance count`: a view of VM capacity and instance counts over time.
 
 #### Tile server
 
 The tile server has a range of logs.
 
-- `Soundscape tilesrv access logs`: all access logs for the tile server, one per request. Does not include
+- `iOS tilesrv access logs`: all access logs for the tile server, one per request. Does not include
 
-- `Soundscape tilesrv access logs summary`: hourly summary of access logs. *This is very useful for getting an idea of whether all is well.*
+- `iOS tilesrv access logs summary`: hourly summary of access logs. *This is very useful for getting an idea of whether all is well.*
 
 #### Function app
 
 The function apps (that trigger VM creation for ingestion) generate logs when they run. They are not usually very important, but if you need them, they are shown here.
 
-- `Soundscape function app logs`: all low level logs from Azure Functions.
+- `iOS function app logs`: all low level logs from Azure Functions.
 
 #### Front door logs
 
 Unlike the other logs, the Front Door logs do not appear in the log analytics workspace in the deployment RG, but in the one in the shared resource group `rg-ssp-shared-dev-uks`. There is one such query stored.
 
-- `Soundscape Front Door metrics`: this shows an hourly summary of incoming traffic to Front Door.
+- `iOS Front Door metrics`: this shows an hourly summary of incoming traffic to Front Door.
 
-- `Soundscape Front Door Access Log summary`: this shows a daily summary of incoming traffic, with counts based on parsed into country, URL, and unique users.
+- `iOS Front Door Access Log summary`: this shows a daily summary of incoming traffic, with counts based on parsed into country, URL, and unique users.
 
-- `Soundscape Front Door Access Logs`: this shows all access logs from Front Door, with some useful information.
+- `iOS Front Door Access Logs`: this shows all access logs from Front Door, with some useful information.
 
-- `Soundscape Front Door Errors`: this is a subset of the access log view that only shows errors.
+- `iOS Front Door Errors`: this is a subset of the access log view that only shows errors.
 
 #### PostGreSQL logs
 
 These logs show errors from the SQL database.
 
 - `iOS SQL Logs`: all SQL logs from PostGreSQL.
+
+### Android logs
+
+#### Ingestion VMs
+
+The ingestion of data is done by a VM that is started once a week then shuts down again when complete, and generates logs. *These logs do not appear until some time after the VM is created - typically at least ten minutes.* The main logs for this VM are in the following queries.
+
+- `Android VM processing - high level`: high level logs of when the ingestion started and finished.
+
+- `Android VM processing - detailed logs`: detailed logs of the ingestion process. These are very large, with logs at roughly one per minute intervals.
+
+You can see how many VMs were running and when using the following.
+
+- `Android VM instance count`: a view of VM capacity and instance counts over time.
+
+#### Function app
+
+The function app (that triggers VM creation for ingestion) generate logs when they run. They are not usually very important, but if you need them, they are shown here.
+
+- `Andoroid function app logs`: all low level logs from Azure Functions.

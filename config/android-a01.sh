@@ -17,11 +17,6 @@ export PMTILES_BUCKET=pmtiles
 # Area to use - should normally be "monaco" or "planet"
 export AREA=planet
 
-# Global shared diagnostics viewing tooling
-export DIAGSREGION=northeurope
-export DIAGSRG=android-diags
-
-# Do not change from here down
 # This subscription stuff is purely to make sure we are using the right Azure subscription.
 export SUBSCRIPTION=4bf1580a-f73d-4821-8cdc-605925ba78e9
 

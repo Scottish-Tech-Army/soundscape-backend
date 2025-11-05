@@ -1,5 +1,5 @@
 @description('Name for the query pack')
-param queryPackName string = 'soundscape-queries'
+param queryPackName string = 'ios-queries'
 
 // Root query pack
 resource queryPack 'Microsoft.OperationalInsights/queryPacks@2025-02-01' = {

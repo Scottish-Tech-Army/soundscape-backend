@@ -189,11 +189,3 @@ Follow the following steps. Note that some of the scripts here take quite some t
     ~~~bash
     bash scripts/code_clean.sh
     ~~~
-
-## Deploying log queries
-
-There are some saved queries shared across all deployments. These exist in a single resource group (shared across all deployments), and so you should not need to change these. If you make changes, you can deploy them as follows.
-
-~~~bash
-bash scripts/iosdiags.sh
-~~~
