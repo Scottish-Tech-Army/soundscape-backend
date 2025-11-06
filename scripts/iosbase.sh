@@ -3,8 +3,9 @@
 set -euo pipefail
 echo "RG: ${RG}"
 
-# This script must run from the parent directory of the scripts directory
+# Change to the parent directory of the scripts directory and source utils.
 cd "$(dirname "$0")/.."
+. scripts/cfgutils.sh
 
 # Before running this, you must be logged into your account, with the correct subscription selected.
 

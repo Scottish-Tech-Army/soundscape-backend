@@ -33,9 +33,9 @@ cd ${DATADIR}/extracts
 
 # List contents of the extracts directory.
 echo "Contents of ${DATADIR}/extracts:"
-ls -lh ${DATADIR}/extracts
-df -h
-du -sh ${DATADIR}/*
+ls -lh ${DATADIR}/extracts || true
+df -h || true
+du -sh ${DATADIR}/* || true
 
 # Upload all of the extracts to blob storage
 svclog "Copying to blob"

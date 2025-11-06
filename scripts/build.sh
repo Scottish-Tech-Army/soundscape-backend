@@ -2,8 +2,9 @@
 # Script to build the container, and push it.
 set -euo pipefail
 
-# This script must run from the parent directory of the scripts directory
+# Change to the parent directory of the scripts directory and source utils.
 cd "$(dirname "$0")/.."
+. scripts/cfgutils.sh
 
 # Login to the ACR
 az acr login -n ${REGISTRYNAME}

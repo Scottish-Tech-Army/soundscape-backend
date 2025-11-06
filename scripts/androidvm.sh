@@ -3,10 +3,12 @@
 set -euo pipefail
 echo "RG: ${RG}"
 
-# This script must run from the parent directory of the scripts directory
+# Change to the parent directory of the scripts directory and source utils.
 cd "$(dirname "$0")/.."
+. scripts/cfgutils.sh
 
 # Build the escaped query file.
+mkdir -p build
 jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
 
 # Build the tar file of scripts

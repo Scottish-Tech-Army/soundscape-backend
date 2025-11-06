@@ -56,7 +56,7 @@ Find your Cloudflare DNS domain.
 
     - Otherwise go to your workers, and pick a worker, to again find the domain you want.
 
-    The URL receiving production data should then be `https://pmtiles.blah.workers.dev` where you found what `blah` should be above.
+        The URL receiving production data should then be `https://workdername.blah.workers.dev` where you found what `blah` should be above.
 
 ### Cloudflare secrets
 
@@ -70,7 +70,7 @@ Get secrets from Cloudflare and store them for later storage in a key vault.
 
     - Select the three dots to the right of the account name, and click on `Copy account ID`.
 
-- Create an API token to deploy resources.
+- Create an API token to deploy resources. (This assumes that you are using an account API token; you can also use a user API token, but then when you leave the organisation it will all stop working.)
 
     - Select `Account Home` on the left hand panel.
 
@@ -82,15 +82,15 @@ Get secrets from Cloudflare and store them for later storage in a key vault.
 
     - Store off the API key.
 
-- Found your Cloudflare subdomain - the string after the worker name in the URL to access a worker in the account.
+- Found your Cloudflare subdomain - the string after the worker name in the URL to access a worker in the account. This was described above.
 
 - Create R2 access credentials. (This could use the same overpowered API token above, but we instead use a dedicated token.)
 
-    - Select `R2 Object Storage` in the left hand pane.
+    - In the left hand pane, select `Storage and databases`, then `R2 Object Storage`, then `Overview`.
 
-    - Click on `S3 API`
+    - In the `Account details` section of the page, there is a button called `API tokens`.
 
-    - That will give you a button called create API tokens that lets you create the right kind of API token.
+    - That will give you a button called create API tokens that lets you create the right kind of API token. Select `Object Read and Write`.
 
     - Store off both the Access Key and the Secret.
 
@@ -108,14 +108,14 @@ Follow the following steps. Note that some of the scripts here take quite some t
         # Parameters in use
         export PREFIX=a01           # As described above
         export RG=rg-${PREFIX}      # Do not change
-        export REGION=northeurope   # Region - normally should not change
+        export REGION=westeurope    # Region - normally should not change
 
         # Globally unique names, used in both bicep and in scripts
         # A good way to generate this is "date | md5sum | head -c 20 && echo"
         export UNIQUESTRING=fe6971508913740178df   # Ensure globally unique
-        export STORAGENAME=${UNIQUESTRING}
-        export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
-        export METRICAPPNAME=vmcount-${UNIQUESTRING}
+
+        # Area to use - should normally be "monaco" (for fast low level testing) or "planet"
+        export AREA=planet
 
         # Names of export and tiles storage buckets
         export EXPORTS_BUCKET=extracts
@@ -124,15 +124,11 @@ Follow the following steps. Note that some of the scripts here take quite some t
         # Do not change from here down
         # This subscription stuff is purely to make sure we are using the right Azure subscription.
         export SUBSCRIPTION=b9ba9683-feef-47c8-bcc0-08e791dc1493
-
-        az account set --subscription ${SUBSCRIPTION}
-        if [ $? -ne 0 ]; then
-        echo "Failed to set Azure subscription."
-        exit 1
-        fi
         ~~~
 
         Some of these deserve more comment.
+
+        - `REGION` can be any valid Azure region, but there can be performance implications for picking one that is too far from the R2 deployment location.
 
         - `UNIQUESTRING` is just that - a unique string for this deployment used (for example) in storage account names.
 
@@ -141,7 +137,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
  - Source the config file.
 
     ~~~bash
-    . config/ios_pNN.sh
+    . config/android_aNN.sh
     ~~~
 
 - Run the base deploy script.
@@ -174,10 +170,6 @@ Follow the following steps. Note that some of the scripts here take quite some t
     bash scripts/androidvm.sh
     ~~~
 
-- Set up the function apps.
-
-    *Details TBD*
-
 - Deploy the function app code to the deployment.
 
     ~~~bash
@@ -187,5 +179,5 @@ Follow the following steps. Note that some of the scripts here take quite some t
 - Clear out temporary build files. This is optional, but it avoids having random built artefacts lying around cluttering up the disk.
 
     ~~~bash
-    bash scripts/code_clean.sh
+    bash scripts/codeup.sh
     ~~~

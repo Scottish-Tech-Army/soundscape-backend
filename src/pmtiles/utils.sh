@@ -52,13 +52,14 @@ extracts-download-test() {
     mkdir -p $DATADIR/extracts-test
     pushd $DATADIR/extracts-test
 
+    echo "Download manifest.geojson.gz from ${URLBASE}/manifest.geojson.gz"
     curl -D - --fail-with-body "${URLBASE}/manifest.geojson.gz" -o manifest.geojson.gz
     diff manifest.geojson.gz $DATADIR/extracts/manifest.geojson.gz
 
     FILELIST=$(find ${DATADIR}/extracts -name "*.pmtiles" | shuf -n 3)
     for f in ${FILELIST}; do
         FILENAME=$(basename $f)
-        echo "Testing extract ${FILENAME}"
+        echo "Testing extract ${URLBASE}/${FILENAME}"
         curl -D - --fail-with-body "${URLBASE}/${FILENAME}?nodata"
     done
     popd # Done with testing

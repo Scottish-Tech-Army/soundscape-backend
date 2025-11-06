@@ -50,9 +50,9 @@ rclone copy ${DATADIR}/${PMTILESFILE} r2:${PMTILES_BUCKET} \
 
 # List contents of the /mnt directory.
 echo "Contents of ${DATADIR}:"
-ls -lh ${DATADIR}
-df -h
-du -sh ${DATADIR}/*
+ls -lh ${DATADIR} || true
+df -h || true
+du -sh ${DATADIR}/* || true
 
 popd # leave DATADIR
 
@@ -70,7 +70,7 @@ LIVE_URL="https://${PMTILES_BUCKET}.${CLOUDFLARE_SUBDOMAIN}.workers.dev/blah"
 # /14/8188/5448.mvt is around the Tower of London
 # /14/8529/5974.mvt is Monaco
 TARGETS="Monaco /14/8529/5974"
-if [ "${AREA}" = "planet"]; then
+if [ "${AREA}" = "planet" ]; then
     TARGETS="${TARGETS} Yaounde /14/8714/8016 TowerOfLondon /14/8188/5448"
 fi
 

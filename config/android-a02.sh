@@ -1,11 +1,11 @@
 # Parameters in use
-export PREFIX=a01           # As described above
-export RG=rg-${PREFIX}      # Do not change
-export REGION=northeurope   # Region - normally should not change
+export PREFIX=a02
+export RG=rg-${PREFIX}
+export REGION=westeurope
 
 # Globally unique names, used in both bicep and in scripts
 # A good way to generate this is "date | md5sum | head -c 20 && echo"
-export UNIQUESTRING=c8c8f79c0b44fc22686b  # Ensure globally unique
+export UNIQUESTRING=d41d8cd98f00b204e980 # Ensure globally unique
 
 # Names of export and tiles storage buckets
 export EXTRACTS_BUCKET=extracts

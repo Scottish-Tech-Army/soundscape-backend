@@ -33,8 +33,9 @@ var keyVaultName string = '${prefix}-vlt-${uniqueString(resourceGroup().id)}'
 @description('Log Analytics workspace name')
 var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
 
+// Cron format here includes seconds, so is "seconds minutes hours day month day-of-week"
 @description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
-var triggerSchedule string = '0 0 16 * * 4'
+var triggerSchedule string = '0 0 12 6 * *' // 12:00 GMT on the 6th of every month
 
 @description('VM size supporting ephemeral NVMe OS disk')
 var vmSize string = 'Standard_E20ds_v6' // For spot instances
