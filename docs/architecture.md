@@ -1,8 +1,8 @@
-# Architecture
+# iOS Architecture
 
 This repository contains code that allows the deployment of a back end for the [Soundscape iPhone app](https://apps.apple.com/gb/app/soundscape/id6459021379). The app calculates its location, converts that to OpenStreetMap tile format, and uses that to build an HTTP GET request that retrieves a JSON file of [OpenStreetMap](https://www.openstreetmap.org) data showing known locations in the area. The back end (this repository) constructs, stores, and returns that data.
 
-![Architecture Diagram](soundscape.drawio.svg)
+![iOS Architecture Diagram](iossoundscape.drawio.svg)
 
 ## Architecture summary
 
@@ -75,3 +75,67 @@ The data in the database is downloaded and ingested from public data at [Geofabr
     - Once a week, a function app with a timer trigger increases the scale to 1, so a single VM is instantiated. This trigger can also be fired manually through the portal to force an update.
 
     - The VM when created installs and runs the ingestion jobs through cloud init. If the run is successful, the ingestion job scales the VMSS down again, and the VM disappears.
+
+# Android architecture
+
+There are three components to the Android architecture.
+
+1. There is a tileserver component that serves up tiles based on a protomap format, running in Cloudflare (but orchestrated from Azure).
+
+2. There is an offline maps download component that again runs in Cloudflare, orchestrated from Azure.
+
+3. There is a search component. This is not contained in this repository at all, and is not shown in the architecture diagram.
+
+![Android Architecture Diagram](android.drawio.svg)
+
+## Cloudflare components
+
+There are a number of Cloudflare components.
+
+- There are two R2 buckets.
+
+    - The bucket parametrised as `PMTILES_BUCKET` (normally `pmtiles` for non-test deployments) contains the `pmtiles` file used for all audio data.
+
+    - The bucket parametrised as `EXTRACTS_BUCKET` (normally `extracts` for non-test deployments) contains the downloadable extracts data for offline storage.
+
+    In both of these buckets, there are timestamped directories, allowing new versions of data to be uploaded without impacting the existing data.
+
+- There are then two workers used by the app.
+
+    - The worker named `PMTILES_BUCKET` contains the worker defined in the [protomaps PMTiles repository](https://github.com/protomaps/PMTiles), which allows retrieval of tiles for the client containing Open Street Map data used for maps and audio. This worker takes a configuration parameter which defines which of the various pmtiles files in the bucket is currently in use.
+
+    - The worker named `EXTRACTS_BUCKET` contains a worker that allows the download of extracts. Clients download a file `manifest.geojson.gz` which lists all of the extracts available, and can then download the extract that is most suitable for their location. Again, this worker takes a configuration parameter which indicates which version clients should be offered. However, there are two important differences.
+
+        - While data is returned from the R2 bucket if present, not all data is initially uploaded to R2. If the file required is not present, it is retrieved from Azure and stored in R2 before being returned to the client.
+
+        - All extracts files are both named and datastamped, and the manifest file references datestamped files. Hence if the extracts list changes while a client is still processing the manifest, the old extracts are still available for a limited time (around twenty minutes). After this period, clients must download the manifest and recalculate which extract they should use.
+
+- In addition to the workers `PMTILES_BUCKET` and `EXTRACTS_BUCKET`, there are two workers called `PMTILES_BUCKET-test` and `EXTRACTS_BUCKET-test`, used for testing during the upload process, not by clients.
+
+## Uploading of new data from Azure
+
+The data is uploaded and the workers are configured from tooling running in Azure. The architecture for this is very similar to the reloading model for iOS. There is a VMSS which runs at regular intervals, and when it runs, the tooling on it does the following.
+
+- It sets up the `pmtiles` file. It does this as follows.
+
+    - It downloads the raw data and builds the `pmtiles` file.
+
+    - It uploads the `pmtiles` file to the R2 bucket used for tile retrieval, named `PMTILES_BUCKET` from the config (normally `pmtiles` for production).
+
+    - It updates the worker `PMTILES_BUCKET-test` configuration to handle all requests from the new file and validates that it works.
+
+    - It updates the production worker `PMTILES_BUCKET` configuration to use the new pmtiles file. This is the worker that handles requests from the app itself.
+
+- The tooling then sets up extracts.
+
+    - It checks out the relevant scripts.
+
+    - The scripts generate all of the extracts; often several hundred GB.
+
+    - Because uploading all that data would be very expensive, it stores them in a public Azure storage account using [internet routing](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/routing-preference-overview), rather than directly copying to R2.
+
+    - It updates the worker `EXTRACTS_BUCKET-test` configuration to handle all requests from the new datestamped directory of extracts and validates that it is possible to download the manifest and a small number of extracts.
+
+    - It updates the production worker `EXTRACTS_BUCKET` configuration to match the configuration tested above, and retests. This is the worker that handles requests from the app itself.
+
+- Finally, after a pause, it tidies up old data, removing the previous versions from R2 and from Azure storage.

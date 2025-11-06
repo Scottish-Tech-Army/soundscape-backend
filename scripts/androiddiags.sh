@@ -11,7 +11,7 @@ az group create --location ${DIAGSREGION} --resource-group ${DIAGSRG}
 
 # Before running this, you must be logged into your account, with the correct subscription selected.
 az deployment group create \
-    --resource-group ${DIAGSRG} --template-file templates/diags.bicep \
+    --resource-group ${DIAGSRG} --template-file templates/androiddiags.bicep \
     --debug --verbose
 
 echo "SUCCESS"

@@ -74,6 +74,9 @@ var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id
 @description('Name of the storage container for downloads')
 var downloadContainerName = 'downloads'
 
+@description('Name of the storage container for uploads')
+var uploadContainerName = 'uploads'
+
 // Get the UAMI from the other subscription
 resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
   name: registryUAMIName
@@ -207,7 +210,7 @@ resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2025-06-01-preview
     }
     storage: {
       // For Premium SSD v1, remove iops and throughput, and turn autoGrow back on
-      storageSizeGB: 500
+      storageSizeGB: 850
       iops: 12000
       throughput: 500
       // https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/concepts-storage-premium-ssd-v2
@@ -235,6 +238,39 @@ resource dbExtensions 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@
   properties: {
     value: 'postgis,hstore'
     source: 'user-override'
+  }
+}
+
+// Send diagnostics log from DB to Log Analytics
+resource dbDiags 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'send-postgres-logs'
+  scope: dbService
+  properties: {
+    workspaceId: logAnalytics.id
+    logs: [
+      {
+        category: 'PostgreSQLLogs'
+        enabled: true
+      }
+      {
+        category: 'PostgreSQLFlexSessions'
+        enabled: true
+      }
+      {
+        category: 'PostgreSQLFlexQueryStoreRuntime'
+        enabled: true
+      }
+      {
+        category: 'PostgreSQLFlexWaitStatistics'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
   }
 }
 
@@ -435,6 +471,11 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
   name: 'default'
   parent: storage
+}
+
+resource uploadContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: uploadContainerName
+  parent: blobService
 }
 
 resource downloadContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {

@@ -1,4 +1,4 @@
-# Deployment and management
+# Deployment of the iOS backend in Azure
 
 This document describes how to deploy a new deployment. It does not cover the global shared resources (which are assumed to exist).
 
@@ -42,7 +42,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
 
 - Set up a config file. Production instances should be named `pNN` where `NN` is a two digit number that should be monotonically increasing, such as `p01`.
 
-    - The file should be in the [config](config) directory, and be named `sta-pNN.sh`
+    - The file should be in the [config](config) directory, and be named `ios-pNN.sh`
 
     - Contents should be as below; see comments.
 
@@ -58,28 +58,15 @@ Follow the following steps. Note that some of the scripts here take quite some t
         # Globally unique names, used in both bicep and in scripts
         # A good way to generate this is "date | md5sum | head -c 20 && echo"
         export UNIQUESTRING=fe6971508913740178df   # Ensure globally unique
-        export STORAGENAME=${UNIQUESTRING}
-        export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
-        export METRICAPPNAME=vmcount-${UNIQUESTRING}
 
-        # Global shared diagnostics viewing tooling
-        export DIAGSRG=rg-diags     # Do not change
-
-        # Do not change from here down
-        # This subscription stuff is purely to make sure we are using the right Azure subscription.
+        # Subscription name
         export SUBSCRIPTION=b9ba9683-feef-47c8-bcc0-08e791dc1493
-
-        az account set --subscription ${SUBSCRIPTION}
-        if [ $? -ne 0 ]; then
-        echo "Failed to set Azure subscription."
-        exit 1
-        fi
         ~~~
 
  - Source the config file.
 
     ~~~bash
-    . config/sta_pNN.sh
+    . config/ios_pNN.sh
     ~~~
 
 - Ensure that you logged into Azure, and using the correct subscription.
@@ -97,10 +84,10 @@ Follow the following steps. Note that some of the scripts here take quite some t
     bash scripts/build.sh
     ~~~
 
-- Run the deploy script. This deploys the database, tile server apps, and much of the core infrastructure.
+- Run the base deploy script. This deploys the database, tile server apps, and much of the core infrastructure.
 
     ~~~bash
-    bash scripts/deploy.sh
+    bash scripts/iosbase.sh
     ~~~
 
     *Very occasionally this fails with an error reporting `PrincipalNotFound`. If this occurs, just rerun the command. This is an intermittent timing issue caused by a managed identity being assigned a role before Entra has propagated its creation, and is resolved when the command is rerun.*
@@ -108,7 +95,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
 - Run the VM deployment script. This deploys all the peripheral (but necessary) components, including ingestion tooling, function apps, and dashboards.
 
     ~~~bash
-    bash scripts/vm.sh
+    bash scripts/iosvm.sh
     ~~~
 
 - Deploy the function app code to the deployment.
@@ -120,7 +107,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
 - Clear out temporary build files. This is optional, but it avoids having random built artefacts lying around cluttering up the disk.
 
     ~~~bash
-    bash scripts/code_clean.sh
+    bash scripts/codeup.sh
     ~~~
 
 ## Deploying log queries
@@ -128,7 +115,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
 There are some saved queries shared across all deployments. These exist in a single resource group (shared across all deployments), and so you should not need to change these. If you make changes, you can deploy them as follows.
 
 ~~~bash
-bash scripts/diags.sh
+bash scripts/iosdiags.sh
 ~~~
 
 ### Redeploy gotchas

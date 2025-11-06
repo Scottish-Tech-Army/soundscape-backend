@@ -1,0 +1,39 @@
+{
+    // Parameters for both workers
+    // Note that bucket name and worker names match, for simplicity
+    "name": "${PMTILES_BUCKET}",
+    "main": "tiles.js",
+    "observability": {
+        "enabled": true
+    },
+
+    "env": {
+        // Parameters for live code
+        "live": {
+            "name": "${PMTILES_BUCKET}",
+            "vars": {
+                "PMTILES_PATH": "${PMTILES_PATH}"
+            },
+            "r2_buckets": [
+                {
+                    "binding": "BUCKET",
+                    "bucket_name": "${PMTILES_BUCKET}"
+                }
+            ]
+        },
+        // Parameters for test code
+        "test": {
+            "name": "${PMTILES_BUCKET}-test",
+            "vars": {
+                "PMTILES_PATH": "${PMTILES_PATH}"
+            },
+            "r2_buckets": [
+                {
+                    "binding": "BUCKET",
+                    "bucket_name": "${PMTILES_BUCKET}"
+                }
+            ]
+        }
+    },
+    "compatibility_date": "2025-10-12"
+}

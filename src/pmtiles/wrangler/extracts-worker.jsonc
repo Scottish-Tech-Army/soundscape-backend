@@ -1,0 +1,41 @@
+{
+    // Parameters for both workers
+    // Note that bucket name and worker names match, for simplicity
+    "name": "${EXTRACTS_BUCKET}",
+    "main": "streamer.js",
+    "observability": {
+        "enabled": true
+    },
+
+    "env": {
+        // Parameters for live code
+        "live": {
+            "name": "${EXTRACTS_BUCKET}",
+            "vars": {
+                "ORIGIN_BASE_URL": "${EXTRACTS_URL}",
+                "CURRENT_DATESTAMP": "${DATESTAMP}"
+            },
+            "r2_buckets": [
+                {
+                    "binding": "BUCKET",
+                    "bucket_name": "${EXTRACTS_BUCKET}"
+                }
+            ]
+        },
+        // Parameters for test code
+        "test": {
+            "name": "${EXTRACTS_BUCKET}-test",
+            "vars": {
+                "ORIGIN_BASE_URL": "${EXTRACTS_URL}",
+                "CURRENT_DATESTAMP": "${DATESTAMP}"
+            },
+            "r2_buckets": [
+                {
+                    "binding": "BUCKET",
+                    "bucket_name": "${EXTRACTS_BUCKET}"
+                }
+            ]
+        }
+    },
+    "compatibility_date": "2025-10-12"
+}

@@ -44,6 +44,9 @@ var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup
 @description('Tilesrv Container App name')
 var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id)}'
 
+@description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
+var triggerSchedule string = '0 0 16 * * 0'
+
 @description('VM size supporting ephemeral NVMe OS disk')
 //var vmSize string = 'Standard_E20ds_v5' // Best if no spot
 var vmSize string = 'Standard_E20ds_v6' // For spot instances
@@ -53,12 +56,6 @@ var vmssName string = 'ingest-vmss'
 
 @description('Azure user name')
 var adminUsername string = 'azureuser'
-
-@description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
-var triggerSchedule string = '0 0 16 * * 0'
-
-@description('Metric schedule in cron format, e.g. "*/5 * * * *" for every five minutes')
-var metricSchedule string = '*/5 * * * *'
 
 // Get existing resources
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' existing = {
@@ -102,7 +99,7 @@ resource dbService 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' existi
 // Build cloud init, now we have retrieved the existing resources
 // We then interpolate a block of environment variables into the cloud-init file
 @description('Cloud init file before substitution')
-var cloudInitRaw = loadTextContent('./cloud-init.yaml')
+var cloudInitRaw = loadTextContent('./ios-cloud-init.yaml')
 
 // Build one interpolated block in Bicep; note the extra spacing for the YAML indentation
 var envLines = [
@@ -124,7 +121,7 @@ var cloudInitRendered = replace(cloudInitRaw, '{{ENV_BLOCK}}', envBlock)
 
 // Create the new resources
 resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
-  name: 'ingest-vmss'
+  name: vmssName
   location: resourceGroup().location
   sku: {
     name: vmSize
@@ -140,10 +137,10 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
         osDisk: {
           createOption: 'FromImage'
           caching: 'ReadOnly'
-          diffDiskSettings: {
-            option: 'Local' // Ephemeral OS on NVMe
-            placement: 'NVMeDisk'
+          managedDisk: {
+            storageAccountType: 'Premium_LRS'
           }
+          diskSizeGB: 64
         }
         imageReference: {
           publisher: 'Canonical'
@@ -360,241 +357,20 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
   }
 }
 
-// Plans - every function app needs one.
-var triggerPlanName        = '${prefix}-plan'
-var metricPlanName        = '${prefix}-plan2'
-
-// 1) Storage Account for FUNCTIONS runtime
-resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
-  name: storageName
-}
-
-// Grab the first storage account key
-var storageKey = storage.listKeys().keys[0].value
-
-// Blob service and storage in that account for the function app code and uploads
-var triggerContainerName = 'functionapp'
-var metricContainerName = 'metricapp'
+// Upload and download storage container names
 var uploadContainerName = 'uploads'
 var downloadContainerName = 'downloads'
 
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' existing = {
-  name: 'default'
-  parent: storage
-}
-
-resource triggerContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: triggerContainerName
-  parent: blobService
-}
-
-resource metricContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: metricContainerName
-  parent: blobService
-}
-
-resource uploadContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: uploadContainerName
-  parent: blobService
-}
-
-// 1a - UAMI permissions on the storage account
-resource blobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storage.id, 'blob-contributor', uami.id)
-  scope: storage
-  properties: {
-    principalId: uami.properties.principalId
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
-    )
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource queueDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storage.id, 'queue-contributor', uami.id)
-  scope: storage
-  properties: {
-    principalId: uami.properties.principalId
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      '974c5e8b-45b9-4653-ba55-5f855dd0fb88' // Storage Queue Data Contributor
-    )
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// 2) Consumption (Dynamic) plan
-resource triggerPlan 'Microsoft.Web/serverfarms@2021-02-01' = {
-  name: triggerPlanName
-  kind: 'functionapp'
-  location: resourceGroup().location
-  sku: {
-    tier: 'FlexConsumption'
-    name: 'FC1'
-  }
-  properties: {
-    reserved: true // Linux
-  }
-}
-
-resource metricPlan 'Microsoft.Web/serverfarms@2021-02-01' = {
-  name: metricPlanName
-  kind: 'functionapp'
-  location: resourceGroup().location
-  sku: {
-    tier: 'FlexConsumption'
-    name: 'FC1'
-  }
-  properties: {
-    reserved: true // Linux
-  }
-}
-
-// 3) Function App
-resource triggerApp 'Microsoft.Web/sites@2024-11-01' = {
-  name: triggerAppName
-  location: resourceGroup().location
-  kind: 'functionapp,linux,flex'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${uami.id}': {}
-    }
-  }
-  properties: {
-    serverFarmId: triggerPlan.id
-    functionAppConfig: {
-      runtime: {
-        name: 'python'
-        version: '3.12'
-      }
-      scaleAndConcurrency: {
-        instanceMemoryMB: 2048
-        maximumInstanceCount: 40 // Seems to be required, and 40 is minimum value
-      }
-      deployment: {
-        storage: {
-          // Package location
-          type: 'BlobContainer' // Pick most recent blob from this container
-          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${triggerContainerName}'
-
-          // Auth model for the package fetch (UAMI)
-          authentication: {
-            type: 'UserAssignedIdentity'
-            userAssignedIdentityResourceId: uami.id
-            // storageAccountConnectionStringName not required when using UAMI
-          }
-        }
-      }
-    }
-    siteConfig: {
-      cors: {
-        allowedOrigins: [
-          'https://portal.azure.com'    // allow portal XHR calls, required for testing
-        ]
-      }
-      appSettings: [
-        { name:  'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storageName};AccountKey=${storageKey};EndpointSuffix=${environment().suffixes.storage}' }
-        { name: 'FUNCTIONS_EXTENSION_VERSION',      value: '~4' }
-
-        // Diags settings
-        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',  value: appInsights.properties.ConnectionString }
-        { name: 'APPINSIGHTS_INSTRUMENTATIONKEY',   value: appInsights.properties.InstrumentationKey }
-        { name: 'APPLICATIONINSIGHTS_ROLE_NAME',    value: triggerAppName }
-
-        // Variables passed to the code
-        { name: 'UAMI_CLIENT_ID',                   value: uami.properties.clientId }
-        { name: 'AZURE_SUBSCRIPTION_ID',            value: subscription().subscriptionId }
-        { name: 'VMSS_RESOURCE_GROUP',              value: resourceGroup().name }
-        { name: 'VMSS_NAME',                        value: vmssName }
-        { name: 'VMSS_RESOURCE_ID',                 value: vmss.id }
-        { name: 'TRIGGER_SCHEDULE',                 value: triggerSchedule }
-      ]
-    }
-  }
-}
-
-resource metricApp 'Microsoft.Web/sites@2024-11-01' = {
-  name: metricAppName
-  location: resourceGroup().location
-  kind: 'functionapp,linux,flex'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${uami.id}': {}
-    }
-  }
-  properties: {
-    serverFarmId: metricPlan.id
-    functionAppConfig: {
-      runtime: {
-        name: 'python'
-        version: '3.12'
-      }
-      scaleAndConcurrency: {
-        instanceMemoryMB: 2048
-        maximumInstanceCount: 40 // Seems to be required, and 40 is minimum value
-      }
-      deployment: {
-        storage: {
-          // Package location
-          type: 'BlobContainer' // Pick most recent blob from this container
-          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${metricContainerName}'
-
-          // Auth model for the package fetch (UAMI)
-          authentication: {
-            type: 'UserAssignedIdentity'
-            userAssignedIdentityResourceId: uami.id
-            // storageAccountConnectionStringName not required when using UAMI
-          }
-        }
-      }
-    }
-    siteConfig: {
-      cors: {
-        allowedOrigins: [
-          'https://portal.azure.com'    // allow portal XHR calls, required for testing
-        ]
-      }
-      appSettings: [
-        { name:  'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storageName};AccountKey=${storageKey};EndpointSuffix=${environment().suffixes.storage}' }
-        { name: 'FUNCTIONS_EXTENSION_VERSION',      value: '~4' }
-        // Diags settings
-        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',  value: appInsights.properties.ConnectionString }
-        { name: 'APPINSIGHTS_INSTRUMENTATIONKEY',   value: appInsights.properties.InstrumentationKey }
-        { name: 'APPLICATIONINSIGHTS_ROLE_NAME',    value: triggerAppName }
-        // Variables passed to the code
-        { name: 'UAMI_CLIENT_ID',                   value: uami.properties.clientId }
-        { name: 'AZURE_SUBSCRIPTION_ID',            value: subscription().subscriptionId }
-        { name: 'VMSS_RESOURCE_GROUP',              value: resourceGroup().name }
-        { name: 'VMSS_NAME',                        value: vmssName }
-        { name: 'VMSS_RESOURCE_ID',                 value: vmss.id }
-        { name: 'TRIGGER_SCHEDULE',                 value: metricSchedule }
-      ]
-    }
-  }
-}
-
-// Optional: Diagnostic settings from Function App to Log Analytics (platform logs/metrics)
-resource funcDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: '${prefix}-func-diag'
-  scope: triggerApp
-  properties: {
-    workspaceId: logAnalytics.id
-    logs: [
-      {
-        category: 'FunctionAppLogs'
-        enabled: true
-      }
-    ]
-    metrics: [
-      {
-        category: 'AllMetrics'
-        enabled: true
-      }
-    ]
+module functionApps './functions.bicep' = {
+  name: 'functionApps'
+  params: {
+    prefix: prefix
+    triggerAppName: triggerAppName
+    metricAppName: metricAppName
+    storageName: storageName
+    vmssName: vmssName
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+    triggerSchedule: triggerSchedule
   }
 }
 
@@ -785,7 +561,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                       metrics: [
                         {
                           resourceMetadata: {
-                            id: triggerApp.id
+                            id: functionApps.outputs.triggerAppId
                           }
                           name: 'OnDemandFunctionExecutionCount'
                           aggregationType: 1

@@ -3,20 +3,22 @@
 set -euo pipefail
 echo "RG: ${RG}"
 
-# This script must run from the parent directory of the scripts directory
+# Change to the parent directory of the scripts directory and source utils.
 cd "$(dirname "$0")/.."
-
-# Before running this, you must be logged into your account, with the correct subscription selected.
-
-# Build the tar file of scripts
-mkdir -p build
-pushd src/ingest
-tar -zcvf ../../build/files.tgz requirements-ingest.txt ingest.py tilefunc.sql postgis-vt-util.sql config.json mapping.yml extracts/ ../tiletest/
-popd
+. scripts/cfgutils.sh
 
 # Build the escaped query file.
+mkdir -p build
 jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
-jq -Rs . templates/errorquery.txt > build/error-escaped.txt
+
+# Build the tar file of scripts
+rm -rf build/tmp build/files.tgz
+mkdir -p build/tmp
+cp -r src/pmtiles/* build/tmp/
+cp -r thirdparty/pmtiles/wrangler build/tmp/
+pushd build/tmp
+tar -zcvf ../files.tgz *
+popd
 
 # Returns both key1 and key2; pick either
 echo "Getting storage account key"
@@ -38,10 +40,13 @@ az storage blob upload-batch \
 # Create the group
 echo "Create deployment"
 az deployment group create \
-    --resource-group ${RG} --template-file templates/vm.bicep \
+    --resource-group ${RG} --template-file templates/androidvm.bicep \
     --parameters prefix=${PREFIX} \
+                 area=${AREA} \
                  triggerAppName=${TRIGGERAPPNAME} \
                  metricAppName=${METRICAPPNAME} \
+                 pmtilesBucket=${PMTILES_BUCKET} \
+                 extractsBucket=${EXTRACTS_BUCKET} \
                  storageName=${STORAGENAME} --debug --verbose
 
 echo "SUCCESS"

@@ -1,6 +1,6 @@
 # Soundscape Backend
 
-This repository contains code for the backend services for the Soundscape iPhone app running in Azure. It is structured as follows.
+This repository contains code for the backend services for the Soundscape app running in Azure. It is concerned with both iOS and Android apps.
 
 The repository is structured as follows.
 
@@ -8,9 +8,11 @@ The repository is structured as follows.
 
     - [Architecture](docs/architecture.md)
 
-    - [How to deploy the system](docs/deploy.md)
+    - [How to deploy an iOS backend](docs/iosdeploy.md)
 
-    - [Operations processes](docs/operations.md) such as debugging and testing deployments
+    - [How to deploy an Android backend](docs/androiddeploy.md)
+
+    - [Operations processes](docs/operations.md) such as debugging and testing deployments. *This is iOS only for now; TBD if it will be extended or another document created.*
 
 - [scripts](scripts) contains scripts that allow you to deploy the solution, using all of the components below.
 
@@ -32,3 +34,6 @@ The repository is structured as follows.
 
     - [ingest_diffs](src/ingest_diffs) contains an ingestion diffs container. This is no longer used (as it is simpler and cheaper to perform full ingestions every week than to run it continuously), but in principle it may be reinstated in future.
 
+## Third party software
+
+This code contains third party software from the [protomaps PMTiles repository](https://github.com/protomaps/PMTiles), which is licensed according to [its own license](thirdparty/pmtiles/LICENSE) - see [the README](https://github.com/protomaps/README.md) for further information.

@@ -1,5 +1,5 @@
 @description('Name for the query pack')
-param queryPackName string = 'soundscape-queries'
+param queryPackName string = 'ios-queries'
 
 // Root query pack
 resource queryPack 'Microsoft.OperationalInsights/queryPacks@2025-02-01' = {
@@ -12,7 +12,7 @@ module perfLogs './query.bicep' = {
   name: 'perfLogs'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape summary of performance logs'
+    displayName: 'iOS summary of performance logs'
     queryDescription: 'Summary of performance logs from ingestion VMs'
     query: '''
     IngestLogs_CL
@@ -26,7 +26,7 @@ module perfCSV './query.bicep' = {
   name: 'perfCSV'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape detailed list of perf results'
+    displayName: 'iOS detailed list of perf results'
     queryDescription: 'All outputs from CSV performance tooling'
     query: '''
     IngestLogs_CL
@@ -50,7 +50,7 @@ module perfCSVErrors './query.bicep' = {
   name: 'perfCSVErrors'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape detailed list of perf errors'
+    displayName: 'iOS detailed list of perf errors'
     queryDescription: 'All outputs from CSV performance tooling showing errors'
     query: '''
     IngestLogs_CL
@@ -75,7 +75,7 @@ module ingHighLevel './query.bicep' = {
   name: 'ingHighLevel'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape ingestion - high level'
+    displayName: 'iOS ingestion - high level'
     queryDescription: 'High-level ingestion VM start/completion'
     query: '''
     IngestLogs_CL
@@ -89,11 +89,12 @@ module ingDetail './query.bicep' = {
   name: 'ingDetail'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape ingestion - detailed logs'
+    displayName: 'iOS ingestion - detailed logs'
     queryDescription: 'Low level logs of ingestion process'
     query: '''
     IngestLogs_CL
     | where FilePath !contains "tiletest"
+    | project-reorder TimeGenerated, RawData, FilePath
     | order by TimeGenerated desc
     '''
   }
@@ -103,7 +104,7 @@ module tilesrvLogs './query.bicep' = {
   name: 'tilesrvLogs'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape tilesrv logs'
+    displayName: 'iOS tilesrv logs'
     queryDescription: 'Low level logs of tilesrv container app'
     query: '''
     ContainerAppConsoleLogs_CL
@@ -117,7 +118,7 @@ module tilesrvAccessLogs './query.bicep' = {
   name: 'tilesrvAccessLogs'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape tilesrv access logs'
+    displayName: 'iOS tilesrv access logs'
     queryDescription: 'Access logs for tile server'
     query: '''
     AppRequests
@@ -132,7 +133,7 @@ module tilesrvAccessLogSummary './query.bicep' = {
   name: 'tilesrvAccessLogSummary'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape tilesrv access logs summary'
+    displayName: 'iOS tilesrv access logs summary'
     queryDescription: 'Summary of access log counts for tile server'
     query: '''
     AppRequests
@@ -148,10 +149,10 @@ module tilesrvAccessLogSummary './query.bicep' = {
 }
 
 module functionApp './query.bicep' = {
-  name: 'functionApp'
+  name: 'iosFunctionApp'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape function app logs'
+    displayName: 'iOS function app logs'
     queryDescription: 'Low level logs of function app'
     query: '''
     AppTraces
@@ -164,7 +165,7 @@ module vmCount './query.bicep' = {
   name: 'vmCount'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape VM instance count'
+    displayName: 'iOS VM instance count'
     queryDescription: 'Capacity and VM instance counts for the ingestion scale set'
     query: '''
     AppTraces
@@ -181,7 +182,7 @@ module frontDoor './query.bicep' = {
   name: 'frontDoor'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape Front Door metrics'
+    displayName: 'iOS Front Door metrics'
     queryDescription: 'Front door metrics'
     query: '''
     AzureMetrics
@@ -223,7 +224,7 @@ module frontDoorAccessLogSummary './query.bicep' = {
   name: 'frontDoorAccessLogSummary'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape Front Door Access Log summary'
+    displayName: 'iOS Front Door Access Log summary'
     queryDescription: 'Front door access logs'
     query: '''
     AzureDiagnostics
@@ -250,7 +251,7 @@ module frontDoorAccessLogs './query.bicep' = {
   name: 'frontDoorAccessLogs'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape Front Door Access Logs'
+    displayName: 'iOS Front Door Access Logs'
     queryDescription: 'All Front Door access logs'
     query: '''
     AzureDiagnostics
@@ -265,13 +266,28 @@ module frontDoorAccessLogErrors './query.bicep' = {
   name: 'frontDoorAccessLogErrors'
   params: {
     queryPackName: queryPackName
-    displayName: 'Soundscape Front Door Errors'
+    displayName: 'iOS Front Door Errors'
     queryDescription: 'Front door errors from access logs'
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
     | where httpStatusCode_s != 200
     | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
+    | order by TimeGenerated desc
+    '''
+  }
+}
+
+module sqlLogs './query.bicep' = {
+  name: 'sqlLogs'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'iOS SQL logs'
+    queryDescription: 'Raw logs from the SQL database'
+    query: '''
+    PGSQLServerLogs
+    | project-away ReplicaRole, Location, Type, _ResourceId, TenantId
+    | project-reorder TimeGenerated, Message
     | order by TimeGenerated desc
     '''
   }

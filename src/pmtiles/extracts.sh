@@ -1,0 +1,70 @@
+#!/bin/bash
+set -euo pipefail
+. ${BASE}/env.sh # We reload env.sh, as the previous script may have added to it
+. ${BASE}/utils.sh
+
+svclog "Extracts job starting"
+
+svclog "Creating R2 bucket"
+pushd ${BASE}/wrangler
+# Create the R2 bucket if it doesn't exist already
+export R2_BUCKET=${EXTRACTS_BUCKET}
+envsubst < r2.jsonc > wrangler.jsonc
+wrangler r2 bucket info ${EXTRACTS_BUCKET} || wrangler r2 bucket create ${EXTRACTS_BUCKET} --location weur
+popd
+
+pushd ${DATADIR}/planetiler-openmaptiles/soundscape-maps
+
+# Run the python script which will use the stock world_countries_and_city_groups.geojson which
+# is now in git.
+# xxx FIXME: this sed stuff is nonsense.
+svclog "Build extracts - may take 20 minutes or so for world"
+sed -i 's|\./pmtiles|pmtiles|g' step2-generate-extracts-from-geojson.py
+python step2-generate-extracts-from-geojson.py \
+    --input-tiles ${DATADIR}/${PMTILESFILE} \
+    --outdir ${DATADIR}/extracts \
+    --output-geojson ${DATADIR}/extracts/manifest.geojson \
+    --prefix "${DATESTAMP}-"
+
+# Gzip the manifest once.
+gzip ${DATADIR}/extracts/manifest.geojson
+
+cd ${DATADIR}/extracts
+
+# List contents of the extracts directory.
+echo "Contents of ${DATADIR}/extracts:"
+ls -lh ${DATADIR}/extracts || true
+df -h || true
+du -sh ${DATADIR}/* || true
+
+# Upload all of the extracts to blob storage
+svclog "Copying to blob"
+rclone copy ${DATADIR}/extracts blob:${EXTRACTS_BUCKET}/${DATESTAMP} \
+        --progress \
+        --s3-upload-concurrency 32 \
+        --s3-chunk-size 64M \
+        --transfers 32 \
+        --retries 10 \
+        --low-level-retries 20
+
+svclog "Cut over worker to use extracts from ${DATESTAMP}"
+pushd ${BASE}/wrangler
+export EXTRACTS_URL="https://${TRANSFER_STORAGE_ACCOUNT}.blob.core.windows.net/${EXTRACTS_BUCKET}"
+envsubst < extracts-worker.jsonc > wrangler.jsonc
+wrangler deploy --env test
+
+svclog "Test that the extracts work"
+URLBASE="https://${EXTRACTS_BUCKET}-test.${CLOUDFLARE_SUBDOMAIN}.workers.dev"
+extracts-download-test test $URLBASE
+
+svclog "Promote worker to live and retest"
+wrangler deploy --env live
+
+URLBASE="https://${EXTRACTS_BUCKET}.${CLOUDFLARE_SUBDOMAIN}.workers.dev"
+extracts-download-test live $URLBASE
+popd # leave wrangler
+
+# Return to wherever we started
+#. ${BASE}/bin/deactivate
+popd
+svclog "Extracts job completed"
