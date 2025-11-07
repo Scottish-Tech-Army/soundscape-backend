@@ -21,6 +21,11 @@ pmtiles-download-test() {
     local URLBASE="$2"
     shift 2
 
+    # This sleep is because right after setting up a worker, sometimes it takes a few seconds
+    # for it to be ready, and we want to make sure that we get the latest data.
+    echo "Sleep 90 seconds for worker to be ready for pmtiles test"
+    sleep 90
+
     echo "Nuking and recreating test directory ${DIRNAME}"
     rm -rf "${DIRNAME}"
     mkdir -p "${DIRNAME}"
@@ -49,11 +54,17 @@ extracts-download-test() {
     # - URL base; no trailing slash
     local DIRNAME="${DATADIR}/extracts-download-test/$1"
     local URLBASE="$2"
+
     mkdir -p $DATADIR/extracts-test
     pushd $DATADIR/extracts-test
 
-    echo "Download manifest.geojson.gz from ${URLBASE}/manifest.geojson.gz"
+    # This sleep is because right after setting up a worker, sometimes it takes a few seconds
+    # for it to be ready, and we want to make sure that we get the latest data.
+    echo "Sleep 90 seconds for worker to be ready for extracts test"
+    sleep 90
+
     curl -D - --fail-with-body "${URLBASE}/manifest.geojson.gz" -o manifest.geojson.gz
+
     diff manifest.geojson.gz $DATADIR/extracts/manifest.geojson.gz
 
     FILELIST=$(find ${DATADIR}/extracts -name "*.pmtiles" | shuf -n 3)
