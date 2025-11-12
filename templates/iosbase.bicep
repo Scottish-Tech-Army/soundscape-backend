@@ -12,6 +12,7 @@ param versionTag string
 param storageName string
 
 @description('Name of the Azure Container Registry UAMI - pre-existing, and should be supplied as a parameter really')
+// FIXME: hardcoded
 param registryUAMIName string = 'mi-ssp-dev-uks-acrpull'
 
 // These two are params because for one reason or another they cannot be vars.
