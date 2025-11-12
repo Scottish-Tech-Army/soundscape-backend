@@ -24,6 +24,7 @@ var vnetAddressPrefix string = '10.1.0.0/16'
 @description('Address range and name for the VM subnet')
 var vmSubnetPrefix string = '10.1.16.0/20'
 var vmSubnetName string = 'vm-subnet'
+param nsgName string = 'vm-nsg'
 
 @description('Log Analytics workspace name')
 var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
@@ -49,6 +50,71 @@ resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
   location: resourceGroup().location
 }
 
+// NSG
+resource nsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
+  name: nsgName
+  location: resourceGroup().location
+  properties: {
+    securityRules: [
+      {
+        name: 'Allow-FrontDoor-2322'
+        properties: {
+          priority: 200
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '2322'
+          sourceAddressPrefix: 'AzureFrontDoor.Backend'
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'Allow-AzureLoadBalancer'
+        properties: {
+          priority: 300
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: 'AzureLoadBalancer'
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'Allow-VirtualNetwork'
+        properties: {
+          priority: 400
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'Deny-All-Inbound'
+        properties: {
+          priority: 600
+          direction: 'Inbound'
+          access: 'Deny'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        }
+      }
+    ]
+  }
+}
+
+
+// xxx
+
 // vnet
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
   name: vnetName
@@ -67,6 +133,9 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-09-01' = {
   name: vmSubnetName
   properties: {
     addressPrefix: vmSubnetPrefix
+    networkSecurityGroup: {
+      id: nsg.id
+    }
   }
 }
 
