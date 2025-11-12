@@ -363,7 +363,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           managedDisk: {
             storageAccountType: 'Premium_LRS'
           }
-          diskSizeGB: 64
+          diskSizeGB: 32
         }
         imageReference: {
           publisher: 'Canonical'
@@ -372,6 +372,19 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           version:   'latest'
         }
         diskControllerType: 'NVMe'
+
+        // Added data disk
+        dataDisks: [
+          {
+            lun: 0
+            createOption: 'Empty'
+            diskSizeGB: 200
+            caching: 'ReadWrite'
+            managedDisk: {
+              storageAccountType: 'Premium_LRS'
+            }
+          }
+        ]
       }
       osProfile: {
         computerNamePrefix: 'pmtiles'
@@ -426,6 +439,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
     type: 'UserAssigned'
     userAssignedIdentities: {
       '${uami.id}': {}
+      '${registryUami.id}': {}
     }
   }
 }
