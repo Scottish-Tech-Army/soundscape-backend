@@ -7,13 +7,12 @@ param storageName string
 @description('Name and RG of the Azure Container Registry')
 param registryName string
 param registryRG string
+param registrySub string
+param registryUAMIName string
 
 @description('Version tag for the photon-docker image')
 param versionTag string
 
-@description('Name of the Azure Container Registry UAMI - pre-existing, and should be supplied as a parameter really')
-// FIXME: hardcoded
-param registryUAMIName string = 'mi-ssp-dev-uks-acrpull'
 
 @description('Name of the virtual network')
 var vnetName string = '${prefix}-vnet'
@@ -41,7 +40,7 @@ param area string
 // Get the UAMI from the other subscription
 resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
   name: registryUAMIName
-  scope: resourceGroup(registryRG)
+  scope: resourceGroup(registrySub, registryRG)
 }
 
 // UAMI for the VMSS
@@ -112,11 +111,8 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
   }
 }
 
-
-// xxx
-
 // vnet
-resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
+resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
   name: vnetName
   location: resourceGroup().location
   properties: {
@@ -128,7 +124,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
   }
 }
 
-resource subnet 'Microsoft.Network/virtualNetworks/subnets@2022-09-01' = {
+resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' = {
   parent: vnet
   name: vmSubnetName
   properties: {
@@ -349,10 +345,14 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
     tier: 'Standard'
   }
   properties: {
+    overprovision: false // Required with rolling upgrades and maxSurge
     upgradePolicy: {
       mode: 'Rolling'
       rollingUpgradePolicy: {
         maxSurge: true
+        // Allow initial rollout even if unhealthy for a while - requires both these to be set
+        maxUnhealthyInstancePercent: 100
+        maxUnhealthyUpgradedInstancePercent: 100
       }
     }
     virtualMachineProfile: {
@@ -368,10 +368,10 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
         imageReference: {
           publisher: 'Canonical'
           offer:     'ubuntu-24_04-lts'
-          sku:       'server'
+          sku:       'server-arm64'
           version:   'latest'
         }
-        diskControllerType: 'NVMe'
+        diskControllerType: 'SCSI'
 
         // Added data disk
         dataDisks: [
@@ -387,7 +387,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
         ]
       }
       osProfile: {
-        computerNamePrefix: 'pmtiles'
+        computerNamePrefix: 'photon'
         adminUsername: adminUsername
         customData: base64(cloudInitRendered)
         linuxConfiguration: {
@@ -474,6 +474,25 @@ resource amaExt 'Microsoft.Compute/virtualMachineScaleSets/extensions@2024-07-01
   }
 }
 
+resource appHealthExt 'Microsoft.Compute/virtualMachineScaleSets/extensions@2023-09-01' = {
+  name: 'HealthExtension'
+  parent: vmss
+  properties: {
+    publisher: 'Microsoft.ManagedServices'
+    type: 'ApplicationHealthLinux'
+    typeHandlerVersion: '2.0'
+    autoUpgradeMinorVersion: true
+    settings: {
+      protocol: 'tcp'
+      port: 2322
+      intervalInSeconds: 10
+      numberOfProbes: 3
+      timeout: 5
+      gracePeriod: 3600 // One hour to become healthy
+    }
+  }
+}
+
 resource dcrAssoc 'Microsoft.Insights/dataCollectionRuleAssociations@2022-06-01' = {
   name: 'dcrassoc'
   scope: vmss
@@ -489,11 +508,11 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
   location: resourceGroup().location
   kind: 'Linux'
   properties: {
-    description: 'Collect pmtiles logs'
+    description: 'Collect photon logs'
 
     // 1) Define the custom stream and its columns.
     streamDeclarations: {
-        'Custom-pmtilesLogs':{
+        'Custom-photonLogs':{
           columns: [
             {
               name: 'TimeGenerated'
@@ -521,15 +540,15 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
         {
           name: 'jobLogs'
           filePatterns: [
-            '/opt/pmtiles/logs/*.log'
-            '/opt/pmtiles/logs/*.csv'
+            '/opt/photon/logs/*.log'
+            '/opt/photon/logs/*.csv'
           ]
           format: 'text'
           settings: {
             //text: { recordStartTimestampFormat: 'YYYY-MM-DD HH:MM:SS' }
             text: { recordStartTimestampFormat: 'ISO 8601' }
           }
-          streams: ['Custom-pmtilesLogs']
+          streams: ['Custom-photonLogs']
         }
       ]
       performanceCounters: [
@@ -570,7 +589,7 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
       ]
     }
 
-    // 3) Send to your workspace.
+    // 3) Send to the workspace.
     destinations: {
       logAnalytics: [
         {
@@ -583,9 +602,9 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
     // 4) Map stream to workspace.
     dataFlows: [
       {
-        streams: ['Custom-pmtilesLogs']
+        streams: ['Custom-photonLogs']
         destinations: ['workspace']
-        outputStream: 'Custom-pmtilesLogs_CL'
+        outputStream: 'Custom-photonLogs_CL'
       }
       {
         streams: ['Microsoft-Perf']

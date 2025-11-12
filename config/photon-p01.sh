@@ -2,9 +2,14 @@
 export PREFIX=p01
 export RG=photon-${PREFIX}
 export REGION=westeurope
+export VERSION=v1.0
+
+# Registry information
 export REGISTRYNAME=acrsspdevuks
 export REGISTRYRG=rg-ssp-shared-dev-uks
-export VERSION=v1.0
+export REGISTRYSUB=b9ba9683-feef-47c8-bcc0-08e791dc1493
+export REGISTRYUAMI=mi-ssp-dev-uks-acrpull
+
 
 # Globally unique string, used in both bicep and in scripts
 # A good way to generate this is "date | md5sum | head -c 20 && echo"
