@@ -194,7 +194,83 @@ var envBlock = join(envLines, '\n      ')
 @description('Cloud init file after substitution')
 var cloudInitRendered = replace(cloudInitRaw, '{{ENV_BLOCK}}', envBlock)
 
-// Create the new resources
+// Create the new resources - LB and public IP first
+var lbName string = '${prefix}-lb'
+var lbFrontEndName string = 'photon-fe'
+var lbBackendPoolName string = 'photon-pool'
+var lbProbeName string = 'photon-probe'
+param publicIpName string = '${prefix}-publicip'
+
+resource publicIp 'Microsoft.Network/publicIPAddresses@2022-09-01' = {
+  name: publicIpName
+  location: resourceGroup().location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+
+resource lb 'Microsoft.Network/loadBalancers@2024-10-01' = {
+  name: lbName
+  location: resourceGroup().location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    frontendIPConfigurations: [
+      {
+        name: lbFrontEndName
+        properties: {
+          publicIPAddress: {
+            id: publicIp.id
+          }
+        }
+      }
+    ]
+    backendAddressPools: [
+      {
+        name: lbBackendPoolName
+      }
+    ]
+    loadBalancingRules: [
+      {
+        name: 'photon-rule'
+        properties: {
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, lbFrontEndName)
+          }
+          backendAddressPool: {
+            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, lbBackendPoolName)
+          }
+          probe: {
+            id: resourceId('Microsoft.Network/loadBalancers/probes', lbName, lbProbeName)
+          }
+          protocol: 'Tcp'
+          frontendPort: 2322
+          backendPort: 2322
+          enableFloatingIP: false
+          idleTimeoutInMinutes: 4
+          loadDistribution: 'Default'
+        }
+      }
+    ]
+    probes: [
+      {
+        name: lbProbeName
+        properties: {
+          protocol: 'Tcp'
+          port: 2322
+          intervalInSeconds: 5
+          numberOfProbes: 2
+        }
+      }
+    ]
+  }
+}
+
+// VMSS that runs photon server
 resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
   name: vmssName
   location: resourceGroup().location
@@ -264,6 +340,9 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
                         idleTimeoutInMinutes: 15
                       }
                     }
+                    loadBalancerBackendAddressPools: [{
+                      id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, lbBackendPoolName)
+                    }]
                   }
                 }
               ]
