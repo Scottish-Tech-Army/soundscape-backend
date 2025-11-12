@@ -1,6 +1,6 @@
 #cloud-config
 disk_setup:
-  /dev/nvme1n1:
+  /dev/disk/azure/scsi1/lun0:
     table_type: gpt
     layout: true
     overwrite: false
@@ -8,11 +8,10 @@ disk_setup:
 fs_setup:
   - label: datadisk
     filesystem: ext4
-    device: /dev/nvme1n1
-    partition: 0
+    device: /dev/disk/azure/scsi1/lun0-part1
 
 mounts:
-  - [ /dev/nvme1n1, /mnt, auto, "defaults,nofail", "0", "2" ]
+  - [ /dev/disk/azure/scsi1/lun0-part1, /mnt, auto, "defaults,nofail", "0", "2" ]
 
 package_update: true
 packages:
@@ -36,7 +35,7 @@ write_files:
     content: |
       #!/bin/bash
       set -euo pipefail
-      . /opt/pmtiles/env.sh
+      . /opt/photon/env.sh
 
       mkdir -p ${BASE}/logs
 

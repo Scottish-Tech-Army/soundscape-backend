@@ -13,6 +13,18 @@ param registryUAMIName string
 @description('Version tag for the photon-docker image')
 param versionTag string
 
+// From here on, things that never change, so just vars
+@description('ssh key')
+var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
+
+@description('VM size supporting ephemeral NVMe OS disk')
+var vmSize string = 'Standard_E2ps_v6' // 2 core, 16GB RAM, ARM processor
+
+@description('VMSS name')
+var vmssName string = '${prefix}-vmss'
+
+@description('Azure user name')
+var adminUsername string = 'azureuser'
 
 @description('Name of the virtual network')
 var vnetName string = '${prefix}-vnet'
@@ -23,7 +35,7 @@ var vnetAddressPrefix string = '10.1.0.0/16'
 @description('Address range and name for the VM subnet')
 var vmSubnetPrefix string = '10.1.16.0/20'
 var vmSubnetName string = 'vm-subnet'
-param nsgName string = 'vm-nsg'
+var nsgName string = 'vm-nsg'
 
 @description('Log Analytics workspace name')
 var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
@@ -44,9 +56,8 @@ resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-
 }
 
 // UAMI for the VMSS
-resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
+resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
   name: '${prefix}-uami'
-  location: resourceGroup().location
 }
 
 // NSG
@@ -200,42 +211,6 @@ resource customTable 'Microsoft.OperationalInsights/workspaces/tables@2025-02-01
   }
 }
 
-// Storage account used by function app and uploads
-resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: storageName
-  location: resourceGroup().location
-  sku: { name: 'Standard_LRS' }
-  kind: 'StorageV2'
-}
-
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
-  name: 'default'
-  parent: storage
-}
-
-resource downloadContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: downloadContainerName
-  parent: blobService
-}
-
-resource uploadContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: uploadContainerName
-  parent: blobService
-}
-
-// From here on, things that never change, so just vars
-@description('ssh key')
-var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
-
-@description('VM size supporting ephemeral NVMe OS disk')
-var vmSize string = 'Standard_E2ps_v6' // 2 core, 16GB RAM, ARM processor
-
-@description('VMSS name')
-var vmssName string = '${prefix}-vmss'
-
-@description('Azure user name')
-var adminUsername string = 'azureuser'
-
 // Build cloud init, now we have retrieved the existing resources
 // We then interpolate a block of environment variables into the cloud-init file
 @description('Cloud init file before substitution')
@@ -246,7 +221,7 @@ var envLines = [
   'export CLIENT_ID=${uami.properties.clientId}'
   'export ACR_CLIENT_ID=${registryUami.properties.clientId}'
   'export REGISTRY_NAME=${registryName}'
-  'export IMAGE=${registryName}.azurecr.io/photon-docker:${versionTag}'
+  'export IMAGE=${registryName}.azurecr.io/photon/photon-docker:${versionTag}'
   'export VMSS_NAME=${vmssName}'
   'export RG=${resourceGroup().name}'
   'export STORAGE_ACCOUNT_NAME=${storageName}'
@@ -336,7 +311,7 @@ resource lb 'Microsoft.Network/loadBalancers@2024-10-01' = {
 }
 
 // VMSS that runs photon server
-resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
+resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
   name: vmssName
   location: resourceGroup().location
   sku: {
@@ -378,7 +353,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           {
             lun: 0
             createOption: 'Empty'
-            diskSizeGB: 200
+            diskSizeGB: 400
             caching: 'ReadWrite'
             managedDisk: {
               storageAccountType: 'Premium_LRS'
@@ -401,6 +376,41 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
             ]
           }
         }
+      }
+      extensionProfile: {
+        extensions: [
+          {
+            name: 'HealthExtension'
+            properties: {
+              publisher: 'Microsoft.ManagedServices'
+              type: 'ApplicationHealthLinux'
+              typeHandlerVersion: '2.0'
+              autoUpgradeMinorVersion: true
+              settings: {
+                protocol: 'tcp'
+                port: 2322
+                intervalInSeconds: 10
+                numberOfProbes: 3
+                gracePeriod: 14400 // Four hours to become healthy
+              }
+            }
+          }
+          {
+            name: 'AzureMonitorLinuxAgent'
+            properties: {
+              publisher: 'Microsoft.Azure.Monitor'
+              type: 'AzureMonitorLinuxAgent'
+              typeHandlerVersion: '1.0'
+              autoUpgradeMinorVersion: true
+              settings: {
+                workspaceId: logAnalytics.properties.customerId
+                region: resourceGroup().location
+                settingsAuthType: 'ManagedIdentity'
+              }
+              protectedSettings: {} // Deliberately empty.
+            }
+          }
+        ]
       }
       networkProfile: {
         networkInterfaceConfigurations: [
@@ -454,42 +464,6 @@ resource assignScaleRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
       'b24988ac-6180-42a0-ab88-20f7382dd24c'
     )
     principalId: uami.properties.principalId
-  }
-}
-
-resource amaExt 'Microsoft.Compute/virtualMachineScaleSets/extensions@2024-07-01' = {
-  name: 'AzureMonitorLinuxAgent'
-  parent: vmss
-  properties: {
-    publisher: 'Microsoft.Azure.Monitor'
-    type: 'AzureMonitorLinuxAgent'
-    typeHandlerVersion: '1.0'
-    autoUpgradeMinorVersion: true
-    settings: {
-      workspaceId: logAnalytics.properties.customerId
-      region: resourceGroup().location
-      settingsAuthType: 'ManagedIdentity'
-    }
-    protectedSettings: {} // Deliberately empty.
-  }
-}
-
-resource appHealthExt 'Microsoft.Compute/virtualMachineScaleSets/extensions@2023-09-01' = {
-  name: 'HealthExtension'
-  parent: vmss
-  properties: {
-    publisher: 'Microsoft.ManagedServices'
-    type: 'ApplicationHealthLinux'
-    typeHandlerVersion: '2.0'
-    autoUpgradeMinorVersion: true
-    settings: {
-      protocol: 'tcp'
-      port: 2322
-      intervalInSeconds: 10
-      numberOfProbes: 3
-      timeout: 5
-      gracePeriod: 3600 // One hour to become healthy
-    }
   }
 }
 

@@ -22,6 +22,8 @@ docker run -dit \
     -e BASE_URL=https://download1.graphhopper.com/public/ \
     -e INITIAL_DOWNLOAD=TRUE \
     -e REGION=${AREA} \
+    -v ${DATADIR}:/photon/data \
+    --name photon-server \
     --restart=unless-stopped \
     ${IMAGE}
 

@@ -10,7 +10,6 @@ export REGISTRYRG=rg-ssp-shared-dev-uks
 export REGISTRYSUB=b9ba9683-feef-47c8-bcc0-08e791dc1493
 export REGISTRYUAMI=mi-ssp-dev-uks-acrpull
 
-
 # Globally unique string, used in both bicep and in scripts
 # A good way to generate this is "date | md5sum | head -c 20 && echo"
 export UNIQUESTRING=029edfef73100f3c0334

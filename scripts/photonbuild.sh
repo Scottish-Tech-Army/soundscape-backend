@@ -13,6 +13,6 @@ az acr login -n ${REGISTRYNAME}
 SRCIMAGE=rtuszik/photon-docker:latest
 DESTIMAGE=${REGISTRYNAME}.azurecr.io/photon/photon-docker:${VERSION}
 
-docker pull ${SRCIMAGE}
+docker pull --platform linux/arm64 ${SRCIMAGE}
 docker tag ${SRCIMAGE} ${DESTIMAGE}
 docker push ${DESTIMAGE}
