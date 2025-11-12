@@ -104,7 +104,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
 - Build and upload images. This creates container images of the specified version, and loads them into the shared repository.
 
     ~~~bash
-    bash scripts/build.sh
+    bash scripts/iosbuild.sh
     ~~~
 
 - Run the base deploy script. This deploys the database, tile server apps, and much of the core infrastructure.
