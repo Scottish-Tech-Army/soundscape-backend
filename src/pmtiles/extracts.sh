@@ -5,12 +5,15 @@ set -euo pipefail
 
 svclog "Extracts job starting"
 
-svclog "Creating R2 bucket"
+svclog "Creating R2 bucket and queues"
 pushd ${BASE}/wrangler
 # Create the R2 bucket if it doesn't exist already
 export R2_BUCKET=${EXTRACTS_BUCKET}
 envsubst < r2.jsonc > wrangler.jsonc
 wrangler r2 bucket info ${EXTRACTS_BUCKET} || wrangler r2 bucket create ${EXTRACTS_BUCKET} --location weur
+
+wrangler queues info ${EXTRACTS_BUCKET} || wrangler queues create ${EXTRACTS_BUCKET}
+wrangler queues info ${EXTRACTS_BUCKET}-test || wrangler queues create ${EXTRACTS_BUCKET}-test
 popd
 
 pushd ${DATADIR}/planetiler-openmaptiles/soundscape-maps
@@ -50,14 +53,23 @@ rclone copy ${DATADIR}/extracts blob:${EXTRACTS_BUCKET}/${DATESTAMP} \
 svclog "Cut over worker to use extracts from ${DATESTAMP}"
 pushd ${BASE}/wrangler
 export EXTRACTS_URL="https://${TRANSFER_STORAGE_ACCOUNT}.blob.core.windows.net/${EXTRACTS_BUCKET}"
+
+envsubst < extracts-queue.jsonc > wrangler.jsonc
+wrangler deploy --env test
+
 envsubst < extracts-worker.jsonc > wrangler.jsonc
 wrangler deploy --env test
 
 svclog "Test that the extracts work"
+# FIXME: the tests are not consistent with the new code which uses queues.
 URLBASE="https://${EXTRACTS_BUCKET}-test.${CLOUDFLARE_SUBDOMAIN}.workers.dev"
 extracts-download-test test $URLBASE
 
 svclog "Promote worker to live and retest"
+envsubst < extracts-queue.jsonc > wrangler.jsonc
+wrangler deploy --env live
+
+envsubst < extracts-worker.jsonc > wrangler.jsonc
 wrangler deploy --env live
 
 URLBASE="https://${EXTRACTS_BUCKET}.${CLOUDFLARE_SUBDOMAIN}.workers.dev"

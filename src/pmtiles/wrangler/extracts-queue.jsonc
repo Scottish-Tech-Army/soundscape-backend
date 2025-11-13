@@ -1,8 +1,9 @@
 {
-    // Parameters for both workers
-    // Note that bucket name and worker names match, for simplicity
-    "name": "${EXTRACTS_BUCKET}",
-    "main": "extracts.js",
+    // This is the Worker project name (shows up in dashboard)
+    "name": "${EXTRACTS_BUCKET}-queue",
+    "main": "queue-worker.js",
+
+    "compatibility_date": "2025-11-13",
 
     "observability": {
         "enabled": true,
@@ -11,15 +12,10 @@
         }
     },
 
-
     "env": {
         // Parameters for live code
         "live": {
-            "name": "${EXTRACTS_BUCKET}",
-            "vars": {
-                "ORIGIN_BASE_URL": "${EXTRACTS_URL}",
-                "CURRENT_DATESTAMP": "${DATESTAMP}"
-            },
+            "name": "${EXTRACTS_BUCKET}-queue",
             "r2_buckets": [
                 {
                     "binding": "BUCKET",
@@ -27,9 +23,8 @@
                 }
             ],
             "queues": {
-                "producers": [
+                "consumers": [
                     {
-                        "binding": "QUEUE",
                         "queue": "${EXTRACTS_BUCKET}"
                     }
                 ]
@@ -37,11 +32,7 @@
         },
         // Parameters for test code
         "test": {
-            "name": "${EXTRACTS_BUCKET}-test",
-            "vars": {
-                "ORIGIN_BASE_URL": "${EXTRACTS_URL}",
-                "CURRENT_DATESTAMP": "${DATESTAMP}"
-            },
+            "name": "${EXTRACTS_BUCKET}-queue-test",
             "r2_buckets": [
                 {
                     "binding": "BUCKET",
@@ -49,14 +40,12 @@
                 }
             ],
             "queues": {
-                "producers": [
+                "consumers": [
                     {
-                        "binding": "QUEUE",
                         "queue": "${EXTRACTS_BUCKET}-test"
                     }
                 ]
             }
         }
-    },
-    "compatibility_date": "2025-10-12"
+    }
 }

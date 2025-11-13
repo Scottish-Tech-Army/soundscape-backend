@@ -67,11 +67,12 @@ extracts-download-test() {
 
     diff manifest.geojson.gz $DATADIR/extracts/manifest.geojson.gz
 
-    FILELIST=$(find ${DATADIR}/extracts -name "*.pmtiles" | shuf -n 3)
+    FILELIST=$(find ${DATADIR}/extracts -name "*.pmtiles" | shuf -n 10)
     for f in ${FILELIST}; do
         FILENAME=$(basename $f)
         echo "Testing extract ${URLBASE}/${FILENAME}"
-        curl -D - --fail-with-body "${URLBASE}/${FILENAME}?nodata"
+        # This command will either get a 204 (the data is there) with no body, or a 503 with "File not yet available" in the body.
+        curl -D - --fail-with-body "${URLBASE}/${FILENAME}?nodata" -o ${FILENAME} || grep "File not yet available" ${FILENAME}
     done
     popd # Done with testing
 }
