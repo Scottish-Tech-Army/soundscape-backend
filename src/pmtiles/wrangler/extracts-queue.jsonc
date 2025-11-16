@@ -25,7 +25,9 @@
             "queues": {
                 "consumers": [
                     {
-                        "queue": "${EXTRACTS_BUCKET}"
+                        "queue": "${EXTRACTS_BUCKET}",
+                        "max_batch_size": 1,
+                        "max_batch_timeout": 0
                     }
                 ]
             }
@@ -42,7 +44,9 @@
             "queues": {
                 "consumers": [
                     {
-                        "queue": "${EXTRACTS_BUCKET}-test"
+                        "queue": "${EXTRACTS_BUCKET}-test",
+                        "max_batch_size": 1,
+                        "max_batch_timeout": 0
                     }
                 ]
             }
