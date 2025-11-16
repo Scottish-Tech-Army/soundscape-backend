@@ -61,9 +61,19 @@ envsubst < extracts-worker.jsonc > wrangler.jsonc
 wrangler deploy --env test
 
 svclog "Test that the extracts work"
-# FIXME: the tests are not consistent with the new code which uses queues.
 URLBASE="https://${EXTRACTS_BUCKET}-test.${CLOUDFLARE_SUBDOMAIN}.workers.dev"
 extracts-download-test test $URLBASE
+
+# Kick off the download of some large extracts we are sure will be used, to reduce the risk of queues being blocked.
+svclog "Kick off large extract download to warm cache; ignore result"
+for i in belgium united-kingdom france
+do
+    echo "Download of large extract ${i}"
+    curl -D - "${URLBASE}/${DATESTAMP}-${i}.pmtiles?nodata" -o /dev/null || true
+done
+# We strictly do not NEED to sleep here, but it's not a bad idea to wait until the large extracts are
+# in R2 or at least approaching completion before we cut over.
+sleep 120
 
 svclog "Promote worker to live and retest"
 envsubst < extracts-queue.jsonc > wrangler.jsonc
@@ -77,6 +87,5 @@ extracts-download-test live $URLBASE
 popd # leave wrangler
 
 # Return to wherever we started
-#. ${BASE}/bin/deactivate
 popd
 svclog "Extracts job completed"
