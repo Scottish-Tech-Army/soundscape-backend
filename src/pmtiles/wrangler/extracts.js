@@ -41,17 +41,44 @@ export default {
       // Not in R2 - fetch from origin
       const originUrl = `${originBaseUrl}/${file}`;
       console.log(`Not found in R2 - get from: ${originUrl}`);
-      const originResp = await fetch(originUrl);
 
-      if (!originResp.ok) {
-        console.error(`Did not find in origin - give up: ${originResp.status} ${originResp.statusText}`);
-        return new Response("Not found", { status: originResp.status });
+      // First: HEAD request to inspect headers
+      const headResp = await fetch(originUrl, { method: "HEAD" });
+
+      if (!headResp.ok) {
+        console.error(`HEAD failed: ${headResp.status} ${headResp.statusText}`);
+        return new Response("Not found", { status: headResp.status });
       }
 
-      const contentType = originResp.headers.get("content-type") || "application/octet-stream";
-      const contentLength = originResp.headers.get("content-length");
+      let contentType = headResp.headers.get("content-type") || "application/octet-stream";
+      let contentLength = headResp.headers.get("content-length");
       if (!contentLength) {
-        throw new Error("Origin did not provide Content-Length");
+        throw new Error("Origin HEAD did not provide Content-Length");
+      }
+
+      // Now check if this file is large enough that we should just put on a queue.
+      // Threshold is 100MB
+      const contentLengthMB = parseInt(contentLength, 10) / (1024 * 1024);
+      if (contentLengthMB > 100) {
+        console.log("Large file - pass to queue");
+        await env.QUEUE.send({ url: originUrl, file: file });
+
+        // We just return a 503 with a Retry-After. 5 minutes ought to be enough; it's really hard to predict.
+        return new Response("File not yet available, please retry later", { status: 503, headers: { "Retry-After": "300" } });
+      }
+
+      // Now do the actual GET
+      // We know this will work and what headers it will give, but recheck for paranoia.
+      const originResp = await fetch(originUrl);
+      if (!originResp.ok) {
+        console.error(`Disappeared from origin - give up: ${originResp.status} ${originResp.statusText}`);
+        return new Response("Not found", { status: originResp.status });
+      }
+      contentType = originResp.headers.get("content-type") || "application/octet-stream";
+      contentLength = originResp.headers.get("content-length");
+
+      if (!contentLength) {
+        throw new Error("Origin GET did not provide Content-Length");
       }
 
       const putPromise = await env.BUCKET.put(file, originResp.body, {

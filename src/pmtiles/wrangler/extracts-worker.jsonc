@@ -2,10 +2,15 @@
     // Parameters for both workers
     // Note that bucket name and worker names match, for simplicity
     "name": "${EXTRACTS_BUCKET}",
-    "main": "streamer.js",
+    "main": "extracts.js",
+
     "observability": {
-        "enabled": true
+        "enabled": true,
+        "logs": {
+        "head_sampling_rate": 1.0
+        }
     },
+
 
     "env": {
         // Parameters for live code
@@ -20,7 +25,15 @@
                     "binding": "BUCKET",
                     "bucket_name": "${EXTRACTS_BUCKET}"
                 }
-            ]
+            ],
+            "queues": {
+                "producers": [
+                    {
+                        "binding": "QUEUE",
+                        "queue": "${EXTRACTS_BUCKET}"
+                    }
+                ]
+            }
         },
         // Parameters for test code
         "test": {
@@ -34,7 +47,15 @@
                     "binding": "BUCKET",
                     "bucket_name": "${EXTRACTS_BUCKET}"
                 }
-            ]
+            ],
+            "queues": {
+                "producers": [
+                    {
+                        "binding": "QUEUE",
+                        "queue": "${EXTRACTS_BUCKET}-test"
+                    }
+                ]
+            }
         }
     },
     "compatibility_date": "2025-10-12"

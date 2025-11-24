@@ -2,7 +2,7 @@
 
 This repository contains code that allows the deployment of a back end for the [Soundscape iPhone app](https://apps.apple.com/gb/app/soundscape/id6459021379). The app calculates its location, converts that to OpenStreetMap tile format, and uses that to build an HTTP GET request that retrieves a JSON file of [OpenStreetMap](https://www.openstreetmap.org) data showing known locations in the area. The back end (this repository) constructs, stores, and returns that data.
 
-![iOS Architecture Diagram](iossoundscape.drawio.svg)
+![iOS Architecture Diagram](iossoundscape.svg)
 
 ## Architecture summary
 
@@ -86,7 +86,7 @@ There are three components to the Android architecture.
 
 3. There is a search component. This is not contained in this repository at all, and is not shown in the architecture diagram.
 
-![Android Architecture Diagram](android.drawio.svg)
+![Android Architecture Diagram](android.svg)
 
 ## Cloudflare components
 
@@ -100,17 +100,29 @@ There are a number of Cloudflare components.
 
     In both of these buckets, there are timestamped directories, allowing new versions of data to be uploaded without impacting the existing data.
 
-- There are then two workers used by the app.
+- There are then three workers used by the app.
 
     - The worker named `PMTILES_BUCKET` contains the worker defined in the [protomaps PMTiles repository](https://github.com/protomaps/PMTiles), which allows retrieval of tiles for the client containing Open Street Map data used for maps and audio. This worker takes a configuration parameter which defines which of the various pmtiles files in the bucket is currently in use.
 
-    - The worker named `EXTRACTS_BUCKET` contains a worker that allows the download of extracts. Clients download a file `manifest.geojson.gz` which lists all of the extracts available, and can then download the extract that is most suitable for their location. Again, this worker takes a configuration parameter which indicates which version clients should be offered. However, there are two important differences.
+    - The worker named `EXTRACTS_BUCKET` contains a worker that allows the download of extracts. Clients download a file `manifest.geojson.gz` which lists all of the extracts available, and can then download the extract that is most suitable for their location. Again, this worker takes a configuration parameter which indicates which version clients should be offered. However, the flow is somewhat different.
 
-        - While data is returned from the R2 bucket if present, not all data is initially uploaded to R2. If the file required is not present, it is retrieved from Azure and stored in R2 before being returned to the client.
+        - If the data is present in the R2 bucket already, then it is returned to the client.
 
-        - All extracts files are both named and datastamped, and the manifest file references datestamped files. Hence if the extracts list changes while a client is still processing the manifest, the old extracts are still available for a limited time (around twenty minutes). After this period, clients must download the manifest and recalculate which extract they should use.
+        - If the data is not present in the R2 bucket, then an HTTP HEAD request is issued to the Azure storage. If the header shows that it is smaller than a threshold (currently 100MB) it is retrieved from Azure directly by the worker and stored in R2 before being returned to the client. *For simplicity, this flow is not shown in the architecture diagram.*
 
-- In addition to the workers `PMTILES_BUCKET` and `EXTRACTS_BUCKET`, there are two workers called `PMTILES_BUCKET-test` and `EXTRACTS_BUCKET-test`, used for testing during the upload process, not by clients.
+        - If the header shows that it is larger than that threshold, then a 503 error is returned with a `Retry-After` header. A message is put on the queue (see below).
+
+        All extracts files are both named and datastamped, and the manifest file references datestamped files. Hence if the extracts list changes while a client is still processing the manifest, the old extracts are still available for a limited time (around twenty minutes). After this period, clients must download the manifest and recalculate which extract they should use.
+
+    - The consumer worker `EXTRACTS_BUCKET-queue` monitors a queue, and receives messages whenever a request indicates that an extract was not available and was too large to download inline. When it receives such a message, it does the following.
+
+        - If the extract file is now in R2, it stops immediately (as some other worker already did the job for it).
+
+        - Otherwise, it retrieves the file from Azure and stores it in R2.
+
+        This model is used because ordinary workers are terminated as soon as the client disconnects. Any download lasting more than a couple of seconds before data is available to stream is likely to end with the client disconnecting, and so the download never succeeds. The user impact is that the first download of any large extract fails, but should succeed on a later retry (for all users, not just the first to download).
+
+- In addition to the workers `PMTILES_BUCKET`, `EXTRACTS_BUCKET`, and `EXTRACTS_BUCKET-queue`, there are three workers called `PMTILES_BUCKET-test`, `EXTRACTS_BUCKET-test`, and `EXTRACTS_BUCKET-queue-test`, used for testing during the upload process, not by clients. These use the same R2 buckets as the main workers.
 
 ## Uploading of new data from Azure
 

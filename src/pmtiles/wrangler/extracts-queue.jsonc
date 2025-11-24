@@ -1,0 +1,55 @@
+{
+    // This is the Worker project name (shows up in dashboard)
+    "name": "${EXTRACTS_BUCKET}-queue",
+    "main": "queue-worker.js",
+
+    "compatibility_date": "2025-11-13",
+
+    "observability": {
+        "enabled": true,
+        "logs": {
+        "head_sampling_rate": 1.0
+        }
+    },
+
+    "env": {
+        // Parameters for live code
+        "live": {
+            "name": "${EXTRACTS_BUCKET}-queue",
+            "r2_buckets": [
+                {
+                    "binding": "BUCKET",
+                    "bucket_name": "${EXTRACTS_BUCKET}"
+                }
+            ],
+            "queues": {
+                "consumers": [
+                    {
+                        "queue": "${EXTRACTS_BUCKET}",
+                        "max_batch_size": 1,
+                        "max_batch_timeout": 0
+                    }
+                ]
+            }
+        },
+        // Parameters for test code
+        "test": {
+            "name": "${EXTRACTS_BUCKET}-queue-test",
+            "r2_buckets": [
+                {
+                    "binding": "BUCKET",
+                    "bucket_name": "${EXTRACTS_BUCKET}"
+                }
+            ],
+            "queues": {
+                "consumers": [
+                    {
+                        "queue": "${EXTRACTS_BUCKET}-test",
+                        "max_batch_size": 1,
+                        "max_batch_timeout": 0
+                    }
+                ]
+            }
+        }
+    }
+}
