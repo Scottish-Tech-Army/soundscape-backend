@@ -36,6 +36,25 @@ Before you can initially create a deployment, you need the following.
 
 - Access to the Azure subscription which contains all of the resources in question.
 
+- The diags and alerts infrastructure should have been deployed. This is a one time step, as this is shared across all deployments and is common to both iOS and Android. To do this, follow the [diags deployment instructions](diagsdeploy.md).
+
+- An alert rule should have been configured for incoming requests. This must have been created in the shared resource subscription, as follows.
+
+    - Scoped to the share LAW
+
+    - Using the following query
+
+            AzureDiagnostics
+                | where Category == "FrontDoorAccessLog"
+                | where requestUri_s contains "/tiles"
+                | where httpStatusCode_s != 200
+                | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
+                | order by TimeGenerated desc
+
+    - Run once an hour, only allowed to fire once per day
+
+    - Link to the alert group above
+
 ## Deploying in Azure
 
 Follow the following steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
@@ -107,16 +126,8 @@ Follow the following steps. Note that some of the scripts here take quite some t
 - Clear out temporary build files. This is optional, but it avoids having random built artefacts lying around cluttering up the disk.
 
     ~~~bash
-    bash scripts/codeup.sh
+    bash scripts/cleanup.sh
     ~~~
-
-## Deploying log queries
-
-There are some saved queries shared across all deployments. These exist in a single resource group (shared across all deployments), and so you should not need to change these. If you make changes, you can deploy them as follows.
-
-~~~bash
-bash scripts/iosdiags.sh
-~~~
 
 ### Redeploy gotchas
 

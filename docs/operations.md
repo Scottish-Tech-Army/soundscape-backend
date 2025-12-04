@@ -1,8 +1,8 @@
 # Operations processes
 
-## Dashboard
+## iOS dashboard
 
-The deployment process creates a dashboard, named after the resource group as `rg-pNN`. You can view this in the portal. It displays graphs of the following.
+The iOS deployment process creates a dashboard, named after the resource group as `rg-pNN`. You can view this in the portal. It displays graphs of the following.
 
 - Tile server requests reaching the deployment, with counts of success and errors. (Some errors are expected, notably 404s for random requests against the domain.)
 
@@ -31,6 +31,18 @@ The deployment process creates a dashboard, named after the resource group as `r
     Generally, all three values should be zero, except when an ingestion occurs when they should all increase to one then return to zero after a few (typically ten) hours.
 
 Most of this data can be viewed in the detailed monitoring queries below, with more information.
+
+## Alerts
+
+A range of alerts are configured, and will be seen in email reports sent to the configured users.
+
+- Severity 4: a VM (iOS or Android) successfully ran to completion.
+
+- Severity 1: a VM (iOS or Android) reported an error
+
+- Severity 1: a VM (iOS or Android) took so long to complete that it must have failed (and presumably the termination script did not work to report the error)
+
+- Severity 3: errors are reported in Azure Front Door for Soundscape requests
 
 ## Detailed log monitoring
 

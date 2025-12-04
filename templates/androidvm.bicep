@@ -471,7 +471,7 @@ module vmTimeoutAlert './alert.bicep' = {
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles VM timed out'
     alertDescription: 'Android pmtiles VM timed out without completion'
-    windowSize: 'PT12H'
+    windowSize: 'PT6H'
     severity: 1
     alertQuery: '''
       AppTraces

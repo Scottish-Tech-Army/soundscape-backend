@@ -18,13 +18,13 @@ Before you can initially create a deployment, you need the following.
 
 - Access to the Azure subscription which contains all of the resources in question.
 
-- Access to the Cloudflare account.
+- Access to the Cloudflare account. Using this you must
 
-You also need to:
+    - [Set up Cloudflare configuration](#cloudflare-configuration)
 
-- [Set up Cloudflare configuration](#cloudflare-configuration)
+    - [Configure some Cloudflare secrets](#cloudflare-secrets)
 
-- [Configure some Cloudflare secrets](#cloudflare-secrets)
+- The diags and alerts infrastructure should have been deployed. This is a one time step, as this is shared across all deployments and is common to both iOS and Android. To do this, follow the [diags deployment instructions](diagsdeploy.md).
 
 ### Cloudflare configuration
 
