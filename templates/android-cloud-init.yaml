@@ -63,12 +63,18 @@ write_files:
         --pattern files.tgz
       tar -xzf ${BASE}/files.tgz -C ${BASE}
 
-      # Load install files.
+      # Load install files; last thing to run as root.
+      # Needs to be run before all the file permissions stuff below, as some things are installed
+      # into the base directory.
       bash ${BASE}/install.sh
+
+      # Set up file permissions
+      chown -R azureuser:azureuser ${BASE}
+      chmod '0777' /mnt
+      chmod '0755' /opt/pmtiles/android.sh
+      chmod '0755' /opt/pmtiles/terminate.sh
 
 runcmd:
   - [ bash, /opt/pmtiles/setup.sh ]
-  - [ chown, -R, azureuser:azureuser, /opt/pmtiles ]
-  - [ chmod, '0777', /mnt ]
-  - [ chmod, '0755', /opt/pmtiles/android.sh ]
   - [ su, '-', azureuser, -c, /opt/pmtiles/android.sh ]
+  - [ su, '-', azureuser, -c, /opt/pmtiles/terminate.sh ]

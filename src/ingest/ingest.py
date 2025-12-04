@@ -144,7 +144,7 @@ def provision_database_soundscape(osm_dsn):
     loop.run_until_complete(provision_database_soundscape_async(osm_dsn))
 
 async def provision_database_soundscape_async(osm_dsn):
-    ingest_path = os.environ['INGEST']
+    ingest_path = os.environ['BASE']
     async with aiopg.connect(dsn=osm_dsn) as conn:
         cursor = await conn.cursor()
         with open(ingest_path + '/' + 'postgis-vt-util.sql', 'r') as sql:

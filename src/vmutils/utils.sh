@@ -1,3 +1,6 @@
+# Functions that are used by one or other of the various VMs - mix of iOS and Android stuff
+
+# BOTH iOS and Android service log utility function
 # Service log utility function
 svclog() {
     # %F is YYYY-MM-DD, %T is HH:MM:SS
@@ -11,6 +14,7 @@ redate () {
     sed -E 's/^([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9]{2}:[0-9]{2}:[0-9]{2}) /\1T\2Z /'
 }
 
+# Android only functions
 pmtiles-download-test() {
     # Issues test requests, and sanity checks the responses
     # Arguments:

@@ -8,9 +8,14 @@ cd "$(dirname "$0")/.."
 . scripts/cfgutils.sh
 
 # Build the tar file of scripts
-mkdir -p build
-pushd src/ingest
-tar -zcvf ../../build/files.tgz requirements-ingest.txt ingest.py tilefunc.sql postgis-vt-util.sql config.json mapping.yml extracts/ ../tiletest/
+# Build the tar file of scripts
+rm -rf build/tmp build/files.tgz
+mkdir -p build/tmp
+cp -r src/ingest/* build/tmp/
+cp -r src/vmutils/* build/tmp/
+cp -r src/tiletest build/tmp/
+pushd build/tmp
+tar -zcvf ../files.tgz *
 popd
 
 # Build the escaped query file.
