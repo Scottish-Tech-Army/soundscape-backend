@@ -19,6 +19,11 @@ var extractsContainerName = extractsBucket // Must match - some scripts assume i
 @description('Area to download - normally planet or monaco for local testing')
 param area string
 
+// Action group ID for alerts
+// FIXME: this could be tidied up, and will be when we move to a shared subscription.
+@description('Full ID of action group')
+param actionGroupId string = '/subscriptions/4bf1580a-f73d-4821-8cdc-605925ba78e9/resourceGroups/soundscape-diags/providers/Microsoft.Insights/actionGroups/soundscape'
+
 // From here on, things that never change, so just vars
 @description('ssh key')
 var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
@@ -417,5 +422,63 @@ module vmWorkbook './workbook.bicep' = {
     title: 'VM Instance Counts'
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-vmss-counter'
+  }
+}
+
+// Last but not least, some alerts
+// Scheduled query alert rule for detecting "VM ERROR" in LAW logs
+module vmErrorAlert './alert.bicep' = {
+  name: 'vm-error-alert'
+  params: {
+    alertRuleName: 'vm-error-alert'
+    actionGroupId: actionGroupId
+    logAnalyticsId: logAnalytics.id
+    displayName: 'Android pmtiles creation VM error'
+    alertDescription: 'Android pmtiles VM reports error'
+    severity: 1
+    alertQuery: '''
+      pmtilesLogs_CL
+      | where FilePath contains "svc"
+      | where RawData contains "VM ERROR"
+    '''
+  }
+}
+
+// Scheduled query alert rule for detecting "VM SUCCESS" in LAW logs
+module vmSuccessAlert './alert.bicep' = {
+  name: 'vm-success-alert'
+  params: {
+    alertRuleName: 'vm-success-alert'
+    actionGroupId: actionGroupId
+    logAnalyticsId: logAnalytics.id
+    displayName: 'Android pmtiles VM success'
+    alertDescription: 'Android pmtiles VM reports successful completion'
+    severity: 4
+    alertQuery: '''
+      pmtilesLogs_CL
+      | where FilePath contains "svc"
+      | where RawData contains "VM SUCCESS""
+    '''
+  }
+}
+
+// Scheduled query alert rule for detecting "VM SUCCESS" in LAW logs
+module vmTimeoutAlert './alert.bicep' = {
+  name: 'vm-timeout-alert'
+  params: {
+    alertRuleName: 'vm-timeout-alert'
+    actionGroupId: actionGroupId
+    logAnalyticsId: logAnalytics.id
+    displayName: 'Android pmtiles VM timed out'
+    alertDescription: 'Android pmtiles VM timed out without completion'
+    windowSize: 'PT12H'
+    severity: 1
+    alertQuery: '''
+      AppTraces
+      | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
+      | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
+      | summarize MinValue = min(Value)
+      | where MinValue > 0
+    '''
   }
 }
