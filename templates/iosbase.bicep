@@ -257,11 +257,7 @@ resource dbDiags 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
         enabled: true
       }
       {
-        category: 'PostgreSQLFlexQueryStoreRuntime'
-        enabled: true
-      }
-      {
-        category: 'PostgreSQLFlexWaitStatistics'
+        category: 'PostgreSQLFlexTableStats'
         enabled: true
       }
     ]
