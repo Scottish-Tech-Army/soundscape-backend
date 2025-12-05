@@ -44,6 +44,7 @@ echo "Create deployment"
 az deployment group create \
     --resource-group ${RG} --template-file templates/iosvm.bicep \
     --parameters prefix=${PREFIX} \
+                 area=${AREA} \
                  triggerAppName=${TRIGGERAPPNAME} \
                  metricAppName=${METRICAPPNAME} \
                  storageName=${STORAGENAME} --debug --verbose

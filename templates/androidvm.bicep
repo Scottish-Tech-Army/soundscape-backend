@@ -434,7 +434,7 @@ module vmErrorAlert './alert.bicep' = {
     actionGroupId: actionGroupId
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles creation VM error'
-    alertDescription: 'Android pmtiles VM reports error'
+    alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} reports error'
     severity: 1
     alertQuery: '''
       pmtilesLogs_CL
@@ -452,12 +452,12 @@ module vmSuccessAlert './alert.bicep' = {
     actionGroupId: actionGroupId
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles VM success'
-    alertDescription: 'Android pmtiles VM reports successful completion'
+    alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} reports successful completion'
     severity: 4
     alertQuery: '''
       pmtilesLogs_CL
       | where FilePath contains "svc"
-      | where RawData contains "VM SUCCESS""
+      | where RawData contains "VM SUCCESS"
     '''
   }
 }
@@ -470,12 +470,13 @@ module vmTimeoutAlert './alert.bicep' = {
     actionGroupId: actionGroupId
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles VM timed out'
-    alertDescription: 'Android pmtiles VM timed out without completion'
-    windowSize: 'PT6H'
+    alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} timed out without completion'
+    windowSize: 'PT24H'
     severity: 1
     alertQuery: '''
       AppTraces
       | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
+      | where TimeGenerated > ago(6h)
       | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
       | summarize MinValue = min(Value)
       | where MinValue > 0

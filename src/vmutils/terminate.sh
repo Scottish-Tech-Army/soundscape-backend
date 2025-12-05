@@ -16,9 +16,14 @@ fi
 
 svclog "Goodbye cruel world - uploading logs and deleting VM"
 
+if [ -z "${DATESTAMP:-}" ]; then
+    export DATESTAMP=$(date +%Y%m%d-%H%M)
+fi
+
 # Upload cloud-init files to the directory if they exist
-cp /var/log/cloud-init.log ${BASE}/logs/cloud-init-${DATESTAMP}.log 2>/dev/null || true
-cp /var/log/cloud-init-output.log ${BASE}/logs/cloud-init-output-${DATESTAMP}.log 2>/dev/null || true
+# Note that we do not leave them ending with ".log" to avoid them being ingested into Log Analytics
+cp /var/log/cloud-init.log ${BASE}/logs/cloud-init.log-${DATESTAMP}
+cp /var/log/cloud-init-output.log ${BASE}/logs/cloud-init-output.log-${DATESTAMP}
 
 # Upload logs to the storage account
 az login --identity

@@ -63,6 +63,9 @@ resource alertRule 'Microsoft.Insights/scheduledQueryRules@2022-06-15' = {
     // Suppress duplicate alerts for the mute interval
     muteActionsDuration: muteInterval
 
+    // Required when suppression is set
+    autoMitigate: false
+
     // Notify existing Action Group
     actions: {
       actionGroups: [

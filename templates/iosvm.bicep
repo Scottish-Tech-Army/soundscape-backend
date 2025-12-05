@@ -11,9 +11,8 @@ param metricAppName string
 @description('Storage account name')
 param storageName string
 
-// Variables that could probably be changed
-@description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france-single" and "france-regions"')
-param genRegions string = 'planet'
+@description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france" and "finland"')
+param area string
 
 // Action group ID for alerts
 // FIXME: this could be tidied up, and will be when we move to a shared subscription.
@@ -109,7 +108,7 @@ var cloudInitRaw = loadTextContent('./ios-cloud-init.yaml')
 // Build one interpolated block in Bicep; note the extra spacing for the YAML indentation
 var envLines = [
   'export POSTGIS_HOST=${dbServiceName}.postgres.database.azure.com'
-  'export GEN_REGIONS=${genRegions}'
+  'export GEN_REGIONS=${area}'
   'export KEY_VAULT_NAME=${keyVaultName}'
   'export CLIENT_ID=${uami.properties.clientId}'
   'export VMSS_NAME=${vmssName}'
@@ -1045,7 +1044,7 @@ module vmErrorAlert './alert.bicep' = {
     actionGroupId: actionGroupId
     logAnalyticsId: logAnalytics.id
     displayName: 'Ingestion VM error'
-    alertDescription: 'Ingestion VM for iOS reports error'
+    alertDescription: 'Ingestion VM for iOS in RG ${resourceGroup().name} reports error'
     severity: 1
     alertQuery: '''
       IngestLogs_CL
@@ -1063,12 +1062,12 @@ module vmSuccessAlert './alert.bicep' = {
     actionGroupId: actionGroupId
     logAnalyticsId: logAnalytics.id
     displayName: 'Ingestion VM success'
-    alertDescription: 'Ingestion VM for iOS reports successful completion'
+    alertDescription: 'Ingestion VM for iOS in RG ${resourceGroup().name} reports successful completion'
     severity: 4
     alertQuery: '''
       IngestLogs_CL
       | where FilePath contains "svc"
-      | where RawData contains "VM SUCCESS""
+      | where RawData contains "VM SUCCESS"
     '''
   }
 }
@@ -1081,13 +1080,14 @@ module vmTimeoutAlert './alert.bicep' = {
     actionGroupId: actionGroupId
     logAnalyticsId: logAnalytics.id
     displayName: 'Ingestion VM timed out'
-    alertDescription: 'Ingestion VM for iOS timed out without completion'
-    windowSize: 'PT12H'
+    alertDescription: 'Ingestion VM for iOS in RG ${resourceGroup().name} timed out without completion'
+    windowSize: 'PT24H'
     severity: 1
     alertQuery: '''
       AppTraces
       | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
       | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
+      | where TimeGenerated > ago(12h)
       | summarize MinValue = min(Value)
       | where MinValue > 0
     '''

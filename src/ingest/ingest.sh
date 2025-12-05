@@ -4,11 +4,10 @@ set -euo pipefail
 ENVFILE="$(dirname "$0")/env.sh"
 . ${ENVFILE}
 . ${BASE}/utils.sh
-. ${BASE}/secrets.sh
 
 # Ensure venv Python is default for CMD and any shell-in debugging
 PATH="${BASE}/venv/bin:$PATH"
-DATESTAMP=$(date +%Y%m%d_%H%M%S)
+export DATESTAMP=$(date +%Y%m%d-%H%M)
 echo "export DATESTAMP=${DATESTAMP}" >> ${BASE}/env.sh
 
 LOGFILE="${BASE}/logs/ingest_$(date +%Y%m%d_%H%M%S).log"

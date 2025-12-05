@@ -59,20 +59,24 @@ Before you can initially create a deployment, you need the following.
 
 Follow the following steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
 
-- Set up a config file. Production instances should be named `pNN` where `NN` is a two digit number that should be monotonically increasing, such as `p01`.
+- Set up a config file. Production instances should be named `iNN` where `NN` is a two digit number that should be monotonically increasing, such as `i01`.
 
-    - The file should be in the [config](config) directory, and be named `ios-pNN.sh`
+    - The file should be in the [config](config) directory, and be named `ios-iNN.sh`
 
     - Contents should be as below; see comments.
 
         ~~~bash
         # Parameters in use
-        export PREFIX=p01           # As described above
-        export RG=rg-${PREFIX}      # Do not change
+        export PREFIX=i05           # As described above
+        export RG=ios05             # Do not change
         export REGION=uksouth       # Region - normally should not change
         export REGISTRYNAME=acrsspdevuks # Do not change
         export REGISTRYRG=rg-ssp-shared-dev-uks # Do not change
         export VERSION=${PREFIX}    # Version of containers - make unique per deployment
+
+        # Area to export - should be "planet" unless for testing (when "finland" is a reasonable choice)
+        export AREA=planet
+
 
         # Globally unique names, used in both bicep and in scripts
         # A good way to generate this is "date | md5sum | head -c 20 && echo"
@@ -85,7 +89,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
  - Source the config file.
 
     ~~~bash
-    . config/ios_pNN.sh
+    . config/ios_iNN.sh
     ~~~
 
 - Ensure that you logged into Azure, and using the correct subscription.
@@ -145,7 +149,7 @@ Your deployment still does not work, because ingestion has not occurred. You can
 
 - Open the [Azure portal](https://portal.azure.com).
 
-- Find the resource group you just created (`rg-pNN`) and select it to view the list of resources in it.
+- Find the resource group you just created (`iosNN`) and select it to view the list of resources in it.
 
 - Click on the Azure Function app that triggers ingestion - this is the one starting `trigger-`.
 
@@ -171,15 +175,15 @@ To change over your deployment, perform the following steps.
 
 - Select `Origin Groups` on the left panel, and create a new `Origin Group` (which is a place where traffic can end up). That group should have the following features.
 
-    - Name it after your deployment. For example, the `pNN` deployment can sensibly be named `pNN-tilesrv`.
+    - Name it after your deployment. For example, the `iNN` deployment can sensibly be named `iNN-tilesrv`.
 
     - Add a single Origin within it.
 
-        - `Name` does not matter, but `pNN-container-app` is a sensible choice.
+        - `Name` does not matter, but `iNN-container-app` is a sensible choice.
 
         - `Origin Type` should be `Container Apps` from the dropdown.
 
-        - `Host name` should be the URL of the correct Azure Container App - if you have set the type correctly above, there is a dropdown list of valid Container Apps. Make sure you pick the one from your new instance, the one starting `pNN`.
+        - `Host name` should be the URL of the correct Azure Container App - if you have set the type correctly above, there is a dropdown list of valid Container Apps. Make sure you pick the one from your new instance, the one starting `iNN`.
 
         - Disable `Certificate subject name validation`
 
