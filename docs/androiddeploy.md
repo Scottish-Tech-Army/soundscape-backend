@@ -106,8 +106,8 @@ Follow the following steps. Note that some of the scripts here take quite some t
 
         ~~~bash
         # Parameters in use
-        export PREFIX=a01           # As described above
-        export RG=rg-${PREFIX}      # Do not change
+        export PREFIX=a03           # As described above
+        export RG=android03         # Same number as above
         export REGION=westeurope    # Region - normally should not change
 
         # Globally unique names, used in both bicep and in scripts
@@ -179,5 +179,5 @@ Follow the following steps. Note that some of the scripts here take quite some t
 - Clear out temporary build files. This is optional, but it avoids having random built artefacts lying around cluttering up the disk.
 
     ~~~bash
-    bash scripts/codeup.sh
+    bash scripts/cleanup.sh
     ~~~
