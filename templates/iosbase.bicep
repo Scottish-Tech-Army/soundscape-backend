@@ -257,11 +257,7 @@ resource dbDiags 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
         enabled: true
       }
       {
-        category: 'PostgreSQLFlexQueryStoreRuntime'
-        enabled: true
-      }
-      {
-        category: 'PostgreSQLFlexWaitStatistics'
+        category: 'PostgreSQLFlexTableStats'
         enabled: true
       }
     ]
@@ -302,6 +298,16 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
   properties: {}
 }
 
+// Create AppTraces table using Analytics plan. We must do this before the app insights resoure is created,
+// hence the dependency below.
+resource appTracesTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
+  parent: logAnalytics
+  name: 'AppTraces'
+  properties: {
+    plan: 'Analytics'
+  }
+}
+
 // Application Insights linked to the existing Log Analytics workspace
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: appInsightsName
@@ -311,6 +317,9 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
     Application_Type: 'web'
     WorkspaceResourceId: logAnalytics.id
   }
+  dependsOn: [
+    appTracesTable
+  ]
 }
 
 // Grant UAMI rights to publish to LAW
@@ -344,7 +353,7 @@ resource customTable 'Microsoft.OperationalInsights/workspaces/tables@2025-02-01
   name: 'IngestLogs_CL' // "_CL" suffix is required
   parent: logAnalytics
   properties: {
-    plan: 'Basic'
+    plan: 'Analytics'
     schema: {
       name: 'IngestLogs_CL'
       displayName: 'Ingest Logs'

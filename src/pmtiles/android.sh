@@ -23,16 +23,4 @@ sleep 600
 # Tidy up old files in R2.
 bash ${BASE}/r2tidy.sh >> ${LOGFILE} 2>&1
 
-# Obliterate the VM after completion
-svclog "Goodbye cruel world - uploading logs and deleting VM"
-
-# Upload logs to the storage account
-az login --identity
-az storage blob upload-batch \
---auth-mode login \
---account-name ${STORAGE_ACCOUNT_NAME} \
---destination ${UPLOAD_CONTAINER_NAME} \
---source ${BASE}/logs
-
-# Nuke the VM once and for all
-az vmss scale --resource-group ${RG} --name ${VMSS_NAME} --new-capacity 0
+svclog "VM SUCCESS"

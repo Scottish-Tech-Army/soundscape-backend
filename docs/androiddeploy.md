@@ -18,13 +18,13 @@ Before you can initially create a deployment, you need the following.
 
 - Access to the Azure subscription which contains all of the resources in question.
 
-- Access to the Cloudflare account.
+- Access to the Cloudflare account. Using this you must
 
-You also need to:
+    - [Set up Cloudflare configuration](#cloudflare-configuration)
 
-- [Set up Cloudflare configuration](#cloudflare-configuration)
+    - [Configure some Cloudflare secrets](#cloudflare-secrets)
 
-- [Configure some Cloudflare secrets](#cloudflare-secrets)
+- The diags and alerts infrastructure should have been deployed. This is a one time step, as this is shared across all deployments and is common to both iOS and Android. To do this, follow the [diags deployment instructions](diagsdeploy.md).
 
 ### Cloudflare configuration
 
@@ -106,8 +106,8 @@ Follow the following steps. Note that some of the scripts here take quite some t
 
         ~~~bash
         # Parameters in use
-        export PREFIX=a01           # As described above
-        export RG=rg-${PREFIX}      # Do not change
+        export PREFIX=a03           # As described above
+        export RG=android03         # Same number as above
         export REGION=westeurope    # Region - normally should not change
 
         # Globally unique names, used in both bicep and in scripts
@@ -179,5 +179,5 @@ Follow the following steps. Note that some of the scripts here take quite some t
 - Clear out temporary build files. This is optional, but it avoids having random built artefacts lying around cluttering up the disk.
 
     ~~~bash
-    bash scripts/codeup.sh
+    bash scripts/cleanup.sh
     ~~~

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Set up secrets as environment variables, loading them from key vault.
-# env.sh must have been sourced so as to ensure that BASE and other variables are set.
+# env.sh must have been sourced so as to ensure that BASE and other variables are set, but we cannot assume that utils.sh exists yet.
 # We do not do the set -euo pipefail here as either this is being sourced from a shell or from a script that already has that set.
 
 getsecret() {

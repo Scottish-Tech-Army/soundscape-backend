@@ -15,6 +15,7 @@ jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
 rm -rf build/tmp build/files.tgz
 mkdir -p build/tmp
 cp -r src/pmtiles/* build/tmp/
+cp -r src/vmutils/* build/tmp/
 cp -r thirdparty/pmtiles/wrangler build/tmp/
 pushd build/tmp
 tar -zcvf ../files.tgz *
