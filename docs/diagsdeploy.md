@@ -37,35 +37,27 @@ To do this, follow the steps below.
 
     If necessary, you can log in using a different account, or use `az account set` to reset which subscription is in use.
 
-- Load the shared queries for Android.
+- Load the shared queries and alert group.
 
     ~~~bash
-    bash scripts/androiddiags.sh
+    bash scripts/diagsdeploy.sh
     ~~~
 
-- Load the shared queries for iOS.
-
-    ~~~bash
-    bash scripts/iosdiags.sh
-    ~~~
-
-- Set up the alert group that will handle all alerts. This is done through the portal so that we do not need to check in people's email addresses in git repositories.
+- Configure the alert group that will handle all alerts. This is done through the portal so that we do not need to check in people's email addresses in git repositories.
 
     - Go to the [Azure portal](https://portal.azure.com).
 
-    - Find `alerts`, either through the search bar or the list of `All services`.
+    - Find the resource group you set up above (something like `soundscape-diags` with the default configuraiton).
 
-    - Create an `Action group`, which will allow for the configuration of all alert destinations. Fill in the fields as follows.
+    - Edit the `Action group` in that subscription.
 
-        - Name: "soundscape"
+        - Under `Notifications`, select `Notification type` of `Email/SMS message/Push/Voice` (from the dropdown)
 
-        - Display name: "Soundscape"
+        - Give it a name - "soundscape" is fine
 
-        - Region: "global"
+        - Hit the edit button and add whatever emails should receive alerts.
 
-        - Email notifications, with the more modern unified format, and your email of choice to receive the mails.
-
-        *FIXME: This action group has its ID hard coded in a couple of places; that should be tidied up when resources are moved to a shared subscription.*
+        - Hit the save button
 
 
 

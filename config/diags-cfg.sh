@@ -6,4 +6,4 @@ export DIAGSRG=soundscape-diags
 
 # Do not change from here down
 # This subscription stuff is purely to make sure we are using the right Azure subscription.
-export SUBSCRIPTION=4bf1580a-f73d-4821-8cdc-605925ba78e9
+export SUBSCRIPTION=c45947c8-2a50-4f53-bdf1-1fb282636578
