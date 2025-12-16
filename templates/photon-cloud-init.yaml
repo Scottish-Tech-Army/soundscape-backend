@@ -1,0 +1,63 @@
+#cloud-config
+disk_setup:
+  /dev/disk/azure/scsi1/lun0:
+    table_type: gpt
+    layout: true
+    overwrite: false
+
+fs_setup:
+  - label: datadisk
+    filesystem: ext4
+    device: /dev/disk/azure/scsi1/lun0-part1
+
+mounts:
+  - [ /dev/disk/azure/scsi1/lun0-part1, /mnt, auto, "defaults,nofail", "0", "2" ]
+
+package_update: true
+packages:
+  - curl
+  - wget
+  - unzip
+  - sysstat
+  - docker.io
+
+write_files:
+  - path: /opt/photon/env.sh
+    permissions: '0700'
+    content: |
+      #!/bin/bash
+      # Environment variables for the android jobs
+      export BASE=/opt/photon
+      export DATADIR=/mnt
+      {{ENV_BLOCK}}
+  - path: /opt/photon/setup.sh
+    permissions: '0700'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      . /opt/photon/env.sh
+
+      mkdir -p ${BASE}/logs
+
+      # Install Azure CLI
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      # Download files from storage account.
+      az login --identity --client-id ${CLIENT_ID}
+      az storage blob download-batch \
+        --auth-mode login \
+        --account-name ${STORAGE_ACCOUNT_NAME} \
+        --destination ${BASE} \
+        --source ${DOWNLOAD_CONTAINER_NAME} \
+        --pattern files.tgz
+      tar -xzf ${BASE}/files.tgz -C ${BASE}
+
+      # Let the user access docker
+      usermod -aG docker azureuser
+
+runcmd:
+  - [ bash, /opt/photon/setup.sh ]
+  - [ chown, -R, azureuser:azureuser, /opt/photon ]
+  - [ chmod, '0777', /mnt ]
+  - [ chmod, '0755', /opt/photon/photon.sh ]
+  - [ su, '-', azureuser, -c, /opt/photon/photon.sh ]

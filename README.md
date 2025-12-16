@@ -12,7 +12,9 @@ The repository is structured as follows.
 
     - [How to deploy an Android backend](docs/androiddeploy.md)
 
-    - [Operations processes](docs/operations.md) such as debugging and testing deployments. *This is iOS only for now; TBD if it will be extended or another document created.*
+    - [Operations processes](docs/operations.md) such as debugging and testing deployments.
+
+    - [Photon server docs](docs/photon.md) describe how to run a photon search server. *This is a work in progress, and should not be used until it is fully tested.*
 
 - [scripts](scripts) contains scripts that allow you to deploy the solution, using all of the components below.
 
