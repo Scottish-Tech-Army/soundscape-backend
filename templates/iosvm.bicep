@@ -14,11 +14,6 @@ param storageName string
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france" and "finland"')
 param area string
 
-// Action group ID for alerts
-// FIXME: this could be tidied up, and will be when we move to a shared subscription.
-@description('Full ID of action group')
-param actionGroupId string = '/subscriptions/4bf1580a-f73d-4821-8cdc-605925ba78e9/resourceGroups/soundscape-diags/providers/Microsoft.Insights/actionGroups/soundscape'
-
 // From here on, things that never change, so just vars
 @description('ssh key')
 var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
@@ -1041,7 +1036,6 @@ module vmErrorAlert './alert.bicep' = {
   name: 'vm-error-alert'
   params: {
     alertRuleName: 'vm-error-alert'
-    actionGroupId: actionGroupId
     logAnalyticsId: logAnalytics.id
     displayName: 'Ingestion VM error'
     alertDescription: 'Ingestion VM for iOS in RG ${resourceGroup().name} reports error'
