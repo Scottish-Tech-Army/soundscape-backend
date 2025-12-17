@@ -8,6 +8,8 @@ The repository is structured as follows.
 
     - [Architecture](docs/architecture.md)
 
+    - [Infrastructure deployment](docs/infradeploy.md)
+
     - [How to deploy an iOS backend](docs/iosdeploy.md)
 
     - [How to deploy an Android backend](docs/androiddeploy.md)

@@ -6,25 +6,17 @@ This document describes how to deploy a new deployment.
 
 Before you can initially create a deployment, you need the following.
 
-- A PC to run the tooling on. The tooling was tested using Linux, but anything running bash should be fine, including a Mac or WSL on Windows. This PC must have various utilities installed . These include the following.
+- General prerequisites are described in the [infrastructure deployment document](docs/infradeploy.md), and you should follow those, including in particular:
 
-    - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
+    - Making sure that the diags infrastructure has been deployed.
 
-    - [Docker](https://docs.docker.com/engine/install/)
-
-    - [Azure functions core tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=linux)
-
-    - The contents of this repo checked out locally, to allow running of the various scripts.
-
-- Access to the Azure subscription which contains all of the resources in question.
+    - Making sure that quotas have been set.
 
 - Access to the Cloudflare account. Using this you must
 
     - [Set up Cloudflare configuration](#cloudflare-configuration)
 
     - [Configure some Cloudflare secrets](#cloudflare-secrets)
-
-- The diags and alerts infrastructure should have been deployed. This is a one time step, as this is shared across all deployments and is common to both iOS and Android. To do this, follow the [diags deployment instructions](diagsdeploy.md).
 
 ### Cloudflare configuration
 

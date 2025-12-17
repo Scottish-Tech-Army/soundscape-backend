@@ -22,21 +22,11 @@ The process is as follows.
 
 ## Prerequisites
 
-Before you can initially create a deployment, you need the following.
+- General prerequisites are described in the [infrastructure deployment document](docs/infradeploy.md), and you should follow those, including in particular:
 
-- A PC to run the tooling on. The tooling was tested using Linux, but anything running bash should be fine, including a Mac or WSL on Windows. This PC must have various utilities installed . These include the following.
+    - Making sure that the diags infrastructure has been deployed.
 
-    - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
-
-    - [Docker](https://docs.docker.com/engine/install/)
-
-    - [Azure functions core tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=linux)
-
-    - The contents of this repo checked out locally, to allow running of the various scripts.
-
-- Access to the Azure subscription which contains all of the resources in question.
-
-- The diags and alerts infrastructure should have been deployed. This is a one time step, as this is shared across all deployments and is common to both iOS and Android. To do this, follow the [diags deployment instructions](diagsdeploy.md).
+    - Making sure that quotas have been set.
 
 - An alert rule should have been configured for incoming requests. This must have been created in the shared resource subscription, as follows.
 
