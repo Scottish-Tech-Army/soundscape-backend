@@ -4,4 +4,5 @@ export DIAGSREGION=westeurope
 export DIAGSRG=soundscape-diags
 
 # Subscription
-export SUBSCRIPTION=c45947c8-2a50-4f53-bdf1-1fb282636578
+export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
+

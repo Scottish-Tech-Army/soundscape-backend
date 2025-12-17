@@ -443,7 +443,6 @@ module vmSuccessAlert './alert.bicep' = {
   name: 'vm-success-alert'
   params: {
     alertRuleName: 'vm-success-alert'
-    actionGroupId: actionGroupId
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles VM success'
     alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} reports successful completion'
@@ -461,7 +460,6 @@ module vmTimeoutAlert './alert.bicep' = {
   name: 'vm-timeout-alert'
   params: {
     alertRuleName: 'vm-timeout-alert'
-    actionGroupId: actionGroupId
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles VM timed out'
     alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} timed out without completion'
