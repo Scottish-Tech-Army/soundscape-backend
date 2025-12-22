@@ -7,6 +7,12 @@ echo "RG: ${RG}"
 cd "$(dirname "$0")/.."
 . scripts/cfgutils.sh
 
+if [ -z "${USE_SPOT:-}" ]; then
+  echo "USE_SPOT not set - defaulting to true"
+  USE_SPOT=true
+fi
+USE_SPOT=${USE_SPOT,,}  # Lower case as Azure CLI is case sensitive about booleans
+
 # Build the tar file of scripts
 # Build the tar file of scripts
 rm -rf build/tmp build/files.tgz
@@ -47,6 +53,7 @@ az deployment group create \
                  area=${AREA} \
                  triggerAppName=${TRIGGERAPPNAME} \
                  metricAppName=${METRICAPPNAME} \
+                 useSpot=${USE_SPOT} \
                  storageName=${STORAGENAME} --debug --verbose
 
 echo "SUCCESS"

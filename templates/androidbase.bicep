@@ -63,6 +63,29 @@ resource vaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
+// Set up an NSG for the VM subnet that denies all inbound traffic
+resource vmNsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
+  name: 'vm-nsg'
+  location: resourceGroup().location
+  properties: {
+    securityRules: [
+      {
+        name: 'Deny-All-Inbound'
+        properties: {
+          priority: 4096
+          direction: 'Inbound'
+          access: 'Deny'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        }
+      }
+    ]
+  }
+}
+
 // vnet
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
   name: vnetName
@@ -78,6 +101,10 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
         name: vmSubnetName
         properties: {
           addressPrefix: vmSubnetPrefix
+
+          networkSecurityGroup: {
+            id: vmNsg.id
+          }
         }
       }
     ]

@@ -26,7 +26,7 @@ write_files:
     permissions: '0700'
     content: |
       #!/bin/bash
-      set -euo pipefail
+      set -xeuo pipefail
       . /opt/pmtiles/env.sh
 
       mkdir -p ${BASE}/logs
@@ -66,7 +66,7 @@ write_files:
       # Load install files; last thing to run as root.
       # Needs to be run before all the file permissions stuff below, as some things are installed
       # into the base directory.
-      bash ${BASE}/install.sh
+      bash -x ${BASE}/install.sh
 
       # Set up file permissions
       chown -R azureuser:azureuser ${BASE}

@@ -19,6 +19,9 @@ var extractsContainerName = extractsBucket // Must match - some scripts assume i
 @description('Area to download - normally planet or monaco for local testing')
 param area string
 
+@description('Whether to use spot instances for the VMSS - defaults to true')
+param useSpot bool = true
+
 // From here on, things that never change, so just vars
 @description('ssh key')
 var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
@@ -38,7 +41,7 @@ var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGro
 var triggerSchedule string = '0 0 12 6 * *' // 12:00 GMT on the 6th of every month
 
 @description('VM size supporting ephemeral NVMe OS disk')
-var vmSize string = 'Standard_E20ds_v6' // For spot instances
+var vmSize string = 'Standard_E20ds_v6'
 
 @description('VMSS name')
 var vmssName string = '${prefix}-vmss'
@@ -204,13 +207,19 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           }
         }
       }
+      diagnosticsProfile: {
+        bootDiagnostics: {
+          enabled: true
+          storageUri: null // use managed storage
+        }
+      }
       networkProfile: {
         networkInterfaceConfigurations: [
           {
             name: 'nic'
             properties: {
               primary: true
-              enableAcceleratedNetworking: true
+              enableAcceleratedNetworking: false
               ipConfigurations: [
                 {
                   name: 'ipconfig'
@@ -231,8 +240,13 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           }
         ]
       }
-      priority: 'Spot' // Spot instance to save money
-      evictionPolicy: 'Delete' // If evicted, get rid of disks etc. completely; note that spotRestorePolicy is not set, so VMSS won't try to bring it back automatically
+      // This wild syntax is a bicep spread operator
+      ...(useSpot ? {
+        priority: 'Spot'
+        evictionPolicy: 'Delete'
+      } : {
+            priority: 'Regular'
+      })
     }
   }
   identity: {

@@ -14,6 +14,9 @@ param storageName string
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france" and "finland"')
 param area string
 
+@description('Whether to use spot instances for the VMSS - defaults to true')
+param useSpot bool = true
+
 // From here on, things that never change, so just vars
 @description('ssh key')
 var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY7V0dh2WdA9E8Zl0R+JLuR8EGwfJ'
@@ -47,8 +50,7 @@ var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id
 var triggerSchedule string = '0 0 16 * * 0'
 
 @description('VM size supporting ephemeral NVMe OS disk')
-//var vmSize string = 'Standard_E20ds_v5' // Best if no spot
-var vmSize string = 'Standard_E20ds_v6' // For spot instances
+var vmSize string = 'Standard_E20ds_v6'
 
 @description('VMSS name')
 var vmssName string = 'ingest-vmss'
@@ -165,6 +167,12 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           }
         }
       }
+      diagnosticsProfile: {
+        bootDiagnostics: {
+          enabled: true
+          storageUri: null // use managed storage
+        }
+      }
       networkProfile: {
         networkInterfaceConfigurations: [
           {
@@ -192,8 +200,13 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           }
         ]
       }
-      priority: 'Spot' // Spot instance to save money
-      evictionPolicy: 'Delete' // If evicted, get rid of disks etc. completely; note that spotRestorePolicy is not set, so VMSS won't try to bring it back automatically
+      // This wild syntax is a bicep spread operator
+      ...(useSpot ? {
+        priority: 'Spot'
+        evictionPolicy: 'Delete' // If evicted, get rid of disks etc. completely; note that spotRestorePolicy is not set, so VMSS won't try to bring it back automatically
+      } : {
+            priority: 'Regular'
+      })
     }
   }
   identity: {

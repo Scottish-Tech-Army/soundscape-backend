@@ -1,3 +1,4 @@
+import logging
 import os
 from azure.identity import ManagedIdentityCredential
 from azure.mgmt.compute import ComputeManagementClient
@@ -15,6 +16,7 @@ def scale_vmss_to_one():
 
     parameters = { "sku": {"capacity": 1 } }
 
+    logging.info("Scaling VMSS %s in resource group %s to 1 instance", vmss, rg)
     client.virtual_machine_scale_sets.begin_update(
         resource_group_name=rg,
         vm_scale_set_name=vmss,
