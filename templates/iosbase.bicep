@@ -128,6 +128,16 @@ resource vaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
+// Set up an NSG for the VM subnet with default rules - denying all inbound traffic except from the vnet and load balancers
+resource vmNsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
+  name: 'vm-nsg'
+  location: resourceGroup().location
+  properties: {
+    securityRules: [
+    ]
+  }
+}
+
 // vnet
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
   name: vnetName
@@ -165,6 +175,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
         name: vmSubnetName
         properties: {
           addressPrefix: vmSubnetPrefix
+          networkSecurityGroup: {
+            id: vmNsg.id
+          }
         }
       }
     ]
