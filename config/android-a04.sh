@@ -11,8 +11,8 @@ export USE_SPOT=false
 export UNIQUESTRING=9cf07a7f610487d10734
 
 # Names of export and tiles storage buckets
-export EXTRACTS_BUCKET=extractsdummy
-export PMTILES_BUCKET=pmtilesdummy
+export EXTRACTS_BUCKET=extracts
+export PMTILES_BUCKET=pmtiles
 
 # Area to use - should normally be "monaco" or "planet"
 export AREA=planet
