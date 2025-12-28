@@ -1,3 +1,27 @@
+# Overview
+
+This documents the architecture of how both Android and iOS back ends for Soundscape work. While they are very different, there are some common components; after this overview section there are sections that describe the iOS and Android architectures in detail.
+
+The different resources are split into five resource groups.
+
+- There is a diagnostics RG, `soundscape-diags`. This contains the following shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications).
+
+- There is a shared RG, `soundscape-shared`. This contains
+
+    - DNS zones for external traffic
+
+    - An Azure Front Door instance which routes incoming traffic for iOS and for Photon Server to the correct endpoint.
+
+    - A Log Analytics workspace which stores logs and metrics from Azure Front Door.
+
+    - Some alert rules
+
+- There is an iOS instance RG, described in detail in the [iOS Architecture](#ios-architecture) section below. This contains an Azure PostGreSQL database and an Azure Container App to serve the data from it. New iOS instances can be created and the traffic cut over as required (for example to allow configuration changes).
+
+- There is an Android instance RG, described in detail in the [Android Architecture](#android-architecture) section below. This contains a storage account with tile data, used by the Cloudflare components, and tooling to update that storage account's content regularly. As for iOS, new instances can be created and the Cloudflare configuration cut over as required (for example to allow configuration changes).
+
+- Finally, there is a Photon Server RG, which is not yet fully complete (and is not currently live). That contains a Photon Server that handles Android search traffic, fronted by the shared Front Door instance.
+
 # iOS Architecture
 
 This repository contains code that allows the deployment of a back end for the [Soundscape iPhone app](https://apps.apple.com/gb/app/soundscape/id6459021379). The app calculates its location, converts that to OpenStreetMap tile format, and uses that to build an HTTP GET request that retrieves a JSON file of [OpenStreetMap](https://www.openstreetmap.org) data showing known locations in the area. The back end (this repository) constructs, stores, and returns that data.
