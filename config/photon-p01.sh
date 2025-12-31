@@ -1,14 +1,8 @@
 # Parameters in use
 export PREFIX=p01
-export RG=photon-${PREFIX}
+export RG=photon01
 export REGION=westeurope
 export VERSION=v1.0
-
-# Registry information
-export REGISTRYNAME=acrsspdevuks
-export REGISTRYRG=rg-ssp-shared-dev-uks
-export REGISTRYSUB=b9ba9683-feef-47c8-bcc0-08e791dc1493
-export REGISTRYUAMI=mi-ssp-dev-uks-acrpull
 
 # Globally unique string, used in both bicep and in scripts
 # A good way to generate this is "date | md5sum | head -c 20 && echo"
@@ -18,4 +12,5 @@ export UNIQUESTRING=029edfef73100f3c0334
 export AREA=planet
 
 # Subscription to use.
-export SUBSCRIPTION=4bf1580a-f73d-4821-8cdc-605925ba78e9
+export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
+

@@ -52,7 +52,6 @@ Before you can initially use any of the tooling to deploy any components, you ne
 
         If you need  to increase any quotas, you can edit them. If that does not work then issue a support request, which normally takes no more than an hour or two to be satisfied.
 
-
 ## Diagnostics infrastructure
 
 Diagnostics infrastructure is stored in a shared resource group, with both iOS and Android resources present in it. These resources are (to all intents and purposes) free, and there should be one such resource group in the subscription. They consist of
@@ -73,7 +72,7 @@ To deploy this infrastructure, follow the steps below.
         # Diags configuration
         # Region and RG
         export DIAGSREGION=westeurope
-        export DIAGSRG=soundscape-diags
+        export DIAGSRG=soundscape-shared
 
         # Subscription
         export SUBSCRIPTION=c45947c8-2a50-4f53-bdf1-1fb282636578
@@ -95,7 +94,7 @@ To deploy this infrastructure, follow the steps below.
 
     - Go to the [Azure portal](https://portal.azure.com).
 
-    - Find the resource group you set up above (something like `soundscape-diags` with the default configuraiton).
+    - Find the resource group you set up above (something like `soundscape-diags` with the default configuration).
 
     - Edit the `Action group` in that subscription.
 
@@ -107,10 +106,89 @@ To deploy this infrastructure, follow the steps below.
 
         - Hit the save button
 
+## Shared resource group deployment
+
+Shared infrastructure contains the front door and DNS components for the deployment. To deploy this infrastructure, follow the steps below.
+
+- Set up a config file (this will have already been done for you - you should only ever change this if you are in the process of moving to another subscription or something).
+
+    - The file should be in the [config](config) directory, and be named `shared-cfg.sh`
+
+    - Contents should be as below; see comments.
+
+        ~~~bash
+        # Shared RG configuration
+        # Region and RG
+        export SHAREDREGION=westeurope
+        export SHAREDRG=soundscape-shared
+
+        # Subscription
+        export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
+        ~~~
+
+- Source the config file.
+
+    ~~~bash
+    . config/shared-cfg.sh
+    ~~~
+
+
+- Load the shared queries and alert group.
+
+    ~~~bash
+    bash scripts/shareddeploy.sh
+    ~~~
+
+- Once you have got traffic running through the Front Door (which only occurs later when you have created some deployments), you should set up the alerts. *Until some traffic has been logged by Front Door, this script will fail with cryptic errors.*
+
+    ~~~bash
+    bash scripts/sharedalerts.sh
+    ~~~
+
+## Adding DNS zones and endpoints
+
+In order to add the shared DNS zones and corresponding endpoints in Front Door, you should do the following, for each of the relevant zones (`tst` and `prd2`, which here we will denote as `ZONE`).
+
+- Source the config file.
+
+    ~~~bash
+    . config/shared-cfg.sh
+    ~~~
+
+- Ensure that the DNS zone and custom domain do not exist anywhere else (i.e. the old tenant).
+
+- Create the DNS zone and custom domain.
+
+    ~~~bash
+    bash scripts/sharedzone.sh ZONE
+    ~~~
+
+- Set up the `NS` records in the parent zone.
+
+    - Open the [portal](https://portal.azure.com).
+
+    - Got to the parent `soundscape.scottishtecharmy.org` DNS zone
+
+    - Add new NS record for the zone, named `ZONE`. The values should match the NS records for `@` in the zone `ZONE` you just created
+
+- Validate the Front Door custom domain
+
+    - Go to the Front Door instance, `soundscape-fd` in the `soundscape-shared` resource group.
+
+    - Expand `Settings` on the left
+
+    - Click on `Domains`
+
+    - You should see your domain, which will be in state `Domain validation needed`
+
+    - Click on the `Validation state` which should show `Pending`
+
+    - Add the TXT record (`_dnsauth`) to the `ZONE` DNS zone with the value supplied
+
+    - Wait for at least some minutes, maybe a few hours
 
 
 
 
 
-
-
+    *FIXME: instructions for how to do this*

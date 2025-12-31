@@ -55,6 +55,7 @@ az deployment group create \
                  pmtilesBucket=${PMTILES_BUCKET} \
                  extractsBucket=${EXTRACTS_BUCKET} \
                  useSpot=${USE_SPOT} \
+                 diagsRG=${DIAGSRG} \
                  storageName=${STORAGENAME} --debug --verbose
 
 echo "SUCCESS"

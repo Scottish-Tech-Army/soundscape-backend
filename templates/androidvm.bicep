@@ -19,6 +19,9 @@ var extractsContainerName = extractsBucket // Must match - some scripts assume i
 @description('Area to download - normally planet or monaco for local testing')
 param area string
 
+@description('Diags RG with alert group')
+param diagsRG string
+
 @description('Whether to use spot instances for the VMSS - defaults to true')
 param useSpot bool = true
 
@@ -36,8 +39,10 @@ var keyVaultName string = '${prefix}-vlt-${uniqueString(resourceGroup().id)}'
 @description('Log Analytics workspace name')
 var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
 
-// Cron format here includes seconds, so is "seconds minutes hours day month day-of-week"
 @description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
+// Format: seconds / minutes / hours / day of month / month / day of week (0=Sun)
+// https://learn.microsoft.com/en-gb/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&utm_source=copilot.com&pivots=programming-language-csharp#ncrontab-expressions
+// This is 12 noon on the 6th of every month
 var triggerSchedule string = '0 0 12 6 * *' // 12:00 GMT on the 6th of every month
 
 @description('VM size supporting ephemeral NVMe OS disk')
@@ -440,6 +445,7 @@ module vmErrorAlert './alert.bicep' = {
   name: 'vm-error-alert'
   params: {
     alertRuleName: 'vm-error-alert'
+    diagsRG: diagsRG
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles creation VM error'
     alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} reports error'
@@ -457,6 +463,7 @@ module vmSuccessAlert './alert.bicep' = {
   name: 'vm-success-alert'
   params: {
     alertRuleName: 'vm-success-alert'
+    diagsRG: diagsRG
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles VM success'
     alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} reports successful completion'
@@ -474,6 +481,7 @@ module vmTimeoutAlert './alert.bicep' = {
   name: 'vm-timeout-alert'
   params: {
     alertRuleName: 'vm-timeout-alert'
+    diagsRG: diagsRG
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles VM timed out'
     alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} timed out without completion'

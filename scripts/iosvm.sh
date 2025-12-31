@@ -53,7 +53,12 @@ az deployment group create \
                  area=${AREA} \
                  triggerAppName=${TRIGGERAPPNAME} \
                  metricAppName=${METRICAPPNAME} \
+                 tilesrvAppName=${TILESRVAPPNAME} \
                  useSpot=${USE_SPOT} \
-                 storageName=${STORAGENAME} --debug --verbose
+                 diagsRG=${DIAGSRG} \
+                 sharedRGName=${SHAREDRG} \
+                 sharedLAW=${SHAREDLAW} \
+                 frontDoorName=${FRONTDOOR} \
+                 storageName=${STORAGENAME}
 
 echo "SUCCESS"

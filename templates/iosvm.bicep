@@ -11,11 +11,26 @@ param metricAppName string
 @description('Storage account name')
 param storageName string
 
+@description('Tilesrv Container App name')
+param tilesrvAppName string
+
 @description('Regions to generate tiles for - planet except for testing. Typical valid values are "planet", "france" and "finland"')
 param area string
 
+@description('Diags RG with alert group')
+param diagsRG string
+
 @description('Whether to use spot instances for the VMSS - defaults to true')
 param useSpot bool = true
+
+@description('Shared RG name')
+param sharedRGName string
+
+@description('Shared Log Analytics workspace name')
+param sharedLAW string
+
+@description('Front Door name')
+param frontDoorName string
 
 // From here on, things that never change, so just vars
 @description('ssh key')
@@ -34,20 +49,14 @@ var keyVaultName string = '${prefix}-vlt-${uniqueString(resourceGroup().id)}'
 @description('Log Analytics workspace name')
 var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
 
-@description('Shared Log Analytics workspace name')
-var sharedLogAnalyticsWorkspaceName string = 'shared-691d6eaf8fcbac9533caaaf5116944f5'
-
-@description('Shared RG')
-var sharedRGName = 'rg-ssp-shared-dev-uks'
-
 @description('App insights name')
 var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
 
-@description('Tilesrv Container App name')
-var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id)}'
-
 @description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
-var triggerSchedule string = '0 0 16 * * 0'
+// Format: seconds / minutes / hours / day of month / month / day of week (0=Sun)
+// https://learn.microsoft.com/en-gb/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&utm_source=copilot.com&pivots=programming-language-csharp#ncrontab-expressions
+// This is 16:00 every 15th of the month
+var triggerSchedule string = '0 0 16 15 * *'
 
 @description('VM size supporting ephemeral NVMe OS disk')
 var vmSize string = 'Standard_E20ds_v6'
@@ -57,6 +66,9 @@ var vmssName string = 'ingest-vmss'
 
 @description('Azure user name')
 var adminUsername string = 'azureuser'
+
+@description('Subscription ID')
+var subId = subscription().subscriptionId
 
 // Get existing resources
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' existing = {
@@ -79,7 +91,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' exis
 
 // Get shared LA workspace
 resource sharedLogAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
-  name: sharedLogAnalyticsWorkspaceName
+  name: sharedLAW
   scope: resourceGroup(sharedRGName)
 }
 
@@ -763,7 +775,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                       metrics: [
                         {
                           resourceMetadata: {
-                            id: '/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-ssp-shared-dev-uks/providers/Microsoft.Cdn/profiles/fpd-ssp-prd2-uks-01' // Hard coded - only one Front Door
+                            id: '/subscriptions/${subId}/resourceGroups/${sharedRGName}/providers/Microsoft.Cdn/profiles/${frontDoorName}'
                           }
                           name: 'RequestCount'
                           aggregationType: 1
@@ -774,7 +786,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                         }
                         {
                           resourceMetadata: {
-                            id: '/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-ssp-shared-dev-uks/providers/Microsoft.Cdn/profiles/fpd-ssp-prd2-uks-01' // Hard coded - only one Front Door
+                            id: '/subscriptions/${subId}/resourceGroups/${sharedRGName}/providers/Microsoft.Cdn/profiles/${frontDoorName}'
                           }
                           name: 'OriginRequestCount'
                           aggregationType: 1
@@ -829,7 +841,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                       metrics: [
                         {
                           resourceMetadata: {
-                            id: '/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-ssp-shared-dev-uks/providers/Microsoft.Cdn/profiles/fpd-ssp-prd2-uks-01' // Hard coded - only one Front Door
+                            id: '/subscriptions/${subId}/resourceGroups/${sharedRGName}/providers/Microsoft.Cdn/profiles/${frontDoorName}'
                           }
                           name: 'TotalLatency'
                           aggregationType: 4
@@ -840,7 +852,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                         }
                         {
                           resourceMetadata: {
-                            id: '/subscriptions/b9ba9683-feef-47c8-bcc0-08e791dc1493/resourceGroups/rg-ssp-shared-dev-uks/providers/Microsoft.Cdn/profiles/fpd-ssp-prd2-uks-01' // Hard coded - only one Front Door
+                            id: '/subscriptions/${subId}/resourceGroups/${sharedRGName}/providers/Microsoft.Cdn/profiles/${frontDoorName}'
                           }
                           name: 'OriginLatency'
                           aggregationType: 4
@@ -1049,6 +1061,7 @@ module vmErrorAlert './alert.bicep' = {
   name: 'vm-error-alert'
   params: {
     alertRuleName: 'vm-error-alert'
+    diagsRG: diagsRG
     logAnalyticsId: logAnalytics.id
     displayName: 'Ingestion VM error'
     alertDescription: 'Ingestion VM for iOS in RG ${resourceGroup().name} reports error'
@@ -1066,7 +1079,7 @@ module vmSuccessAlert './alert.bicep' = {
   name: 'vm-success-alert'
   params: {
     alertRuleName: 'vm-success-alert'
-    actionGroupId: actionGroupId
+    diagsRG: diagsRG
     logAnalyticsId: logAnalytics.id
     displayName: 'Ingestion VM success'
     alertDescription: 'Ingestion VM for iOS in RG ${resourceGroup().name} reports successful completion'
@@ -1084,7 +1097,7 @@ module vmTimeoutAlert './alert.bicep' = {
   name: 'vm-timeout-alert'
   params: {
     alertRuleName: 'vm-timeout-alert'
-    actionGroupId: actionGroupId
+    diagsRG: diagsRG
     logAnalyticsId: logAnalytics.id
     displayName: 'Ingestion VM timed out'
     alertDescription: 'Ingestion VM for iOS in RG ${resourceGroup().name} timed out without completion'

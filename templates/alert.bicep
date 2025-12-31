@@ -27,7 +27,7 @@ param windowSize string = 'PT1H'
 param muteInterval string = 'PT24H'
 
 @description('RG for the diags resources')
-param diagsRG string = 'soundscape-diags'
+param diagsRG string
 
 @description('Name of the Action Group')
 param actionGroupName string = 'soundscape'
