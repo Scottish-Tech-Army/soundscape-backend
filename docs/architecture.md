@@ -4,21 +4,23 @@ This documents the architecture of how both Android and iOS back ends for Sounds
 
 The different resources are split into five resource groups.
 
-- There is a diagnostics RG, `soundscape-diags`. This contains the following shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications).
+- There is a diagnostics RG, `soundscape-diags`. This contains the shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications).
 
 - There is a shared RG, `soundscape-shared`. This contains
 
-    - DNS zones for external traffic
+    - DNS zones for external traffic. *Note that the top level DNS zone is duplicated, and the live one is in the old tenant; that is something that will ultimately be tidied up.*
 
     - An Azure Front Door instance which routes incoming traffic for iOS and for Photon Server to the correct endpoint.
+
+    - An Azure Container Registry.
 
     - A Log Analytics workspace which stores logs and metrics from Azure Front Door.
 
     - Some alert rules
 
-- There is an iOS instance RG, described in detail in the [iOS Architecture](#ios-architecture) section below. This contains an Azure PostGreSQL database and an Azure Container App to serve the data from it. New iOS instances can be created and the traffic cut over as required (for example to allow configuration changes).
+- There is an iOS instance RG, described in detail in the [iOS Architecture](#ios-architecture) section below. This contains an Azure PostGreSQL database and an Azure Container App to serve the data from it. New iOS instance RGs can be created and the traffic cut over as required (for example to allow configuration changes).
 
-- There is an Android instance RG, described in detail in the [Android Architecture](#android-architecture) section below. This contains a storage account with tile data, used by the Cloudflare components, and tooling to update that storage account's content regularly. As for iOS, new instances can be created and the Cloudflare configuration cut over as required (for example to allow configuration changes).
+- There is an Android instance RG, described in detail in the [Android Architecture](#android-architecture) section below. This contains a storage account with tile data, used by the Cloudflare components, and tooling to update that storage account's content and copy data over to Cloudflare regularly. As for iOS, new instances can be created and the configuration cut over to use them as required (for example to allow configuration changes).
 
 - Finally, there is a Photon Server RG, which is not yet fully complete (and is not currently live). That contains a Photon Server that handles Android search traffic, fronted by the shared Front Door instance.
 
@@ -30,8 +32,6 @@ This repository contains code that allows the deployment of a back end for the [
 
 ## Architecture summary
 
-### Deployment instance resource group
-
 Each deployed instance is in Azure, and contains the components below in a single resource group. Note that while there is normally only one such instance, a new one can be quickly created and cut over, to allow upgrades and code changes without risking an outage.
 
 - The backend database is an [Azure Database for PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/) instance, with the PostGIS extension installed.
@@ -42,19 +42,9 @@ Each deployed instance is in Azure, and contains the components below in a singl
 
 - There are various logging and diagnostics tooling components from the Azure Monitor family including [Log Analytics](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/log-analytics-overview), and [Application Insights](https://learn.microsoft.com/en-us/azure/azure-monitor/app/app-insights-overview)
 
-### Shared resource group
+- Incoming traffic is routed through the [Azure Front Door](https://learn.microsoft.com/en-us/azure/frontdoor/front-door-overview) instance in `soundscape-shared`, which allows traffic to be cut over from one back end instance to another, manages SSL termination, and provides CDN capability and some metrics. This has routes for
 
-In addition to these per-instance components, there are some global components in a shared Resource Group. *The tooling in this repository does not cover creating this RG - it must already exist.*
-
-- The entire thing is fronted by [Azure Front Door](https://learn.microsoft.com/en-us/azure/frontdoor/front-door-overview), which allows traffic to be cut over from one back end instance to another, manages SSL termination, and provides CDN capability and some metrics.
-
-- There is a common Azure Container Registry that stores the container images for the Tile Server.
-
-- There are multiple DNS zones that allow incoming traffic to be routed to the platform, specifically the following.
-
-    - `prd2.soundscape.scottishtecharmy.org`: live traffic from the app
-
-    - `soundscape.scottishtecharmy.org`: live traffic from an older version of the app
+    - `prd2.soundscape.scottishtecharmy.org`: live traffic from the iOS app
 
     - `tst.soundscape.scottishtecharmy.org`: test traffic, used to test new back end deployment instances
 
@@ -96,7 +86,7 @@ The data in the database is downloaded and ingested from public data at [Geofabr
 
     - Normally it is zero - i.e. no VM is running. VMs are not cheap.
 
-    - Once a week, a function app with a timer trigger increases the scale to 1, so a single VM is instantiated. This trigger can also be fired manually through the portal to force an update.
+    - Periodically, a function app with a timer trigger increases the scale to 1, so a single VM is instantiated. This trigger can also be fired manually through the portal to force an update.
 
     - The VM when created installs and runs the ingestion jobs through cloud init. If the run is successful, the ingestion job scales the VMSS down again, and the VM disappears.
 

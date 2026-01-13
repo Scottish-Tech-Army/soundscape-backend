@@ -1,12 +1,12 @@
 # Deployment of the Android backend in Azure
 
-This document describes how to deploy a new deployment.
+This document describes how to deploy a new Android deployment.
 
 ## Prerequisites
 
 Before you can initially create a deployment, you need the following.
 
-- General prerequisites are described in the [infrastructure deployment document](docs/infradeploy.md), and you should follow those, including in particular:
+- General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including in particular:
 
     - Making sure that the diags infrastructure has been deployed.
 
@@ -102,6 +102,9 @@ Follow the following steps. Note that some of the scripts here take quite some t
         export RG=android03         # Same number as above
         export REGION=westeurope    # Region - normally should not change
 
+        # Whether to use spot VMs; not permitted in some subscriptions
+        export USE_SPOT=false
+
         # Globally unique names, used in both bicep and in scripts
         # A good way to generate this is "date | md5sum | head -c 20 && echo"
         export UNIQUESTRING=fe6971508913740178df   # Ensure globally unique
@@ -109,13 +112,12 @@ Follow the following steps. Note that some of the scripts here take quite some t
         # Area to use - should normally be "monaco" (for fast low level testing) or "planet"
         export AREA=planet
 
-        # Names of export and tiles storage buckets
+        # Names of export and tiles storage buckets; "extracts" and "pmtiles" for live traffic
         export EXPORTS_BUCKET=extracts
         export PMTILES_BUCKET=pmtiles
 
-        # Do not change from here down
-        # This subscription stuff is purely to make sure we are using the right Azure subscription.
-        export SUBSCRIPTION=b9ba9683-feef-47c8-bcc0-08e791dc1493
+        # Subscription ID
+        export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
         ~~~
 
         Some of these deserve more comment.
@@ -173,3 +175,19 @@ Follow the following steps. Note that some of the scripts here take quite some t
     ~~~bash
     bash scripts/cleanup.sh
     ~~~
+
+- The deployment is now running, but it has not downloaded any data yet. It will do this periodically on a timer, but to make it do immediately so you should do the following.
+
+    - Open the [Azure portal](https://portal.azure.com).
+
+    - Find the resource group you just created (`androidNN`) and select it to view the list of resources in it.
+
+    - Click on the Azure Function app that triggers ingestion - this is the one starting `trigger-`.
+
+    - Click on the only function in the list, `ingest-timer`.
+
+    - In the `Code&Test` blade, click on `Test/Run`
+
+    - This will cause a new subwindow to open with a big `Run` button. Click it.
+
+- Monitor the progress of the operations following the [operations instructions](/docs/operations.md).

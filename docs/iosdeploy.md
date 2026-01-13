@@ -1,6 +1,6 @@
 # Deployment of the iOS backend in Azure
 
-This document describes how to deploy a new deployment. It does not cover the global shared resources (which are assumed to exist).
+This document describes how to deploy a new iOS backend. It does not cover the global shared resources (which are assumed to exist).
 
 The general model is as follows.
 
@@ -22,28 +22,11 @@ The process is as follows.
 
 ## Prerequisites
 
-- General prerequisites are described in the [infrastructure deployment document](docs/infradeploy.md), and you should follow those, including in particular:
+- General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including in particular:
 
-    - Making sure that the diags infrastructure has been deployed.
+    - Making sure that the shared infrastructure has been deployed.
 
     - Making sure that quotas have been set.
-
-- An alert rule should have been configured for incoming requests. This must have been created in the shared resource subscription, as follows.
-
-    - Scoped to the share LAW
-
-    - Using the following query
-
-            AzureDiagnostics
-                | where Category == "FrontDoorAccessLog"
-                | where requestUri_s contains "/tiles"
-                | where httpStatusCode_s != 200
-                | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
-                | order by TimeGenerated desc
-
-    - Run once an hour, only allowed to fire once per day
-
-    - Link to the alert group above
 
 ## Deploying in Azure
 
@@ -65,12 +48,15 @@ Follow the following steps. Note that some of the scripts here take quite some t
         # Area to export - should be "planet" unless for testing (when "finland" is a reasonable choice)
         export AREA=planet
 
+        # Whether to use SPOT VMS; spot VMs are far cheaper, but not permitted in certain subscriptions.
+        export USE_SPOT=false
+
         # Globally unique names, used in both bicep and in scripts
         # A good way to generate this is "date | md5sum | head -c 20 && echo"
         export UNIQUESTRING=fe6971508913740178df   # Ensure globally unique
 
         # Subscription name
-        export SUBSCRIPTION=b9ba9683-feef-47c8-bcc0-08e791dc1493
+        export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
         ~~~
 
  - Source the config file.
@@ -78,15 +64,6 @@ Follow the following steps. Note that some of the scripts here take quite some t
     ~~~bash
     . config/ios_iNN.sh
     ~~~
-
-- Ensure that you logged into Azure, and using the correct subscription.
-
-    ~~~bash
-    az login --use-device-code
-    az account show
-    ~~~
-
-    If necessary, you can log in using a different account, or use `az account set` to reset which subscription is in use.
 
 - Build and upload images. This creates container images of the specified version, and loads them into the shared repository.
 
@@ -102,7 +79,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
 
     *Very occasionally this fails with an error reporting `PrincipalNotFound`. If this occurs, just rerun the command. This is an intermittent timing issue caused by a managed identity being assigned a role before Entra has propagated its creation, and is resolved when the command is rerun.*
 
-- Run the VM deployment script. This deploys all the peripheral (but necessary) components, including ingestion tooling, function apps, and dashboards, then sets up an origin group to route traffic.
+- Run the VM deployment script. This deploys all the peripheral (but necessary) components, including ingestion tooling, function apps, and dashboards.
 
     ~~~bash
     bash scripts/iosvm.sh
@@ -114,7 +91,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
     bash scripts/functionapp.sh
     ~~~
 
-- Create an origin group linking back to the tile server app, so we can later route live traffic. *Warning - doing this on a live system can break Front Door traffic. It will recover within half an hour or so, but you don't want to do that with live traffic. The script will check and try to stop you doing this.*
+- Create an origin group linking back to the tile server app, so we can later route live traffic. *Warning - doing this when the deployment you are working on is already live can break Front Door traffic. It will recover within half an hour or so, but you don't want to do that with live traffic. The script will check and try to stop you doing this.*
 
     ~~~bash
     bash scripts/iosorigin.sh
@@ -168,11 +145,13 @@ To change over your deployment, perform the following steps.
 
 - Select `Origin Groups` on the left panel. You should see the origin group for your new instance there.
 
-- The Front Door instance already has two live endpoints, one for live traffic `prd2` and one for test traffic `tst`. Within each of these there is a single route.
+- The Front Door instance already has two live endpoints, one for live traffic `prd2` and one for test traffic `tst`. Within each of these there is a single route that you must change.
 
     - Click on `Front Door manager`
 
     - Click the `tst.soundscape.scottishtecharmy.org` endpoint.
+
+    - Click on the route.
 
     - Change the origin group to be the one for your new deployment.
 
@@ -216,7 +195,6 @@ Now it is time to cut the traffic over.
 
     ~~~bash
     nohup bash /ROOT_OF_REPO/scripts/loadtest.sh prd2 &
-    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh soundscape &
     ~~~
 
     (Note that we are now testing the live domains.) Double check that the tests are running correctly from the logs. The dashboard should show traffic in Front Door Manager, but (initially) not in your deployment.
@@ -225,7 +203,7 @@ Now it is time to cut the traffic over.
 
     - Click on `Front Door manager`
 
-    - Click the `fdr-appcontainer` endpoint.
+    - Click the `prd2.soundscape.scottishtecharmy.org` endpoint.
 
     - Change the origin group to be the one for your new deployment.
 

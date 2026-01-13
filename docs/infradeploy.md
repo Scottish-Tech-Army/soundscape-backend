@@ -50,7 +50,7 @@ Before you can initially use any of the tooling to deploy any components, you ne
 
         - Filter to region `northeurope` for iOS infrastructure, and ensure `Total Edsv6 Family vCPUs` is at least 32.
 
-        If you need  to increase any quotas, you can edit them. If that does not work then issue a support request, which normally takes no more than an hour or two to be satisfied.
+        If you need to increase any quotas, you can edit them. If that does not work then issue a support request, which normally takes no more than an hour or two to be satisfied. *Spot VMs are not enabled at present; this is because there is a limitation thanks to our free Azure credits, which do not allow us to use spot VMs.*
 
 ## Diagnostics infrastructure
 
@@ -75,7 +75,7 @@ To deploy this infrastructure, follow the steps below.
         export DIAGSRG=soundscape-shared
 
         # Subscription
-        export SUBSCRIPTION=c45947c8-2a50-4f53-bdf1-1fb282636578
+        export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
         ~~~
 
 - Source the config file.
@@ -90,7 +90,7 @@ To deploy this infrastructure, follow the steps below.
     bash scripts/diagsdeploy.sh
     ~~~
 
-- Configure the alert group that will handle all alerts. This is done through the portal so that we do not need to check in people's email addresses in git repositories.
+- Configure the alert group that will handle all alerts, created above. This is done through the portal so that we do not need to check in people's email addresses in git repositories.
 
     - Go to the [Azure portal](https://portal.azure.com).
 
@@ -108,7 +108,7 @@ To deploy this infrastructure, follow the steps below.
 
 ## Shared resource group deployment
 
-Shared infrastructure contains the front door and DNS components for the deployment. To deploy this infrastructure, follow the steps below.
+Shared infrastructure contains the Azure Front Door, Azure Container Registry, and DNS components for the deployment. To deploy this infrastructure, follow the steps below.
 
 - Set up a config file (this will have already been done for you - you should only ever change this if you are in the process of moving to another subscription or something).
 
@@ -121,6 +121,11 @@ Shared infrastructure contains the front door and DNS components for the deploym
         # Region and RG
         export SHAREDREGION=westeurope
         export SHAREDRG=soundscape-shared
+        export SHAREDLAW=shared-law
+        export REGISTRYNAME=soundscape
+        export REGISTRYRG=$SHAREDRG
+        export REGISTRYUAMI=registry-uami
+        export FRONTDOOR=soundscape-fd
 
         # Subscription
         export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
@@ -132,8 +137,7 @@ Shared infrastructure contains the front door and DNS components for the deploym
     . config/shared-cfg.sh
     ~~~
 
-
-- Load the shared queries and alert group.
+- Run the script to create the shared resource group and set up resources within it.
 
     ~~~bash
     bash scripts/shareddeploy.sh
@@ -163,7 +167,7 @@ In order to add the shared DNS zones and corresponding endpoints in Front Door, 
     bash scripts/sharedzone.sh ZONE
     ~~~
 
-- Set up the `NS` records in the parent zone.
+- Check the `NS` records in the parent zone. (Unless the parent zone has already moved to the new tenant.)
 
     - Open the [portal](https://portal.azure.com).
 
@@ -175,20 +179,14 @@ In order to add the shared DNS zones and corresponding endpoints in Front Door, 
 
     - Go to the Front Door instance, `soundscape-fd` in the `soundscape-shared` resource group.
 
-    - Expand `Settings` on the left
+    - Expand `Settings` on the left.
 
-    - Click on `Domains`
+    - Click on `Domains`.
 
-    - You should see your domain, which will be in state `Domain validation needed`
+    - You should see your domain, which will be in state `Domain validation needed`.
 
-    - Click on the `Validation state` which should show `Pending`
+    - Click on the `Validation state` which should show `Pending`.
 
-    - Add the TXT record (`_dnsauth`) to the `ZONE` DNS zone with the value supplied
+    - Add the TXT record (`_dnsauth`) to the `ZONE` DNS zone with the value supplied.
 
-    - Wait for at least some minutes, maybe a few hours
-
-
-
-
-
-    *FIXME: instructions for how to do this*
+    - Wait for at least some minutes, maybe a few hours.
