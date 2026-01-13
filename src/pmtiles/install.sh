@@ -2,16 +2,16 @@
 # Install everything we might need. This script runs as root.
 set -euo pipefail
 # Remove any old distro-provided Node.js
-apt-get remove -y nodejs npm
+apt-get remove -y nodejs npm --option=Dpkg::Lock::Timeout=300
 
 # Update package index
-apt-get update -y
+apt-get update -y --option=Dpkg::Lock::Timeout=300
 
 # Add NodeSource repo for Node.js 20
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 
 # Install Node.js 20 (includes npm)
-apt-get install -y nodejs
+apt-get install -y nodejs --option=Dpkg::Lock::Timeout=300
 
 # Install wrangler
 npm install -g wrangler

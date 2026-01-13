@@ -7,6 +7,12 @@ echo "RG: ${RG}"
 cd "$(dirname "$0")/.."
 . scripts/cfgutils.sh
 
+if [ -z "${USE_SPOT:-}" ]; then
+  echo "USE_SPOT not set - defaulting to true"
+  USE_SPOT=true
+fi
+USE_SPOT=${USE_SPOT,,}  # Lower case as Azure CLI is case sensitive about booleans
+
 # Build the escaped query file.
 mkdir -p build
 jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
@@ -38,7 +44,7 @@ az storage blob upload-batch \
   --pattern files.tgz \
   --overwrite
 
-# Create the group
+# Create the deployment itself
 echo "Create deployment"
 az deployment group create \
     --resource-group ${RG} --template-file templates/androidvm.bicep \
@@ -48,6 +54,8 @@ az deployment group create \
                  metricAppName=${METRICAPPNAME} \
                  pmtilesBucket=${PMTILES_BUCKET} \
                  extractsBucket=${EXTRACTS_BUCKET} \
+                 useSpot=${USE_SPOT} \
+                 diagsRG=${DIAGSRG} \
                  storageName=${STORAGENAME} --debug --verbose
 
 echo "SUCCESS"

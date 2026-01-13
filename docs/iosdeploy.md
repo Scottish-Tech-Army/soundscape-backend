@@ -1,6 +1,6 @@
 # Deployment of the iOS backend in Azure
 
-This document describes how to deploy a new deployment. It does not cover the global shared resources (which are assumed to exist).
+This document describes how to deploy a new iOS backend. It does not cover the global shared resources (which are assumed to exist).
 
 The general model is as follows.
 
@@ -22,38 +22,11 @@ The process is as follows.
 
 ## Prerequisites
 
-Before you can initially create a deployment, you need the following.
+- General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including in particular:
 
-- A PC to run the tooling on. The tooling was tested using Linux, but anything running bash should be fine, including a Mac or WSL on Windows. This PC must have various utilities installed . These include the following.
+    - Making sure that the shared infrastructure has been deployed.
 
-    - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
-
-    - [Docker](https://docs.docker.com/engine/install/)
-
-    - [Azure functions core tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=linux)
-
-    - The contents of this repo checked out locally, to allow running of the various scripts.
-
-- Access to the Azure subscription which contains all of the resources in question.
-
-- The diags and alerts infrastructure should have been deployed. This is a one time step, as this is shared across all deployments and is common to both iOS and Android. To do this, follow the [diags deployment instructions](diagsdeploy.md).
-
-- An alert rule should have been configured for incoming requests. This must have been created in the shared resource subscription, as follows.
-
-    - Scoped to the share LAW
-
-    - Using the following query
-
-            AzureDiagnostics
-                | where Category == "FrontDoorAccessLog"
-                | where requestUri_s contains "/tiles"
-                | where httpStatusCode_s != 200
-                | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
-                | order by TimeGenerated desc
-
-    - Run once an hour, only allowed to fire once per day
-
-    - Link to the alert group above
+    - Making sure that quotas have been set.
 
 ## Deploying in Azure
 
@@ -68,22 +41,22 @@ Follow the following steps. Note that some of the scripts here take quite some t
         ~~~bash
         # Parameters in use
         export PREFIX=i05           # As described above
-        export RG=ios05             # Do not change
-        export REGION=uksouth       # Region - normally should not change
-        export REGISTRYNAME=acrsspdevuks # Do not change
-        export REGISTRYRG=rg-ssp-shared-dev-uks # Do not change
+        export RG=ios05             # As described above
+        export REGION=northeurope   # Region - normally should not change
         export VERSION=${PREFIX}    # Version of containers - make unique per deployment
 
         # Area to export - should be "planet" unless for testing (when "finland" is a reasonable choice)
         export AREA=planet
 
+        # Whether to use SPOT VMS; spot VMs are far cheaper, but not permitted in certain subscriptions.
+        export USE_SPOT=false
 
         # Globally unique names, used in both bicep and in scripts
         # A good way to generate this is "date | md5sum | head -c 20 && echo"
         export UNIQUESTRING=fe6971508913740178df   # Ensure globally unique
 
         # Subscription name
-        export SUBSCRIPTION=b9ba9683-feef-47c8-bcc0-08e791dc1493
+        export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
         ~~~
 
  - Source the config file.
@@ -91,15 +64,6 @@ Follow the following steps. Note that some of the scripts here take quite some t
     ~~~bash
     . config/ios_iNN.sh
     ~~~
-
-- Ensure that you logged into Azure, and using the correct subscription.
-
-    ~~~bash
-    az login --use-device-code
-    az account show
-    ~~~
-
-    If necessary, you can log in using a different account, or use `az account set` to reset which subscription is in use.
 
 - Build and upload images. This creates container images of the specified version, and loads them into the shared repository.
 
@@ -125,6 +89,12 @@ Follow the following steps. Note that some of the scripts here take quite some t
 
     ~~~bash
     bash scripts/functionapp.sh
+    ~~~
+
+- Create an origin group linking back to the tile server app, so we can later route live traffic. *Warning - doing this when the deployment you are working on is already live can break Front Door traffic. It will recover within half an hour or so, but you don't want to do that with live traffic. The script will check and try to stop you doing this.*
+
+    ~~~bash
+    bash scripts/iosorigin.sh
     ~~~
 
 - Clear out temporary build files. This is optional, but it avoids having random built artefacts lying around cluttering up the disk.
@@ -171,41 +141,17 @@ Having followed this process, you should cut traffic over to the new backend ins
 
 To change over your deployment, perform the following steps.
 
-- Select the Azure Front Door instance (the only one, in the `fpd-ssp-prd2-uks-01` resource group) in the portal. All instructions are related to that resource.
+- Select the Azure Front Door instance (the only one, in the `soundscape-shared` resource group) in the portal. All instructions are related to that resource.
 
-- Select `Origin Groups` on the left panel, and create a new `Origin Group` (which is a place where traffic can end up). That group should have the following features.
+- Select `Origin Groups` on the left panel. You should see the origin group for your new instance there.
 
-    - Name it after your deployment. For example, the `iNN` deployment can sensibly be named `iNN-tilesrv`.
-
-    - Add a single Origin within it.
-
-        - `Name` does not matter, but `iNN-container-app` is a sensible choice.
-
-        - `Origin Type` should be `Container Apps` from the dropdown.
-
-        - `Host name` should be the URL of the correct Azure Container App - if you have set the type correctly above, there is a dropdown list of valid Container Apps. Make sure you pick the one from your new instance, the one starting `iNN`.
-
-        - Disable `Certificate subject name validation`
-
-        - Leave the Origin enabled, and with everything else left as the defaults.
-
-    - Allow HTTP health probes on the `/metrics` path.
-
-    - Within the origin, do *not* enable subject name validation.
-
-- The Front Door instance already has two live endpoints, one for live traffic `fdr-appcontainer` and one for test traffic `tst.soundscape.scottishtecharmy.org`. Within each of these there is a single route.
-
-    - You should not need to change any routes, but for reference the matching pattern must be `/tiles/*`, with origin path `/` (so `/tiles` requests go to the root on the tile server app).
-
-    - It should be enabled.
-
-    - Compression and caching must be enabled, with the `Use query string` option.
-
-- You should now configure test traffic to arrive at your new deployment.
+- The Front Door instance already has two live endpoints, one for live traffic `prd2` and one for test traffic `tst`. Within each of these there is a single route that you must change.
 
     - Click on `Front Door manager`
 
     - Click the `tst.soundscape.scottishtecharmy.org` endpoint.
+
+    - Click on the route.
 
     - Change the origin group to be the one for your new deployment.
 
@@ -249,7 +195,6 @@ Now it is time to cut the traffic over.
 
     ~~~bash
     nohup bash /ROOT_OF_REPO/scripts/loadtest.sh prd2 &
-    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh soundscape &
     ~~~
 
     (Note that we are now testing the live domains.) Double check that the tests are running correctly from the logs. The dashboard should show traffic in Front Door Manager, but (initially) not in your deployment.
@@ -258,7 +203,7 @@ Now it is time to cut the traffic over.
 
     - Click on `Front Door manager`
 
-    - Click the `fdr-appcontainer` endpoint.
+    - Click the `prd2.soundscape.scottishtecharmy.org` endpoint.
 
     - Change the origin group to be the one for your new deployment.
 

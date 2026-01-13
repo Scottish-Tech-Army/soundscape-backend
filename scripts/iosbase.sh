@@ -18,6 +18,8 @@ az deployment group create \
                  versionTag=${VERSION} \
                  registryName=${REGISTRYNAME} \
                  registryRG=${REGISTRYRG} \
+                 registryUAMIName=${REGISTRYUAMI} \
+                 tilesrvAppName=${TILESRVAPPNAME} \
                  storageName=${STORAGENAME} --debug --verbose
 
 echo "SUCCESS"

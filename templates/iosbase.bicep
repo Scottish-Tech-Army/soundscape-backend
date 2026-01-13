@@ -12,8 +12,7 @@ param versionTag string
 param storageName string
 
 @description('Name of the Azure Container Registry UAMI - pre-existing, and should be supplied as a parameter really')
-// FIXME: hardcoded
-param registryUAMIName string = 'mi-ssp-dev-uks-acrpull'
+param registryUAMIName string
 
 // These two are params because for one reason or another they cannot be vars.
 // The DB admin password gets reset (but plumbed through) on every redeployment, to a random value.
@@ -32,6 +31,9 @@ var keyVaultName string = '${prefix}-vlt-${uniqueString(resourceGroup().id)}'
 
 @description('Name of the Container Apps Environment (managed environment).')
 var containerAppEnvName string = '${prefix}-container-apps-env'
+
+@description('Tilesrv Container App name')
+param tilesrvAppName string
 
 @description('Registry URL')
 var registryUrl string = '${registryName}.azurecr.io'
@@ -68,9 +70,6 @@ var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGro
 
 @description('App insights name')
 var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
-
-@description('Tilesrv Container App name')
-var tilesrvAppName string = '${prefix}-tilesrv-${uniqueString(resourceGroup().id)}'
 
 @description('Name of the storage container for downloads')
 var downloadContainerName = 'downloads'
@@ -128,6 +127,16 @@ resource vaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
+// Set up an NSG for the VM subnet with default rules - denying all inbound traffic except from the vnet and load balancers
+resource vmNsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
+  name: 'vm-nsg'
+  location: resourceGroup().location
+  properties: {
+    securityRules: [
+    ]
+  }
+}
+
 // vnet
 resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
   name: vnetName
@@ -165,6 +174,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-09-01' = {
         name: vmSubnetName
         properties: {
           addressPrefix: vmSubnetPrefix
+          networkSecurityGroup: {
+            id: vmNsg.id
+          }
         }
       }
     ]
@@ -382,7 +394,7 @@ resource customTable 'Microsoft.OperationalInsights/workspaces/tables@2025-02-01
 }
 
 // Container Apps
-resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' = {
+resource tilesrvApp 'Microsoft.App/containerApps@2025-07-01' = {
   name: tilesrvAppName
   location: resourceGroup().location
   identity: {
@@ -433,7 +445,6 @@ resource tilesrvApp 'Microsoft.App/containerapps@2025-02-02-preview' = {
       containers: [
         {
           image: tilesrvImage
-          imageType: 'ContainerImage'
           name: 'tilesrv'
           env: [
             { name: 'APP_PORT',            value: '8080' }

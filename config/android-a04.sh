@@ -1,11 +1,14 @@
 # Parameters in use
-export PREFIX=a02
-export RG=rg-${PREFIX}
+export PREFIX=a04
+export RG=android04
 export REGION=westeurope
+
+# Do not use SPOT VMS
+export USE_SPOT=false
 
 # Globally unique names, used in both bicep and in scripts
 # A good way to generate this is "date | md5sum | head -c 20 && echo"
-export UNIQUESTRING=d41d8cd98f00b204e980 # Ensure globally unique
+export UNIQUESTRING=9cf07a7f610487d10734
 
 # Names of export and tiles storage buckets
 export EXTRACTS_BUCKET=extracts
@@ -15,5 +18,4 @@ export PMTILES_BUCKET=pmtiles
 export AREA=planet
 
 # Subscription to use.
-export SUBSCRIPTION=4bf1580a-f73d-4821-8cdc-605925ba78e9
-
+export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356

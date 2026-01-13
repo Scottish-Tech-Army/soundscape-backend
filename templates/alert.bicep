@@ -1,7 +1,4 @@
 // Generalised alert
-@description('Full ID of action group')
-param actionGroupId string
-
 @description('ID of Log Analytics workspace to monitor')
 param logAnalyticsId string
 
@@ -28,6 +25,17 @@ param windowSize string = 'PT1H'
 
 @description('Mute interval - defaults to 24 hours')
 param muteInterval string = 'PT24H'
+
+@description('RG for the diags resources')
+param diagsRG string
+
+@description('Name of the Action Group')
+param actionGroupName string = 'soundscape'
+
+resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' existing = {
+  name: actionGroupName
+  scope: resourceGroup(diagsRG)
+}
 
 resource alertRule 'Microsoft.Insights/scheduledQueryRules@2022-06-15' = {
   name: alertRuleName
@@ -69,7 +77,7 @@ resource alertRule 'Microsoft.Insights/scheduledQueryRules@2022-06-15' = {
     // Notify existing Action Group
     actions: {
       actionGroups: [
-          actionGroupId
+          actionGroup.id
       ]
     }
   }

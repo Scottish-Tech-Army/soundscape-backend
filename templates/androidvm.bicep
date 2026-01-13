@@ -19,10 +19,11 @@ var extractsContainerName = extractsBucket // Must match - some scripts assume i
 @description('Area to download - normally planet or monaco for local testing')
 param area string
 
-// Action group ID for alerts
-// FIXME: this could be tidied up, and will be when we move to a shared subscription.
-@description('Full ID of action group')
-param actionGroupId string = '/subscriptions/4bf1580a-f73d-4821-8cdc-605925ba78e9/resourceGroups/soundscape-diags/providers/Microsoft.Insights/actionGroups/soundscape'
+@description('Diags RG with alert group')
+param diagsRG string
+
+@description('Whether to use spot instances for the VMSS - defaults to true')
+param useSpot bool = true
 
 // From here on, things that never change, so just vars
 @description('ssh key')
@@ -38,12 +39,14 @@ var keyVaultName string = '${prefix}-vlt-${uniqueString(resourceGroup().id)}'
 @description('Log Analytics workspace name')
 var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
 
-// Cron format here includes seconds, so is "seconds minutes hours day month day-of-week"
 @description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
+// Format: seconds / minutes / hours / day of month / month / day of week (0=Sun)
+// https://learn.microsoft.com/en-gb/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&utm_source=copilot.com&pivots=programming-language-csharp#ncrontab-expressions
+// This is 12 noon on the 6th of every month
 var triggerSchedule string = '0 0 12 6 * *' // 12:00 GMT on the 6th of every month
 
 @description('VM size supporting ephemeral NVMe OS disk')
-var vmSize string = 'Standard_E20ds_v6' // For spot instances
+var vmSize string = 'Standard_E20ds_v6'
 
 @description('VMSS name')
 var vmssName string = '${prefix}-vmss'
@@ -209,13 +212,19 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           }
         }
       }
+      diagnosticsProfile: {
+        bootDiagnostics: {
+          enabled: true
+          storageUri: null // use managed storage
+        }
+      }
       networkProfile: {
         networkInterfaceConfigurations: [
           {
             name: 'nic'
             properties: {
               primary: true
-              enableAcceleratedNetworking: true
+              enableAcceleratedNetworking: false
               ipConfigurations: [
                 {
                   name: 'ipconfig'
@@ -236,8 +245,13 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
           }
         ]
       }
-      priority: 'Spot' // Spot instance to save money
-      evictionPolicy: 'Delete' // If evicted, get rid of disks etc. completely; note that spotRestorePolicy is not set, so VMSS won't try to bring it back automatically
+      // This wild syntax is a bicep spread operator
+      ...(useSpot ? {
+        priority: 'Spot'
+        evictionPolicy: 'Delete'
+      } : {
+            priority: 'Regular'
+      })
     }
   }
   identity: {
@@ -431,7 +445,7 @@ module vmErrorAlert './alert.bicep' = {
   name: 'vm-error-alert'
   params: {
     alertRuleName: 'vm-error-alert'
-    actionGroupId: actionGroupId
+    diagsRG: diagsRG
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles creation VM error'
     alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} reports error'
@@ -449,7 +463,7 @@ module vmSuccessAlert './alert.bicep' = {
   name: 'vm-success-alert'
   params: {
     alertRuleName: 'vm-success-alert'
-    actionGroupId: actionGroupId
+    diagsRG: diagsRG
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles VM success'
     alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} reports successful completion'
@@ -467,7 +481,7 @@ module vmTimeoutAlert './alert.bicep' = {
   name: 'vm-timeout-alert'
   params: {
     alertRuleName: 'vm-timeout-alert'
-    actionGroupId: actionGroupId
+    diagsRG: diagsRG
     logAnalyticsId: logAnalytics.id
     displayName: 'Android pmtiles VM timed out'
     alertDescription: 'Android pmtiles VM in RG ${resourceGroup().name} timed out without completion'
