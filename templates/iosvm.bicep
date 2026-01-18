@@ -55,8 +55,7 @@ var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup
 @description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
 // Format: seconds / minutes / hours / day of month / month / day of week (0=Sun)
 // https://learn.microsoft.com/en-gb/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&utm_source=copilot.com&pivots=programming-language-csharp#ncrontab-expressions
-// This is 16:00 every 15th of the month
-var triggerSchedule string = '0 0 16 15 * *'
+var triggerSchedule string = '0 0 16 15 * *' // 16:00 GMT on the 15th of every month
 
 @description('VM size supporting ephemeral NVMe OS disk')
 var vmSize string = 'Standard_E20ds_v6'
