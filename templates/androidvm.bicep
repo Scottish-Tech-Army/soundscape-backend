@@ -439,6 +439,221 @@ module vmWorkbook './workbook.bicep' = {
   }
 }
 
+// Dashboard with some plausible metrics
+resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
+  location: resourceGroup().location
+  name: resourceGroup().name
+  properties: {
+    lenses: [
+      {
+        order: 0
+        parts: [
+          {
+            position: {
+              x: 0
+              y: 0
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: transferStorage.id
+                          }
+                          name: 'Egress'
+                          aggregationType: 1
+                          namespace: 'microsoft.storage/storageaccounts'
+                          metricVisualization: {
+                            displayName: 'Egress'
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: transferStorage.id
+                          }
+                          name: 'Ingress'
+                          aggregationType: 1
+                          namespace: 'microsoft.storage/storageaccounts'
+                          metricVisualization: {
+                            displayName: 'Ingress'
+                          }
+                        }
+                      ]
+                      title: 'Ingress and Egress for ${transferStorage.name}'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 6
+              y: 0
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: transferStorage.id
+                          }
+                          name: 'UsedCapacity'
+                          aggregationType: 4
+                          namespace: 'microsoft.storage/storageaccounts'
+                          metricVisualization: {
+                            displayName: 'Used capacity'
+                          }
+                        }
+                      ]
+                      title: 'Storage capacity used for ${transferStorage.name}'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 0
+              y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'ComponentId'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'TimeContext'
+                  value: null
+                  isOptional: true
+                }
+                {
+                  name: 'ResourceIds'
+                  value: [
+                    'azure monitor'
+                  ]
+                  isOptional: true
+                }
+                {
+                  name: 'ConfigurationId'
+                  value: vmWorkbook.outputs.id
+                  isOptional: true
+                }
+                {
+                  name: 'Type'
+                  value: 'workbook'
+                  isOptional: true
+                }
+                {
+                  name: 'GalleryResourceType'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'PinName'
+                  value: vmWorkbook.outputs.title
+                  isOptional: true
+                }
+                {
+                  name: 'StepSettings'
+                  value: '{"version":"KqlItem/1.0","query":${vmKqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{"max":1}}}'
+                  isOptional: true
+                }
+                {
+                  name: 'ParameterValues'
+                  value: {
+                    TimeRange: {
+                      type: 4
+                      value: {
+                        durationMs: 86400000
+                      }
+                      isPending: false
+                      isWaiting: false
+                      isFailed: false
+                      isGlobal: false
+                      labelValue: 'Last 24 hours'
+                      displayName: 'Time range picker'
+                      formattedValue: 'Last 24 hours'
+                    }
+                  }
+                  isOptional: true
+                }
+                {
+                  name: 'Location'
+                  value: resourceGroup().location
+                  isOptional: true
+                }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+
 // Last but not least, some alerts
 // Scheduled query alert rule for detecting "VM ERROR" in LAW logs
 module vmErrorAlert './alert.bicep' = {
@@ -497,3 +712,4 @@ module vmTimeoutAlert './alert.bicep' = {
     '''
   }
 }
+
