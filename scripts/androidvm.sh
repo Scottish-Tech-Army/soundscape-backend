@@ -24,7 +24,7 @@ cp -r src/pmtiles/* build/tmp/
 cp -r src/vmutils/* build/tmp/
 cp -r thirdparty/pmtiles/wrangler build/tmp/
 pushd build/tmp
-tar -zcvf ../files.tgz *
+tar -zcf ../files.tgz *
 popd
 
 # Returns both key1 and key2; pick either
@@ -56,6 +56,6 @@ az deployment group create \
                  extractsBucket=${EXTRACTS_BUCKET} \
                  useSpot=${USE_SPOT} \
                  diagsRG=${DIAGSRG} \
-                 storageName=${STORAGENAME} --debug --verbose
+                 storageName=${STORAGENAME}
 
 echo "SUCCESS"
