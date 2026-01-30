@@ -48,16 +48,6 @@ A range of alerts are configured, and will be seen in email reports sent to the 
 
 A range of detailed diagnostics queries have been created which should allow easier checking of logs, with standard logs queries.
 
-### Deploying the tooling
-
-To deploy the tooling, run the following from the base of the repo. This need only be done once; it is safe to delete and recreate the resource group then redeploy the queries.
-
-~~~bash
-. scripts/diags-cfg.sh
-bash scripts/androiddiags.sh
-bash scripts/iosdiags.sh
-~~~
-
 ### Using the queries
 
 All of the requests listed here are stored in a deployed query pack. To view them, do the following.

@@ -32,16 +32,34 @@ az storage blob upload-batch \
   --pattern files.tgz \
   --overwrite
 
+if az vmss show -g ${RG} -n ${PREFIX}-vmss >/dev/null 2>&1
+then
+  echo "VMSS already exists - capacity 1"
+  SCALE=1
+  NOWAIT="--no-wait"
+else
+  echo "VMSS does not exist yet - capacity 0 at first"
+  SCALE=0
+  NOWAIT=""
+fi
+
+# Note the "--no-wait" flag, which makes this return promptly. That is because
+# the deployment waits for the VM to be fully provisioned, which can take a long time.
+echo "Starting deployment of VM - will return before VM is live"
 az deployment group create \
     --resource-group ${RG} --template-file templates/photonvm.bicep \
     --parameters prefix=${PREFIX} \
                  versionTag=${VERSION} \
                  registryName=${REGISTRYNAME} \
                  registryRG=${REGISTRYRG} \
-                 registrySub=${REGISTRYSUB} \
                  registryUAMIName=${REGISTRYUAMI} \
                  area=${AREA} \
-                 storageName=${STORAGENAME} \
-    --debug --verbose --no-wait
+                 scale=${SCALE} \
+                 storageName=${STORAGENAME} ${NOWAIT}
+
+if [ "$SCALE" -eq "0" ]; then
+  echo "Scaling VMSS to 1 instance"
+  az vmss scale --name ${PREFIX}-vmss --resource-group ${RG} --new-capacity 1
+fi
 
 echo "SUCCESS"

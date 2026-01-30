@@ -13,6 +13,6 @@ az group create --location ${REGION} --resource-group ${RG}
 az deployment group create \
     --resource-group ${RG} --template-file templates/photonbase.bicep \
     --parameters prefix=${PREFIX} \
-                 storageName=${STORAGENAME} --debug --verbose
+                 storageName=${STORAGENAME}
 
 echo "SUCCESS"

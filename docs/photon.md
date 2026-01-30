@@ -10,7 +10,15 @@ The basic model is that the photon server runs on a VM in a VMSS. When the VM is
 
 Deployment of the photon server works as follows.
 
-- Create a config file
+- Create and source a config file
+
+    - FIXME: document it xxx
+
+- Upload the docker image.
+
+    ~~~bash
+    bash scripts/photonbuild.sh
+    ~~~
 
 - Load the base infrastructure
 

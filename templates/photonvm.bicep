@@ -4,10 +4,12 @@ param prefix string
 @description('Storage account name')
 param storageName string
 
+@description('VM scale')
+param scale int
+
 @description('Name and RG of the Azure Container Registry')
 param registryName string
 param registryRG string
-param registrySub string
 param registryUAMIName string
 
 @description('Version tag for the photon-docker image')
@@ -52,7 +54,7 @@ param area string
 // Get the UAMI from the other subscription
 resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
   name: registryUAMIName
-  scope: resourceGroup(registrySub, registryRG)
+  scope: resourceGroup(registryRG)
 }
 
 // UAMI for the VMSS
@@ -146,11 +148,9 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' = {
   }
 }
 
-// Log analytics workspace for diagnostics
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
+// Log analytics workspace
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2020-08-01' existing = {
   name: logAnalyticsWorkspaceName
-  location: resourceGroup().location
-  properties: {}
 }
 
 // Grant UAMI rights to publish to LAW
@@ -176,38 +176,6 @@ resource roleAssignLogs 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
       '73c42c96-874c-492b-b04d-ab87d138a893' // Log Analytics Contributor
     )
     principalId: uami.properties.principalId
-  }
-}
-
-// Create a table for photon logs
-resource customTable 'Microsoft.OperationalInsights/workspaces/tables@2025-02-01' = {
-  name: 'photonLogs_CL' // "_CL" suffix is required
-  parent: logAnalytics
-  properties: {
-    plan: 'Basic'
-    schema: {
-      name: 'photonLogs_CL'
-      displayName: 'photon Logs'
-      description: 'Custom table for photon server logs'
-      columns: [
-        {
-          name: 'TimeGenerated'
-          type: 'DateTime'
-        }
-        {
-          name: 'RawData'
-          type: 'String'
-        }
-        {
-          name: 'FilePath'
-          type: 'string'
-        }
-        {
-          name: 'Computer'
-          type: 'string'
-        }
-      ]
-    }
   }
 }
 
@@ -316,7 +284,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
   location: resourceGroup().location
   sku: {
     name: vmSize
-    capacity: 1
+    capacity: scale
     tier: 'Standard'
   }
   properties: {

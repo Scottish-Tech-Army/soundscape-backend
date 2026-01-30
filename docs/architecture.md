@@ -98,7 +98,7 @@ There are three components to the Android architecture.
 
 2. There is an offline maps download component that again runs in Cloudflare, orchestrated from Azure.
 
-3. There is a search component. This is not contained in this repository at all, and is not shown in the architecture diagram.
+3. There is a search component, using photon server. This is covered in the [last section on photon](#photon-server-architecture), as it is logically distinct from the rest of the Android components, and is not shown in the architecture diagram.
 
 ![Android Architecture Diagram](android.svg)
 
@@ -165,3 +165,14 @@ The data is uploaded and the workers are configured from tooling running in Azur
     - It updates the production worker `EXTRACTS_BUCKET` configuration to match the configuration tested above, and retests. This is the worker that handles requests from the app itself.
 
 - Finally, after a pause, it tidies up old data, removing the previous versions from R2 and from Azure storage.
+
+# Photon server architecture
+
+The photon server architecture consists of the following.
+
+- There is a VMSS containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from graphopper.
+
+- There is a load balancer, that exposes the search URL to use.
+
+- The Front Door instance (shared with the iOS deployment) routes traffic to the VMSS.
+
