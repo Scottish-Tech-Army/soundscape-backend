@@ -32,6 +32,19 @@ Deployment of the photon server works as follows.
     bash scripts/photonvm.sh
     ~~~
 
+- Deploy the function app code to the deployment.
+
+    ~~~bash
+    bash scripts/functionapp.sh
+    ~~~
+
+- Clear out temporary build files. This is optional, but it avoids having random built artefacts lying around cluttering up the disk.
+
+    ~~~bash
+    bash scripts/cleanup.sh
+    ~~~
+
+
 ## Missing work
 
 - There is no way for incoming traffic to arrive at the photon server. That can be resolved by adding some Front Door configuration

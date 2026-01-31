@@ -14,7 +14,7 @@ The repository is structured as follows.
 
     - If you want to deploy a new Android backend RG and cut over traffic, read the [Android backend instructions](/docs/androiddeploy.md)
 
-    - [Photon server docs](/docs/photon.md) describe how to run a photon search server. *This is a work in progress, and should not be used until it is fully tested.*
+    - If you want to deploy a new Photon server instance and cut over traffic, read the [Photon server instructions](/docs/photondeploy.md).
 
     - [Operations processes](/docs/operations.md) describes how to operate an existing deployment, including how to use search queries, analyse logs, and monitor load.
 

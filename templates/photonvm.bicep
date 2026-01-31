@@ -1,6 +1,12 @@
 @description('Prefix for the deployment, e.g. aNN')
 param prefix string
 
+@description('Metric function app name')
+param metricAppName string
+
+@description('Trigger function app name')
+param triggerAppName string
+
 @description('Storage account name')
 param storageName string
 
@@ -50,6 +56,12 @@ var uploadContainerName = 'uploads'
 
 @description('Area to download - normally planet or monaco for local testing')
 param area string
+
+@description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
+// Format: seconds / minutes / hours / day of month / month / day of week (0=Sun)
+// https://learn.microsoft.com/en-gb/azure/azure-functions/functions-bindings-timer?tabs=python-v2%2Cisolated-process%2Cnodejs-v4&utm_source=copilot.com&pivots=programming-language-csharp#ncrontab-expressions
+// This is 12 noon on the 1st of every month
+var triggerSchedule string = '0 0 12 1 * *' // 12:00 GMT on the 1st of every month
 
 // Get the UAMI from the other subscription
 resource registryUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' existing = {
@@ -556,3 +568,123 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
   }
 }
 
+module functionApps './functions.bicep' = {
+  name: 'functionApps'
+  params: {
+    prefix: prefix
+    triggerAppName: triggerAppName
+    metricAppName: metricAppName
+    storageName: storageName
+    vmssName: vmssName
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+    triggerSchedule: triggerSchedule
+    triggerType: 'REIMAGE'
+  }
+}
+
+var vmKqlQuery = loadTextContent('../build/vmquery-escaped.txt')
+
+// Workbook for VMSS metrics
+module vmWorkbook './workbook.bicep' = {
+  name: 'vmWorkbook'
+  params: {
+    kqlQuery: vmKqlQuery
+    title: 'VM Instance Counts'
+    logAnalyticsId: logAnalytics.id
+    workbookDisplayName: '${prefix}-vmss-counter'
+  }
+}
+
+// Dashboard with some plausible metrics
+resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
+  location: resourceGroup().location
+  name: resourceGroup().name
+  properties: {
+    lenses: [
+      {
+        order: 0
+        parts: [
+          {
+            position: {
+              x: 0
+              y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'ComponentId'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'TimeContext'
+                  value: null
+                  isOptional: true
+                }
+                {
+                  name: 'ResourceIds'
+                  value: [
+                    'azure monitor'
+                  ]
+                  isOptional: true
+                }
+                {
+                  name: 'ConfigurationId'
+                  value: vmWorkbook.outputs.id
+                  isOptional: true
+                }
+                {
+                  name: 'Type'
+                  value: 'workbook'
+                  isOptional: true
+                }
+                {
+                  name: 'GalleryResourceType'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'PinName'
+                  value: vmWorkbook.outputs.title
+                  isOptional: true
+                }
+                {
+                  name: 'StepSettings'
+                  value: '{"version":"KqlItem/1.0","query":${vmKqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{"max":1}}}'
+                  isOptional: true
+                }
+                {
+                  name: 'ParameterValues'
+                  value: {
+                    TimeRange: {
+                      type: 4
+                      value: {
+                        durationMs: 86400000
+                      }
+                      isPending: false
+                      isWaiting: false
+                      isFailed: false
+                      isGlobal: false
+                      labelValue: 'Last 24 hours'
+                      displayName: 'Time range picker'
+                      formattedValue: 'Last 24 hours'
+                    }
+                  }
+                  isOptional: true
+                }
+                {
+                  name: 'Location'
+                  value: resourceGroup().location
+                  isOptional: true
+                }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

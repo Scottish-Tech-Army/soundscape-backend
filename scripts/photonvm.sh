@@ -7,6 +7,10 @@ echo "RG: ${RG}"
 cd "$(dirname "$0")/.."
 . scripts/cfgutils.sh
 
+# Build the escaped query file.
+mkdir -p build
+jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
+
 # Build the tar file of scripts
 rm -rf build/tmp build/files.tgz
 mkdir -p build/tmp
@@ -53,6 +57,8 @@ az deployment group create \
                  registryName=${REGISTRYNAME} \
                  registryRG=${REGISTRYRG} \
                  registryUAMIName=${REGISTRYUAMI} \
+                 metricAppName=${METRICAPPNAME} \
+                 triggerAppName=${TRIGGERAPPNAME} \
                  area=${AREA} \
                  scale=${SCALE} \
                  storageName=${STORAGENAME} ${NOWAIT}

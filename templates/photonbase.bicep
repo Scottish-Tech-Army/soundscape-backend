@@ -13,6 +13,9 @@ var uploadContainerName = 'uploads'
 @description('Log Analytics workspace name')
 var logAnalyticsWorkspaceName string = '${prefix}-law-${uniqueString(resourceGroup().id)}'
 
+@description('App insights name')
+var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
+
 // UAMI for the VMSS
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
   name: '${prefix}-uami'
@@ -61,6 +64,30 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
   name: logAnalyticsWorkspaceName
   location: resourceGroup().location
   properties: {}
+}
+
+// Create AppTraces table using Analytics plan. We must do this before the app insights resource is created,
+// hence the dependency below.
+resource appTracesTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
+  parent: logAnalytics
+  name: 'AppTraces'
+  properties: {
+    plan: 'Analytics'
+  }
+}
+
+// Application Insights linked to the existing Log Analytics workspace
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: appInsightsName
+  location: resourceGroup().location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logAnalytics.id
+  }
+  dependsOn: [
+    appTracesTable
+  ]
 }
 
 // Create a table for photon logs

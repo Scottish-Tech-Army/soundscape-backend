@@ -394,6 +394,7 @@ module functionApps './functions.bicep' = {
     vmssName: vmssName
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     triggerSchedule: triggerSchedule
+    triggerType: 'SCALE'
   }
 }
 

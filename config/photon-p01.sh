@@ -9,7 +9,8 @@ export VERSION=v1.0
 export UNIQUESTRING=029edfef73100f3c0334
 
 # Area to use - should normally be "monaco" or "planet"
-export AREA=planet
+#export AREA=planet # FIXME: for testing with smaller data
+export AREA=monaco
 
 # Subscription to use.
 export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356

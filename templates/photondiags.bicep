@@ -53,4 +53,17 @@ module vmCount './query.bicep' = {
   }
 }
 
+module functionApp './query.bicep' = {
+  name: 'photonFunctionApp'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Photon function app logs'
+    queryDescription: 'Low level logs of function app'
+    query: '''
+    AppTraces
+    | order by TimeGenerated
+    '''
+  }
+}
+
 // FIXME: xxx more front door logs
