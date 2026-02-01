@@ -97,9 +97,7 @@
                 ],
                 "chartSettings": {
                     "xAxis": "TimeGenerated",
-                    "ySettings": {
-                        "max": 1
-                    }
+                    "ySettings": {{YSETTINGS}}
                 }
             },
             "name": "query - 0"

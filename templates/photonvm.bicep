@@ -596,6 +596,7 @@ module vmWorkbook './workbook.bicep' = {
   params: {
     kqlQuery: vmKqlQuery
     title: 'VM Instance Counts'
+    ySettings: '{}' // Default ySettings
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-vmss-counter'
   }
@@ -658,7 +659,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 }
                 {
                   name: 'StepSettings'
-                  value: '{"version":"KqlItem/1.0","query":${vmKqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{"max":1}}}'
+                  value: '{"version":"KqlItem/1.0","query":${vmKqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}'
                   isOptional: true
                 }
                 {
