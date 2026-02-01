@@ -2,5 +2,5 @@ AppTraces
 | where Message contains "METRIC:"
 | project TimeGenerated, Message
 | extend MetricName = extract(@"METRIC: ([\w ]+):", 1, Message)
-| extend Value = toint(extract(@"METRIC: [\w ]+: (\d+)", 1, Message))
+| extend Value = todouble(extract(@"METRIC: [\w ]+: (\d+)", 1, Message)) + 0.0
 | project TimeGenerated, MetricName, Value

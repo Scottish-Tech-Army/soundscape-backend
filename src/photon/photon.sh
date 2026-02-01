@@ -6,7 +6,7 @@ ENVFILE="$(dirname "$0")/env.sh"
 . ${BASE}/utils.sh
 
 LOGFILE="${BASE}/logs/photon_$(date +%Y%m%d_%H%M%S).log"
-svclog "Starting up photon server - output to ${LOGFILE}"
+svclog "Ensuring that photon server is started - output to ${LOGFILE}"
 
 # Login to the ACR, and pull the image
 az login --identity --client-id ${ACR_CLIENT_ID}

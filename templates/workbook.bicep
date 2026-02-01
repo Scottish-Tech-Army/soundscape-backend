@@ -1,4 +1,4 @@
-@description('Wscaped KQL query')
+@description('Escaped KQL query')
 param kqlQuery string
 
 @description('Display name for the workbook')

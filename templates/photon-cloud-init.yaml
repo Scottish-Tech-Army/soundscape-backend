@@ -55,9 +55,13 @@ write_files:
       # Let the user access docker
       usermod -aG docker azureuser
 
+      cp ${BASE}/photon.service /etc/systemd/system/
+
 runcmd:
   - [ bash, /opt/photon/setup.sh ]
   - [ chown, -R, azureuser:azureuser, /opt/photon ]
   - [ chmod, '0777', /mnt ]
   - [ chmod, '0755', /opt/photon/photon.sh ]
-  - [ su, '-', azureuser, -c, /opt/photon/photon.sh ]
+  - [ systemctl, daemon-reload ]
+  - [ systemctl, enable, photon.service ]
+  - [ systemctl, start, photon.service ]

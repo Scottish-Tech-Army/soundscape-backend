@@ -386,6 +386,12 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
                 workspaceId: logAnalytics.properties.customerId
                 region: resourceGroup().location
                 settingsAuthType: 'ManagedIdentity'
+                authentication: {
+                  managedIdentity: {
+                    'identifier-name': 'mi_res_id'
+                    'identifier-value': uami.id
+                  }
+                }
               }
               protectedSettings: {} // Deliberately empty.
             }
@@ -608,7 +614,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
             position: {
               x: 0
               y: 4
-              colSpan: 6
+              colSpan: 8
               rowSpan: 4
             }
             metadata: {
