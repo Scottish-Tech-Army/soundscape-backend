@@ -396,6 +396,20 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
               protectedSettings: {} // Deliberately empty.
             }
           }
+          {
+            name: 'noop-reimage-trigger'
+            properties: {
+              publisher: 'Microsoft.Azure.Extensions'
+              type: 'CustomScript'
+              typeHandlerVersion: '2.1'
+              autoUpgradeMinorVersion: true
+              settings: {
+                commandToExecute: '/bin/true'
+              } // nothing to run
+              protectedSettings: {} // nothing secret
+              forceUpdateTag: 'initial'
+            }
+          }
         ]
       }
       networkProfile: {
@@ -442,12 +456,38 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
 
 // Let the UAMI be used to scale the VMSS
 resource assignScaleRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(uami.id, vmss.id, 'vmss-scale-role')
+  name: guid(uami.id, vmss.id, 'vmss-update-role')
   scope: vmss
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      'b24988ac-6180-42a0-ab88-20f7382dd24c'
+      'b24988ac-6180-42a0-ab88-20f7382dd24c' // Contributor
+    )
+    principalId: uami.properties.principalId
+  }
+}
+
+// The UAMI also needs to be able to assign itself to the VMSS, because this is a rePUT of the entire VMSS
+resource assignUamiOperator 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(uami.id, 'uami-operator')
+  scope: uami
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'f1a07417-d97a-45cb-824c-7a7467783830' // Managed Identity Operator
+    )
+    principalId: uami.properties.principalId
+  }
+}
+
+// ... and it needs to be allowed to link the VMSS to the network and the load balancer
+resource networkContributorOnRg 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(uami.id, 'network-contributor-rg')
+  scope: resourceGroup()
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '4d97b98b-1d4f-4787-a291-c67834d212e7' // Network Contributor
     )
     principalId: uami.properties.principalId
   }
