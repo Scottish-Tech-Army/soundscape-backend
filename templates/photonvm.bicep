@@ -219,7 +219,8 @@ var lbName string = '${prefix}-lb'
 var lbFrontEndName string = 'photon-fe'
 var lbBackendPoolName string = 'photon-pool'
 var lbProbeName string = 'photon-probe'
-param publicIpName string = '${prefix}-publicip'
+var dnsLabel = 'photon-${uniqueString(resourceGroup().id)}'
+var publicIpName string = '${prefix}-publicip'
 
 resource publicIp 'Microsoft.Network/publicIPAddresses@2022-09-01' = {
   name: publicIpName
@@ -229,6 +230,9 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2022-09-01' = {
   }
   properties: {
     publicIPAllocationMethod: 'Static'
+    dnsSettings: {
+      domainNameLabel: dnsLabel
+    }
   }
 }
 

@@ -90,7 +90,7 @@ Get secrets from Cloudflare and store them for later storage in a key vault.
 
 Follow the following steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
 
-- Set up a config file. Android instances should be named `aNN` where `NN` is a two digit number that should be monotonically increasing, such as `a01`. (Yes, we ended up with `p` for iOS and `a` for Android. Sue me.)
+- Set up a config file. Android instances should be named `aNN` where `NN` is a two digit number that should be monotonically increasing, such as `a01`.
 
     - The file should be in the [config](config) directory, and be named `android-aNN.sh`
 

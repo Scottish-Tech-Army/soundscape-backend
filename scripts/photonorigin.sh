@@ -1,5 +1,5 @@
 #!/bin/bash
-# Set up iOS Front door origin group.
+# Set up photon Front door origin group.
 set -euo pipefail
 echo "RG: ${RG}"
 
@@ -21,12 +21,14 @@ else
     echo "Origin group ${RG} does not already exist - creating it"
 fi
 
-# Get the FQDN of the tile server app
-TILESRVFQDN=$(az containerapp show \
-  --name ${TILESRVAPPNAME} \
-  --resource-group ${RG} \
-  --query "properties.configuration.ingress.fqdn" -o tsv)
-echo "Tile server FQDN: ${TILESRVFQDN}"
+# Get the FQDN of the load balancer public IP.
+PHOTONLBFQDN=$(az network public-ip show \
+  --resource-group "$RG" \
+  --name "${PREFIX}-publicip" \
+  --query "dnsSettings.fqdn" \
+  --output tsv)
+echo "Photon load balancer FQDN: ${PHOTONLBFQDN}"
+
 
 # Create the origin group that points to the container app
 echo "Create origin group for Front Door"
@@ -35,8 +37,9 @@ az deployment group create \
     --template-file templates/origin.bicep \
     --parameters originGroupName=${RG} \
                  fdName=${FRONTDOOR} \
-                 probePath="/metrics" \
-                 targetFQDN=${TILESRVFQDN} \
-                 isHTTPS="true" \
-                 port=443
+                 probePath="/" \
+                 targetFQDN=${PHOTONLBFQDN} \
+                 isHTTPS="false" \
+                 port=2322
+
 echo "SUCCESS"
