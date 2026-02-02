@@ -99,8 +99,10 @@ else
 fi
 
 if [[ "$ENDPOINT_TYPE" == "ios" ]]; then
+  FWDPROTOCOL="" # No forwarding protocol; keep protocol as is
   PATTERN="tiles"
 else
+  FWDPROTOCOL="--forwarding-protocol HttpOnly"
   PATTERN="photon"
 fi
 
@@ -128,7 +130,7 @@ else
     --enable-caching true \
     --query-string-caching-behavior UseQueryString \
     --link-to-default-domain Disabled \
-    --patterns-to-match "/${PATTERN}/*" \
+    ${FWDPROTOCOL} --patterns-to-match "/${PATTERN}/*" \
     --origin-path "/" \
     --origin-group dummy-blackhole
 fi

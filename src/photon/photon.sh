@@ -13,6 +13,12 @@ az login --identity --client-id ${ACR_CLIENT_ID}
 az acr login --name ${REGISTRY_NAME}
 docker pull ${IMAGE}
 
+if docker ps --format '{{.Names}}' | grep -qx "photon-server"
+then
+    svclog "Photon server container already running - drop out"
+    exit 0
+fi
+
 # Run the image
 docker run -dit \
     -p 2322:2322 \

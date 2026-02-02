@@ -159,7 +159,7 @@ In order to add the shared DNS zones and corresponding endpoints in Front Door, 
 
 - `photon` is for live photon search server traffic
 
-- `photontst` is for live photon search server traffic
+- `photontest` is for live photon search server traffic
 
 To deploy and configure them, follow the following process.
 

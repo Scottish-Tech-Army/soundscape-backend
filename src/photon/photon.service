@@ -1,5 +1,5 @@
 [Unit]
-Description=Start Photon after Azure Monitor Agent
+Description=Photon
 After=azuremonitoragent.service
 Requires=azuremonitoragent.service
 
@@ -8,8 +8,6 @@ Type=oneshot
 User=azureuser
 Group=azureuser
 ExecStart=/opt/photon/photon.sh
-Restart=on-failure
-RestartSec=15
 
 [Install]
 WantedBy=multi-user.target
