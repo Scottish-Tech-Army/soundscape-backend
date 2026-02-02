@@ -236,6 +236,7 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2022-09-01' = {
   }
 }
 
+// FIXME: Enable automatic VM repair
 resource lb 'Microsoft.Network/loadBalancers@2024-10-01' = {
   name: lbName
   location: resourceGroup().location
@@ -363,7 +364,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
       }
       extensionProfile: {
         extensions: [
-          {
+          { // FIXME: this reports health before the container has finished downloading
             name: 'HealthExtension'
             properties: {
               publisher: 'Microsoft.ManagedServices'

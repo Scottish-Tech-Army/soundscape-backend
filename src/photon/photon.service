@@ -1,7 +1,7 @@
 [Unit]
-Description=Photon
+Description=Photon post-AMA hook
 After=azuremonitoragent.service
-Requires=azuremonitoragent.service
+PartOf=azuremonitoragent.service
 
 [Service]
 Type=oneshot
@@ -10,4 +10,4 @@ Group=azureuser
 ExecStart=/opt/photon/photon.sh
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=azuremonitoragent.service

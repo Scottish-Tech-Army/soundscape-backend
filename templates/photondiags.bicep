@@ -22,16 +22,22 @@ module photonHighLevel './query.bicep' = {
   }
 }
 
-module ingDetail './query.bicep' = {
-  name: 'ingDetail'
+module photonContainerLogs './query.bicep' = {
+  name: 'photonContainerLogs'
   params: {
     queryPackName: queryPackName
-    displayName: 'Photon VM logs - detailed logs'
+    displayName: 'Photon Container logs'
     queryDescription: 'Low level logs of photon VM'
     query: '''
     photonLogs_CL
-    | project-reorder TimeGenerated, RawData, FilePath
-    | order by TimeGenerated desc
+    | where FilePath !contains "svc"
+    | extend parsed = parse_json(RawData)
+    | extend
+      Message = tostring(parsed.log),
+      Stream  = tostring(parsed.stream),
+      EventTime = todatetime(parsed["time"])
+    | project-reorder EventTime, Stream, Message
+    | order by EventTime desc
     '''
   }
 }

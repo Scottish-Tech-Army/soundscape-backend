@@ -63,6 +63,7 @@ write_files:
       usermod -aG docker azureuser
 
       cp ${BASE}/photon.service /etc/systemd/system/
+      echo "Setup complete"
 
 runcmd:
   - [ bash, /opt/photon/setup.sh ]
