@@ -22,11 +22,13 @@ apt:
 package_update: true
 packages:
   - curl
+  - net-tools
+  - sysstat
   - wget
   - unzip
-  - sysstat
   - docker.io
   - azure-cli
+  - python-is-python3
 
 write_files:
   - path: /opt/photon/env.sh

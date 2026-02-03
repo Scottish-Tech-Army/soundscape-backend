@@ -120,6 +120,20 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
         }
       }
       {
+        // FIXME: disable after testing completes
+        name: 'Allow-SSH'
+        properties: {
+          priority: 500
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '22'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
         name: 'Deny-All-Inbound'
         properties: {
           priority: 600
@@ -201,7 +215,7 @@ var envLines = [
   'export CLIENT_ID=${uami.properties.clientId}'
   'export ACR_CLIENT_ID=${registryUami.properties.clientId}'
   'export REGISTRY_NAME=${registryName}'
-  'export IMAGE=${registryName}.azurecr.io/photon/photon-docker:${versionTag}'
+  'export PHOTONIMAGE=${registryName}.azurecr.io/photon/photon-docker:${versionTag}'
   'export VMSS_NAME=${vmssName}'
   'export RG=${resourceGroup().name}'
   'export STORAGE_ACCOUNT_NAME=${storageName}'
@@ -285,8 +299,15 @@ resource lb 'Microsoft.Network/loadBalancers@2024-10-01' = {
       {
         name: lbProbeName
         properties: {
-          protocol: 'Tcp'
+/*
+          // Removed because we are now using simple TCP probes
+          // Http probes turn out to be buggy
+          protocol: 'Http'
           port: 2322
+          requestPath: '/status'
+*/
+          protocol: 'Tcp'
+          port: 2320
           intervalInSeconds: 5
           numberOfProbes: 2
         }
@@ -315,6 +336,13 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
         maxUnhealthyUpgradedInstancePercent: 100
       }
     }
+/*
+    // FIXME - grace period cannot be longer than 90 minutes. Unclear how this interfaces with startup time, so maybe need to do something differint.
+    automaticRepairsPolicy: {
+      enabled: true
+      gracePeriod: 'PT12H' // Blow away and replace any VM that has been broken for 12 hours; probably too long, but conservative because of startup time
+    }
+*/
     virtualMachineProfile: {
       storageProfile: {
         osDisk: {
@@ -364,22 +392,6 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
       }
       extensionProfile: {
         extensions: [
-          { // FIXME: this reports health before the container has finished downloading
-            name: 'HealthExtension'
-            properties: {
-              publisher: 'Microsoft.ManagedServices'
-              type: 'ApplicationHealthLinux'
-              typeHandlerVersion: '2.0'
-              autoUpgradeMinorVersion: true
-              settings: {
-                protocol: 'tcp'
-                port: 2322
-                intervalInSeconds: 10
-                numberOfProbes: 3
-                gracePeriod: 14400 // Four hours to become healthy
-              }
-            }
-          }
           {
             name: 'AzureMonitorLinuxAgent'
             properties: {
@@ -406,7 +418,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
             properties: {
               publisher: 'Microsoft.Azure.Extensions'
               type: 'CustomScript'
-              typeHandlerVersion: '2.1'
+              typeHandlerVersion: '2.0'
               autoUpgradeMinorVersion: true
               settings: {
                 commandToExecute: '/bin/true'
@@ -415,9 +427,31 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
               forceUpdateTag: 'initial'
             }
           }
+/*
+          {
+            name: 'HealthExtension'
+            properties: {
+              publisher: 'Microsoft.ManagedServices'
+              type: 'ApplicationHealthLinux'
+              typeHandlerVersion: '2.0'
+              autoUpgradeMinorVersion: true
+              settings: {
+                protocol: 'tcp'
+                port: 2320 // Not the port of the container
+                intervalInSeconds: 10
+                numberOfProbes: 3
+                gracePeriod: 600 // Always takes at least ten minutes
+              }
+            }
+          }
+*/
         ]
       }
       networkProfile: {
+        // AMA and this kind of probe break one another
+        healthProbe: {
+          id: resourceId('Microsoft.Network/loadBalancers/probes', lbName, lbProbeName)
+        }
         networkInterfaceConfigurations: [
           {
             name: 'nic'

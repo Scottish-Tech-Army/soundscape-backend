@@ -1,0 +1,7 @@
+FROM python:3.12-slim
+
+RUN pip install requests
+
+COPY health.py /health.py
+
+CMD ["python", "/health.py"]

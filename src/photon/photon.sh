@@ -17,12 +17,29 @@ then
     exit 0
 fi
 
-# Login to the ACR, and pull the image
+# Login to the ACR, and pull the image for photon
 az login --identity --client-id ${ACR_CLIENT_ID}
 az acr login --name ${REGISTRY_NAME}
-docker pull ${IMAGE}
+docker pull ${PHOTONIMAGE}
+
+# For tedious reasons (ARM64 mostly) we need to build the docker image locally.
+pushd ${BASE}/photon/health
+export HEALTHIMAGE=health:latest
+docker build -t ${HEALTHIMAGE} -f Dockerfile.health .
+popd
+
+svclog "Starting health image from ${HEALTHIMAGE}"
+docker run -dit \
+    --network host \
+    --log-driver=json-file \
+    --log-opt max-size=100m \
+    --log-opt max-file=10 \
+    --name health \
+    --restart=unless-stopped \
+    ${HEALTHIMAGE}
 
 # Run the image
+svclog "Starting photon server container from image ${PHOTONIMAGE}"
 docker run -dit \
     -p 2322:2322 \
     -e UPDATE_STRATEGY=DISABLED \
@@ -37,14 +54,15 @@ docker run -dit \
     -v ${DATADIR}:/photon/data \
     --name photon-server \
     --restart=unless-stopped \
-    ${IMAGE}
+    ${PHOTONIMAGE}
 
 svclog "Photon server started"
 
 # Plumb in the logs
-CONTAINER_ID=$(docker inspect --format='{{.Id}}' photon-server)
-LOGPATH="/var/lib/docker/containers/${CONTAINER_ID}/${CONTAINER_ID}-json.log"
-sudo ln -s ${LOGPATH} ${BASE}/logs
-
-svclog "Log file symlinked to ${BASE}/logs/${CONTAINER_ID}-json.log"
-
+for i in health photon-server
+do
+    CONTAINER_ID=$(docker inspect --format='{{.Id}}' ${i})
+    LOGPATH="/var/lib/docker/containers/${CONTAINER_ID}/${CONTAINER_ID}-json.log"
+    sudo ln -s ${LOGPATH} ${BASE}/logs/${i}-json.log
+    svclog "Log file symlinked to ${BASE}/logs/${i}-json.log"
+done
