@@ -36,8 +36,8 @@ module photonContainerLogs './query.bicep' = {
       Message = tostring(parsed.log),
       Stream  = tostring(parsed.stream),
       EventTime = todatetime(parsed["time"])
-    | project-reorder EventTime, Stream, Message
-    | order by EventTime desc
+    | project-reorder EventTime, Stream, Message, Computer
+    | order by EventTime, TimeGenerated desc
     '''
   }
 }

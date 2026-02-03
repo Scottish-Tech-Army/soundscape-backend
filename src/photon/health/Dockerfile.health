@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-RUN pip install requests
+RUN pip install --root-user-action=ignore --disable-pip-version-check requests
 
 COPY health.py /health.py
 

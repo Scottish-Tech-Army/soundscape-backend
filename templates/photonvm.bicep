@@ -250,7 +250,6 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2022-09-01' = {
   }
 }
 
-// FIXME: Enable automatic VM repair
 resource lb 'Microsoft.Network/loadBalancers@2024-10-01' = {
   name: lbName
   location: resourceGroup().location
@@ -294,6 +293,24 @@ resource lb 'Microsoft.Network/loadBalancers@2024-10-01' = {
           loadDistribution: 'Default'
         }
       }
+      {
+        name: 'health-probe-rule'
+        properties: {
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, lbFrontEndName)
+          }
+          backendAddressPool: {
+            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, lbBackendPoolName)
+          }
+          probe: {
+            id: resourceId('Microsoft.Network/loadBalancers/probes', lbName, lbProbeName)
+          }
+          protocol: 'Tcp'
+          frontendPort: 2320
+          backendPort: 2320
+          disableOutboundSnat: true
+        }
+      }
     ]
     probes: [
       {
@@ -331,9 +348,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
       mode: 'Rolling'
       rollingUpgradePolicy: {
         maxSurge: true
-        // Allow initial rollout even if unhealthy for a while - requires both these to be set
-        maxUnhealthyInstancePercent: 100
-        maxUnhealthyUpgradedInstancePercent: 100
+        maxUnhealthyUpgradedInstancePercent: 0
       }
     }
 /*
@@ -427,7 +442,6 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
               forceUpdateTag: 'initial'
             }
           }
-/*
           {
             name: 'HealthExtension'
             properties: {
@@ -437,21 +451,21 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
               autoUpgradeMinorVersion: true
               settings: {
                 protocol: 'tcp'
-                port: 2320 // Not the port of the container
+                port: 2320 // Health port, not load port
                 intervalInSeconds: 10
                 numberOfProbes: 3
-                gracePeriod: 600 // Always takes at least ten minutes
+                gracePeriod: 1200 // 20 minutes before we assume it should be healthy
               }
             }
           }
-*/
         ]
       }
       networkProfile: {
-        // AMA and this kind of probe break one another
+/*
         healthProbe: {
           id: resourceId('Microsoft.Network/loadBalancers/probes', lbName, lbProbeName)
         }
+*/
         networkInterfaceConfigurations: [
           {
             name: 'nic'

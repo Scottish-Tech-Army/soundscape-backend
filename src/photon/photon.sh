@@ -8,8 +8,7 @@ ENVFILE="$(dirname "$0")/env.sh"
 # Wait 30 seconds - AMA is already running, but takes a little while to be ready
 sleep 30
 
-LOGFILE="${BASE}/logs/photon_$(date +%Y%m%d_%H%M%S).log"
-svclog "Ensuring that photon server is started - output to ${LOGFILE}"
+svclog "Ensuring that photon server is started"
 
 if docker ps --format '{{.Names}}' | grep -qx "photon-server"
 then
@@ -23,7 +22,7 @@ az acr login --name ${REGISTRY_NAME}
 docker pull ${PHOTONIMAGE}
 
 # For tedious reasons (ARM64 mostly) we need to build the docker image locally.
-pushd ${BASE}/photon/health
+pushd ${BASE}/health
 export HEALTHIMAGE=health:latest
 docker build -t ${HEALTHIMAGE} -f Dockerfile.health .
 popd
