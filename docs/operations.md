@@ -1,8 +1,10 @@
 # Operations processes
 
-## iOS dashboard
+## Dashboards
 
-The iOS deployment process creates a dashboard, named after the resource group as `rg-pNN`. You can view this in the portal. It displays graphs of the following.
+### iOS dashboard
+
+The iOS deployment process creates a dashboard, named after the resource group as `iosNN`. You can view this in the portal. It displays graphs of the following.
 
 - Tile server requests reaching the deployment, with counts of success and errors. (Some errors are expected, notably 404s for random requests against the domain.)
 
@@ -26,11 +28,30 @@ The iOS deployment process creates a dashboard, named after the resource group a
 
     - Total instances (how many VMs the VMSS actually has). This may differ from capacity if a spot instance has failed, or if the VMSS is in the middle of scaling.
 
-    - Live instances (how many VMs the VMSS actually has that are running normally). This may differ from total instances only if a VM has failed, or is in the process of starting up.
+    - Healthy instances (how many VMs the VMSS actually has that are running normally). This may differ from total instances only if a VM has failed, or is in the process of starting up.
 
     Generally, all three values should be zero, except when an ingestion occurs when they should all increase to one then return to zero after a few (typically ten) hours.
 
 Most of this data can be viewed in the detailed monitoring queries below, with more information.
+
+### Android dashboard
+
+The android deployment process creates a dashboard, named after the resource group as `androidNN`. You can view this in the portal. It displays graphs of the following.
+
+- Ingress and egress rates for the data transfer storage account.
+
+- Storage capacity used for the data transfer storage account.
+
+- Count of VM instances, as for iOS above.
+
+### Photon dashboard
+
+The photon deployment process creates a dashboard, named after the resource group as `photonNN`. You can view this in the portal. It displays graphs of the following.
+
+- **FIXME: should have more graphs here**
+
+- Count of VM instances, as for iOS above. Note however that normally one VM will be active and healthy in normal operation, rather than zero.
+
 
 ## Alerts
 
@@ -43,6 +64,17 @@ A range of alerts are configured, and will be seen in email reports sent to the 
 - Severity 1: a VM (iOS or Android) took so long to complete that it must have failed (and presumably the termination script did not work to report the error)
 
 - Severity 3: errors are reported in Azure Front Door for Soundscape requests
+
+For photon
+
+- Severity 4: a reimage of the photon VMSS has started
+
+- Severity 1: no healthy VMs exist in the photon VMSS
+
+- Severity 1: more than one VM exists in the photon VMSS, implying that the VMSS reimage failed to complete in some way
+
+- Severity 3: errors are reported in Azure Front Door for Soundscape requests **FIXME: this alert is not yet implemented**
+
 
 ## Detailed log monitoring
 

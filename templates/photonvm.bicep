@@ -11,7 +11,7 @@ param triggerAppName string
 param storageName string
 
 @description('VM scale')
-param scale int
+param scale int = 1
 
 @description('Name and RG of the Azure Container Registry')
 param registryName string
@@ -20,6 +20,9 @@ param registryUAMIName string
 
 @description('Version tag for the photon-docker image')
 param versionTag string
+
+@description('Is this a debug deployment - ssh access enabled')
+param debug bool = false
 
 // From here on, things that never change, so just vars
 @description('ssh key')
@@ -56,6 +59,9 @@ var uploadContainerName = 'uploads'
 
 @description('Area to download - normally planet or monaco for local testing')
 param area string
+
+@description('Diags RG with alert group')
+param diagsRG string
 
 @description('Trigger schedule in cron format, e.g. "0 0 10 * * 1" for every Monday at 10:00 GMT')
 // Format: seconds / minutes / hours / day of month / month / day of week (0=Sun)
@@ -119,20 +125,21 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
           destinationAddressPrefix: '*'
         }
       }
-      {
-        // FIXME: disable after testing completes
-        name: 'Allow-SSH'
-        properties: {
-          priority: 500
-          direction: 'Inbound'
-          access: 'Allow'
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '22'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: '*'
+      ...(debug ? [
+        {
+          name: 'Allow-SSH'
+          properties: {
+            priority: 500
+            direction: 'Inbound'
+            access: 'Allow'
+            protocol: '*'
+            sourcePortRange: '*'
+            destinationPortRange: '22'
+            sourceAddressPrefix: '*'
+            destinationAddressPrefix: '*'
+          }
         }
-      }
+      ] : [])
       {
         name: 'Deny-All-Inbound'
         properties: {
@@ -316,13 +323,7 @@ resource lb 'Microsoft.Network/loadBalancers@2024-10-01' = {
       {
         name: lbProbeName
         properties: {
-/*
-          // Removed because we are now using simple TCP probes
-          // Http probes turn out to be buggy
-          protocol: 'Http'
-          port: 2322
-          requestPath: '/status'
-*/
+          // Http probes turn out to be buggy, so we use a simple TCP probe and a health container
           protocol: 'Tcp'
           port: 2320
           intervalInSeconds: 5
@@ -343,21 +344,10 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
     tier: 'Standard'
   }
   properties: {
-    overprovision: false // Required with rolling upgrades and maxSurge
     upgradePolicy: {
-      mode: 'Rolling'
-      rollingUpgradePolicy: {
-        maxSurge: true
-        maxUnhealthyUpgradedInstancePercent: 0
-      }
+      mode: 'Manual'
     }
-/*
-    // FIXME - grace period cannot be longer than 90 minutes. Unclear how this interfaces with startup time, so maybe need to do something differint.
-    automaticRepairsPolicy: {
-      enabled: true
-      gracePeriod: 'PT12H' // Blow away and replace any VM that has been broken for 12 hours; probably too long, but conservative because of startup time
-    }
-*/
+    // It would be nice to have automaticRepairsPolicy set, but they have a max grace period of 90 minutes, which is less than our startup time.
     virtualMachineProfile: {
       storageProfile: {
         osDisk: {
@@ -395,14 +385,16 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
         customData: base64(cloudInitRendered)
         linuxConfiguration: {
           disablePasswordAuthentication: true
-          ssh: {
-            publicKeys: [
-              {
-                path: '/home/${adminUsername}/.ssh/authorized_keys'
-                keyData: sshPublicKey
-              }
-            ]
-          }
+          ...(debug ? {
+            ssh: {
+              publicKeys: [
+                {
+                  path: '/home/${adminUsername}/.ssh/authorized_keys'
+                  keyData: sshPublicKey
+                }
+              ]
+            }
+          } : {})
         }
       }
       extensionProfile: {
@@ -429,20 +421,6 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
             }
           }
           {
-            name: 'noop-reimage-trigger'
-            properties: {
-              publisher: 'Microsoft.Azure.Extensions'
-              type: 'CustomScript'
-              typeHandlerVersion: '2.0'
-              autoUpgradeMinorVersion: true
-              settings: {
-                commandToExecute: '/bin/true'
-              } // nothing to run
-              protectedSettings: {} // nothing secret
-              forceUpdateTag: 'initial'
-            }
-          }
-          {
             name: 'HealthExtension'
             properties: {
               publisher: 'Microsoft.ManagedServices'
@@ -454,18 +432,13 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
                 port: 2320 // Health port, not load port
                 intervalInSeconds: 10
                 numberOfProbes: 3
-                gracePeriod: 1200 // 20 minutes before we assume it should be healthy
+                gracePeriod: 600 // 10 minutes before we allow the option of it being healthy
               }
             }
           }
         ]
       }
       networkProfile: {
-/*
-        healthProbe: {
-          id: resourceId('Microsoft.Network/loadBalancers/probes', lbName, lbProbeName)
-        }
-*/
         networkInterfaceConfigurations: [
           {
             name: 'nic'
@@ -479,12 +452,14 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
                     subnet: {
                       id: subnet.id
                     }
-                    publicIPAddressConfiguration: {
-                      name: 'vmssPip'
-                      properties: {
-                        idleTimeoutInMinutes: 15
+                    ...(debug ? {
+                      publicIPAddressConfiguration: {
+                        name: 'vmssPip'
+                        properties: {
+                          idleTimeoutInMinutes: 15
+                        }
                       }
-                    }
+                    } : {})
                     loadBalancerBackendAddressPools: [{
                       id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, lbBackendPoolName)
                     }]
@@ -788,3 +763,71 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
     ]
   }
 }
+
+// Last but not least, some alerts
+// Alert for fewer than one VM being healthy in the past hour.
+module vmUnhealthyAlert './alert.bicep' = {
+  name: 'vm-unhealthy-alert'
+  params: {
+    alertRuleName: 'vm-unhealthy-alert'
+    diagsRG: diagsRG
+    logAnalyticsId: logAnalytics.id
+    displayName: 'Photon VM is unhealthy'
+    alertDescription: 'Photon VM in RG ${resourceGroup().name} has no healthy intances'
+    windowSize: 'PT24H'
+    severity: 1
+    alertQuery: '''
+      AppTraces
+      | where Message contains "METRIC:" and Message contains "Healthy instance count"
+      | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
+      | where TimeGenerated > ago(1h)
+      | summarize MinValue = min(Value)
+      | where MinValue < 1
+    '''
+  }
+}
+
+// Alert for more than one VM running for more than 12 hours (i.e. failure to scale down after update)
+module vmMultipleAlert './alert.bicep' = {
+  name: 'vm-multiple-alert'
+  params: {
+    alertRuleName: 'vm-multiple-alert'
+    diagsRG: diagsRG
+    logAnalyticsId: logAnalytics.id
+    displayName: 'Photon VM did not scale down after reimage'
+    alertDescription: 'Photon VM in RG ${resourceGroup().name} failed to cleanly scale down after reimage'
+    windowSize: 'PT24H'
+    severity: 1
+    alertQuery: '''
+      AppTraces
+      | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
+      | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
+      | where TimeGenerated > ago(12h)
+      | summarize MinValue = min(Value)
+      | where MinValue > 1
+    '''
+  }
+}
+
+// Alert for more than one VM running briefly (i.e. reimage has started)
+module vmRoutineReimage './alert.bicep' = {
+  name: 'vm-reimage-alert'
+  params: {
+    alertRuleName: 'vm-reimage-alert'
+    diagsRG: diagsRG
+    logAnalyticsId: logAnalytics.id
+    displayName: 'Photon VM reimage is occurring'
+    alertDescription: 'Photon VM for RG ${resourceGroup().name} has started a normal reimage'
+    windowSize: 'PT24H'
+    severity: 4
+    alertQuery: '''
+      AppTraces
+      | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
+      | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
+      | where TimeGenerated > ago(1h)
+      | summarize MaxValue = max(Value)
+      | where MaxValue > 1
+    '''
+  }
+}
+

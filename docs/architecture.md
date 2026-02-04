@@ -176,3 +176,11 @@ The photon server architecture consists of the following.
 
 - The Front Door instance (shared with the iOS deployment) routes traffic to the VMSS.
 
+Every month, the VM reloads its data. This occurs as follows.
+
+- A function app triggers on a timer to scale the VMSS to capacity 2, normally once per month.
+
+- A new VM instance is then created and configures itself.
+
+- When both instances are healthy, the older one is tidied up by the function app (which checks every five minutes to see if it the new VM is healthy yet).
+

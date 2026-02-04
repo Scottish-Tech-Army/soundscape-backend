@@ -12,6 +12,9 @@ export UNIQUESTRING=029edfef73100f3c0334
 #export AREA=planet # FIXME: for testing with smaller data
 export AREA=monaco
 
+# Debug mode, which largely means "allow ssh debug access"
+export DEBUG=true
+
 # Subscription to use.
 export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
 

@@ -112,6 +112,9 @@ Follow the following steps. Note that some of the scripts here take quite some t
         # Area to use - should normally be "monaco" (for fast low level testing) or "planet"
         export AREA=planet
 
+        # Debug mode, which largely means "allow ssh debug access"
+        export DEBUG=true
+
         # Names of export and tiles storage buckets; "extracts" and "pmtiles" for live traffic
         export EXPORTS_BUCKET=extracts
         export PMTILES_BUCKET=pmtiles

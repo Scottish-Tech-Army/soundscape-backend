@@ -1,25 +1,42 @@
 import azure.functions as func
 import os
-from scale import scale_vmss_to_one
-from reimage import reimage_instances
+from scale import scale_vmss
+from checkupdate import check_and_complete
 import logging
 
-SCALE="SCALE"
-REIMAGE="REIMAGE"
+SCALE="SCALE"      # Scale up to 1 instance; will shut itself down
+REIMAGE="REIMAGE"  # Scale up to 2 instances; will check and shut down one if both healthy
 
 app = func.FunctionApp()
 
 # Pull the CRON expression from the environment
-TRIGGER_SCHEDULE = os.environ.get("TRIGGER_SCHEDULE", "0 0 9 * * 1")  # default if not set
+SCALEUP_SCHEDULE = os.environ.get("TRIGGER_SCHEDULE", "0 0 9 * 1 *")  # default if not set; 09:00 on 1st of month
+CHECK_SCHEDULE = "*/5 * * * *" # Every 5 minutes
 TRIGGER_TYPE = os.environ.get("TRIGGER_TYPE", SCALE)
 
-@app.timer_trigger(schedule=TRIGGER_SCHEDULE, arg_name="timer")
-def trigger_timer(timer: func.TimerRequest):
+@app.timer_trigger(schedule=SCALEUP_SCHEDULE, arg_name="timer")
+def scaleup_trigger(timer: func.TimerRequest):
     if TRIGGER_TYPE == SCALE:
-        logging.info("Scaling on timer")
-        scale_vmss_to_one()
+        # In this model, the VMSS is scaled up to 1 instance (from 0), then we rely on the
+        # VM instance scaling itself away when completed.
+        logging.info("Scale up to 1 instance")
+        scale_vmss(1)
     elif TRIGGER_TYPE == REIMAGE:
-        logging.info("Reimage instances to force rolling upgrade")
-        reimage_instances()
+        # In this model, we need to reimage the VM instances. We scale up to 2 instances,
+        # then the check trigger will check health and scale down when the new instance is healthy.
+        logging.info("Scale up to 2 instances")
+        scale_vmss(2)
     else:
-        logging.error("Trigger type not implemented: %s", TRIGGER_TYPE)
+        logging.error("scaleup_trigger: trigger type not implemented: %s", TRIGGER_TYPE)
+
+@app.timer_trigger(schedule=CHECK_SCHEDULE, arg_name="timer")
+def check_status(timer: func.TimerRequest):
+    if TRIGGER_TYPE == SCALE:
+        # Nothing to do
+        pass
+    elif TRIGGER_TYPE == REIMAGE:
+        logging.info("Checking status")
+        check_and_complete()
+    else:
+        logging.error("check_trigger: trigger type not implemented: %s", TRIGGER_TYPE)
+

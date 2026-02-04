@@ -7,6 +7,7 @@ echo "RG: ${RG}"
 cd "$(dirname "$0")/.."
 . scripts/cfgutils.sh
 
+echo "Building files ready to deploy"
 # Build the escaped query file.
 mkdir -p build
 jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
@@ -16,7 +17,7 @@ rm -rf build/tmp build/files.tgz
 mkdir -p build/tmp
 pushd build/tmp
 cp -r ../../src/photon/* .
-tar -zcvf ../files.tgz *
+tar -zcf ../files.tgz *
 popd
 
 # Returns both key1 and key2; pick either
@@ -36,17 +37,6 @@ az storage blob upload-batch \
   --pattern files.tgz \
   --overwrite
 
-if az vmss show -g ${RG} -n ${PREFIX}-vmss >/dev/null 2>&1
-then
-  echo "VMSS already exists - capacity 1"
-  SCALE=1
-  NOWAIT="--no-wait"
-else
-  echo "VMSS does not exist yet - capacity 0 at first"
-  SCALE=0
-  NOWAIT=""
-fi
-
 # Note the "--no-wait" flag, which makes this return promptly. That is because
 # the deployment waits for the VM to be fully provisioned, which can take a long time.
 echo "Starting deployment of VM - will return before VM is live"
@@ -59,13 +49,9 @@ az deployment group create \
                  registryUAMIName=${REGISTRYUAMI} \
                  metricAppName=${METRICAPPNAME} \
                  triggerAppName=${TRIGGERAPPNAME} \
+                 diagsRG=${DIAGSRG} \
                  area=${AREA} \
-                 scale=${SCALE} \
-                 storageName=${STORAGENAME} ${NOWAIT}
-
-if [ "$SCALE" -eq "0" ]; then
-  echo "Scaling VMSS to 1 instance"
-  az vmss scale --name ${PREFIX}-vmss --resource-group ${RG} --new-capacity 1
-fi
+                 debug=${DEBUG} \
+                 storageName=${STORAGENAME} --no-wait
 
 echo "SUCCESS"

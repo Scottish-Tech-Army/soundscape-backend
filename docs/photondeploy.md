@@ -82,6 +82,8 @@ Deployment of the photon server works as follows.
     bash scripts/cleanup.sh
     ~~~
 
+- The deployment is now running, but it has not yet completed downloading data. Check the dashboard for the RG (as in the [operations instructions](/docs/operations.md)) to see whether it has managed to become healthy yet.
+
 ## Switching over to your deployment
 
 Having followed this process, you should cut traffic over to the new backend instance, which can be done as follows.

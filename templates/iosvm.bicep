@@ -1092,7 +1092,7 @@ module vmSuccessAlert './alert.bicep' = {
   }
 }
 
-// Scheduled query alert rule for detecting "VM SUCCESS" in LAW logs
+// Scheduled query alert rule for detecting where VM timed out without completion
 module vmTimeoutAlert './alert.bicep' = {
   name: 'vm-timeout-alert'
   params: {
