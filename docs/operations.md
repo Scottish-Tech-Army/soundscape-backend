@@ -170,4 +170,18 @@ You can see how many VMs were running and when using the following.
 
 The function app (that triggers VM creation for ingestion) generate logs when they run. They are not usually very important, but if you need them, they are shown here.
 
-- `Andoroid function app logs`: all low level logs from Azure Functions.
+- `Android function app logs`: all low level logs from Azure Functions.
+
+### Photon logs
+
+Photon log queries are as follows.
+
+- `Photon VM logs - high level`: high level logs from the photon server, showing initialisation
+
+- `Photon Container logs`: logs from the containers running on the photon server, showing what both the photon instance itself and the health container are doing.
+
+- `Photon VM instance count`: a view of VM capacity and instance counts over time.
+
+- `Photon function app logs`: all low level logs from Azure Functions; more interesting than for the other cases as the function app logic is more complex.
+
+**FIXME** - should have front door logs here too

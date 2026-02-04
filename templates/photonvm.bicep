@@ -421,6 +421,20 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
             }
           }
           {
+            name: 'noop-reimage-trigger'
+            properties: {
+              publisher: 'Microsoft.Azure.Extensions'
+              type: 'CustomScript'
+              typeHandlerVersion: '2.0'
+              autoUpgradeMinorVersion: true
+              settings: {
+                commandToExecute: '/bin/true'
+              } // nothing to run
+              protectedSettings: {} // nothing secret
+              forceUpdateTag: 'initial'
+            }
+          }
+          {
             name: 'HealthExtension'
             properties: {
               publisher: 'Microsoft.ManagedServices'

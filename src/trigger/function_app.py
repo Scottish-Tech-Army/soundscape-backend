@@ -1,7 +1,7 @@
 import azure.functions as func
 import os
 from scale import scale_vmss
-from checkupdate import check_and_complete
+from reimage import update_and_scale, check_and_complete
 import logging
 
 SCALE="SCALE"      # Scale up to 1 instance; will shut itself down
@@ -25,7 +25,7 @@ def scaleup_trigger(timer: func.TimerRequest):
         # In this model, we need to reimage the VM instances. We scale up to 2 instances,
         # then the check trigger will check health and scale down when the new instance is healthy.
         logging.info("Scale up to 2 instances")
-        scale_vmss(2)
+        update_and_scale()
     else:
         logging.error("scaleup_trigger: trigger type not implemented: %s", TRIGGER_TYPE)
 
