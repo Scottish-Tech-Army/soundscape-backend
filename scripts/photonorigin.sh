@@ -37,7 +37,7 @@ az deployment group create \
     --template-file templates/origin.bicep \
     --parameters originGroupName=${RG} \
                  fdName=${FRONTDOOR} \
-                 probePath="/" \
+                 probePath="/status" \
                  targetFQDN=${PHOTONLBFQDN} \
                  isHTTPS="false" \
                  port=2322

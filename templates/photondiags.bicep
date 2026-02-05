@@ -72,4 +72,105 @@ module functionApp './query.bicep' = {
   }
 }
 
-// FIXME: xxx more front door logs
+module frontDoor './query.bicep' = {
+  name: 'frontDoor'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Photon Front Door metrics (including all traffic, not just photon)'
+    queryDescription: 'Front door metrics for all traffic, including iOS and photon search'
+    query: '''
+    AzureMetrics
+    | where ResourceProvider == 'MICROSOFT.CDN'
+    | where MetricName in ("RequestCount", "OriginRequestCount", "ResponseSize", "TotalLatency", "OriginLatency")
+    | extend MetricKey = case(
+        MetricName == "RequestCount", "RequestCount",
+        MetricName == "OriginRequestCount", "OriginRequestCount",
+        MetricName == "ResponseSize", "ResponseSize",
+        MetricName == "TotalLatency", "TotalLatency",
+        MetricName == "OriginLatency", "OriginLatency",
+        "Other"
+    )
+    | summarize
+        RequestCount = sumif(Total, MetricKey == "RequestCount"),
+        OriginRequestCount = sumif(Total, MetricKey == "OriginRequestCount"),
+        ResponseSizeTotal = sumif(Total, MetricKey == "ResponseSize"),
+        ResponseSizeCount = sumif(Count, MetricKey == "ResponseSize"),
+        TotalLatencyTotal = sumif(Total, MetricKey == "TotalLatency"),
+        TotalLatencyCount = sumif(Count, MetricKey == "TotalLatency"),
+        MaxTotalLatency = maxif(Maximum, MetricKey == "TotalLatency"),
+        OriginLatencyTotal = sumif(Total, MetricKey == "OriginLatency"),
+        OriginLatencyCount = sumif(Count, MetricKey == "OriginLatency"),
+        MaxOriginLatency = maxif(Maximum, MetricKey == "OriginLatency")
+        by bin(TimeGenerated, 60m)
+    | extend
+        MeanResponseSize = iif(ResponseSizeCount > 0, ResponseSizeTotal / ResponseSizeCount, 0.0),
+        MeanTotalLatency = iif(TotalLatencyCount > 0, TotalLatencyTotal / TotalLatencyCount, 0.0),
+        MeanOriginLatency = iif(OriginLatencyCount > 0, OriginLatencyTotal / OriginLatencyCount, 0.0)
+    | project TimeGenerated, RequestCount, OriginRequestCount,
+              MeanResponseSize, MeanTotalLatency, MaxTotalLatency,
+              MeanOriginLatency, MaxOriginLatency
+    | order by TimeGenerated desc
+    '''
+  }
+}
+
+module frontDoorAccessLogSummary './query.bicep' = {
+  name: 'frontDoorAccessLogSummary'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Photon Front Door Access Log summary'
+    queryDescription: 'Front door access logs summary for photon search'
+    query: '''
+    AzureDiagnostics
+    | where Category == "FrontDoorAccessLog"
+    | where requestUri_s startswith "photon." or requestUri_s startswith "photontest."
+    | where requestUri_s contains "/photon/"
+    | extend User = strcat(clientIp_s, ":", clientPort_s)
+    | extend Time = bin(TimeGenerated, 24h)
+    | summarize
+        RequestCount = count(),
+        UserCount = dcount(User)
+        by Time, clientCountry_s, sni_s
+    | project
+        Time,
+        Country = clientCountry_s,
+        Domain = sni_s,
+        RequestCount,
+        UserCount
+    | order by Time desc, Country asc
+    '''
+  }
+}
+
+module frontDoorAccessLogs './query.bicep' = {
+  name: 'frontDoorAccessLogs'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Photon Front Door Access Logs'
+    queryDescription: 'All Front Door access logs for photon search'
+    query: '''
+    AzureDiagnostics
+    | where Category == "FrontDoorAccessLog"
+    | where requestUri_s startswith "photon." or requestUri_s startswith "photontest."
+    | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
+    | order by TimeGenerated desc
+    '''
+  }
+}
+
+module frontDoorAccessLogErrors './query.bicep' = {
+  name: 'frontDoorAccessLogErrors'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Photon Front Door Errors'
+    queryDescription: 'Front door errors from access logs for photon search'
+    query: '''
+    AzureDiagnostics
+    | where Category == "FrontDoorAccessLog"
+    | where requestUri_s startswith "photon." or requestUri_s startswith "photontest."
+    | where httpStatusCode_s != 200
+    | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
+    | order by TimeGenerated desc
+    '''
+  }
+}

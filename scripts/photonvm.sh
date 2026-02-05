@@ -52,6 +52,9 @@ az deployment group create \
                  diagsRG=${DIAGSRG} \
                  area=${AREA} \
                  debug=${DEBUG} \
+                 sharedRGName=${SHAREDRG} \
+                 sharedLAW=${SHAREDLAW} \
+                 frontDoorName=${FRONTDOOR} \
                  storageName=${STORAGENAME} --no-wait
 
 echo "SUCCESS"

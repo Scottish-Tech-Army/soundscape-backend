@@ -182,8 +182,8 @@ module frontDoor './query.bicep' = {
   name: 'frontDoor'
   params: {
     queryPackName: queryPackName
-    displayName: 'iOS Front Door metrics'
-    queryDescription: 'Front door metrics'
+    displayName: 'iOS Front Door metrics (including all traffic, not just iOS)'
+    queryDescription: 'Front door metrics for all traffic, including iOS and photon search'
     query: '''
     AzureMetrics
     | where ResourceProvider == 'MICROSOFT.CDN'
@@ -229,6 +229,7 @@ module frontDoorAccessLogSummary './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
+    | where requestUri_s startswith "prd2." or requestUri_s startswith "tst."
     | where requestUri_s contains "tiles"
     | extend User = strcat(clientIp_s, ":", clientPort_s)
     | extend Time = bin(TimeGenerated, 24h)
@@ -256,6 +257,7 @@ module frontDoorAccessLogs './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
+    | where requestUri_s startswith "prd2." or requestUri_s startswith "tst."
     | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
     | order by TimeGenerated desc
     '''
@@ -271,6 +273,7 @@ module frontDoorAccessLogErrors './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
+    | where requestUri_s startswith "prd2." or requestUri_s startswith "tst."
     | where httpStatusCode_s != 200
     | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
     | order by TimeGenerated desc

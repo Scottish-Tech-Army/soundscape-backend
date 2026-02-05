@@ -20,7 +20,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
 }
 
 // Alert rule for non-zero errors in the tile requests
-module vmErrorAlert './alert.bicep' = {
+module tileErrorAlert './alert.bicep' = {
   name: 'tile-error-alert'
   params: {
     alertRuleName: 'tile-error-alert'
@@ -28,12 +28,33 @@ module vmErrorAlert './alert.bicep' = {
     logAnalyticsId: logAnalytics.id
     displayName: 'iOS tile request failures'
     alertDescription: 'iOS tile requests have been failing'
-    severity: 1
+    severity: 2
     alertQuery: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
     | where httpStatusCode_s != 200
-    | where requestUri_s contains "tiles"
+    | where requestUri_s startswith "prd2."
+    | where requestUri_s contains "/tiles/"
+    '''
+  }
+}
+
+// Alert rule for non-zero errors in the tile requests
+module photonErrorAlert './alert.bicep' = {
+  name: 'photon-error-alert'
+  params: {
+    alertRuleName: 'photon-error-alert'
+    diagsRG: diagsRG
+    logAnalyticsId: logAnalytics.id
+    displayName: 'Photon search request failures'
+    alertDescription: 'Photon search requests have been failing'
+    severity: 2
+    alertQuery: '''
+    AzureDiagnostics
+    | where Category == "FrontDoorAccessLog"
+    | where httpStatusCode_s != 200
+    | where requestUri_s startswith "photon."
+    | where requestUri_s contains "/photon/"
     '''
   }
 }

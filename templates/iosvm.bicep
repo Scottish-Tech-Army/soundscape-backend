@@ -796,7 +796,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                           }
                         }
                       ]
-                      title: 'Total and Origin request counts for Front Door'
+                      title: 'Total and Origin request counts for Front Door (iOS and photon combined)'
                       titleKind: 1
                       visualization: {
                         chartType: 2

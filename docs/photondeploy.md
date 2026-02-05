@@ -96,11 +96,11 @@ To change over your deployment, perform the following steps.
 
 - Select `Origin Groups` on the left panel. You should see the origin group for your new instance there.
 
-- The Front Door instance already has two live endpoints, one for live traffic `photon` and one for test traffic `photontst`. Within each of these there is a single route that you must change.
+- The Front Door instance already has two live endpoints, one for live traffic `photon` and one for test traffic `photontest`. Within each of these there is a single route that you must change.
 
     - Click on `Front Door manager`
 
-    - Click the `photontst.soundscape.scottishtecharmy.org` endpoint.
+    - Click the `photontest.soundscape.scottishtecharmy.org` endpoint.
 
     - Click on the route.
 
@@ -109,7 +109,7 @@ To change over your deployment, perform the following steps.
 - Double check that the traffic is working - for example, the following
 
     ~~~bash
-    curl -i "https://photontst.soundscape.scottishtecharmy.org/photon/api?q=harbour&nocache=1234"
+    curl -i "https://photontest.soundscape.scottishtecharmy.org/photon/api?q=harbour&nocache=1234"
     ~~~
 
     where you can change the `nocache` number to ensure that caching does not happen.

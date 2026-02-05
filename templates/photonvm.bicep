@@ -21,8 +21,20 @@ param registryUAMIName string
 @description('Version tag for the photon-docker image')
 param versionTag string
 
+@description('Shared RG name')
+param sharedRGName string
+
+//@description('Shared Log Analytics workspace name')
+param sharedLAW string
+
+@description('Front Door name')
+param frontDoorName string
+
 @description('Is this a debug deployment - ssh access enabled')
 param debug bool = false
+
+@description('Subscription ID')
+var subId = subscription().subscriptionId
 
 // From here on, things that never change, so just vars
 @description('ssh key')
@@ -543,8 +555,7 @@ resource dcrAssoc 'Microsoft.Insights/dataCollectionRuleAssociations@2022-06-01'
   }
 }
 
-// Here be dragons. The DCR can only be created after the custom table, and a dependsOn is insufficient as
-// the table creation is asynchronous. We could script the dependency, but haven't yet.
+// Note that the DCR can only be created after the custom table, created in the earlier bicep script.
 resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
   name: 'datacollectionrule'
   location: resourceGroup().location
@@ -593,39 +604,14 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
           streams: ['Custom-photonLogs']
         }
       ]
+
       performanceCounters: [
         {
           name: 'linuxPerfCounters'
           streams: ['Microsoft-Perf']
           samplingFrequencyInSeconds: 60
           counterSpecifiers: [
-            // CPU
-            'Processor(*)\\% Processor Time'
-            'Processor(*)\\% User Time'
-            'Processor(*)\\% Privileged Time'
-            'Processor(*)\\Interrupts/sec'
-
-            // Memory
-            'Memory\\Available MBytes'
-            'Memory\\Pages/sec'
-            'Memory\\Page Faults/sec'
-            'Memory\\% Committed Bytes In Use'
-
-            // Disk
-            'LogicalDisk(*)\\% Free Space'
-            'LogicalDisk(*)\\Disk Transfers/sec'
-            'LogicalDisk(*)\\Disk Reads/sec'
-            'LogicalDisk(*)\\Disk Writes/sec'
-            'LogicalDisk(*)\\Avg. Disk sec/Transfer'
-            'LogicalDisk(*)\\Avg. Disk Queue Length'
-
-            // Network
-            'Network Interface(*)\\Bytes Total/sec'
-            'Network Interface(*)\\Packets/sec'
-            'Network Interface(*)\\Bytes Received/sec'
-            'Network Interface(*)\\Bytes Sent/sec'
-            'Network Interface(*)\\Packets Received/sec'
-            'Network Interface(*)\\Packets Sent/sec'
+            '*' // AMA will collect all Linux-supported counters
           ]
         }
       ]
@@ -685,6 +671,14 @@ module vmWorkbook './workbook.bicep' = {
 }
 
 // Dashboard with some plausible metrics
+/*
+FIXME: graphs to add
+- LB byte count
+- LB availability fraction
+- Front door metrics - though caveat that includes iOS
+- Request Count, similar to iOS dashboard for errors, using cacheStatus_s to figure out if cached or not
+- Error Count, as per iOS dashboard
+*/
 resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
   location: resourceGroup().location
   name: resourceGroup().name
@@ -696,7 +690,264 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
           {
             position: {
               x: 0
+              y: 0
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: '/subscriptions/${subId}/resourceGroups/${sharedRGName}/providers/Microsoft.Cdn/profiles/${frontDoorName}'
+                          }
+                          name: 'RequestCount'
+                          aggregationType: 1
+                          namespace: 'microsoft.cdn/profiles'
+                          metricVisualization: {
+                            displayName: 'Total Request Count'
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: '/subscriptions/${subId}/resourceGroups/${sharedRGName}/providers/Microsoft.Cdn/profiles/${frontDoorName}'
+                          }
+                          name: 'OriginRequestCount'
+                          aggregationType: 1
+                          namespace: 'microsoft.cdn/profiles'
+                          metricVisualization: {
+                            displayName: 'Origin Request Count'
+                          }
+                        }
+                      ]
+                      title: 'Total and Origin request counts for Front Door (iOS and photon combined)'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 6
+              y: 0
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MarkdownPart'
+              settings: {
+                content: {
+                  title: 'FD actual counts'
+                  content: 'Filtered FD counts from the logs'
+                  markdownSource: 1
+                  markdownUri: ''
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 12
+              y: 0
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MarkdownPart'
+              settings: {
+                content: {
+                  title: 'FD error counts'
+                  content: 'Filtered FD error counts from the logs'
+                  markdownSource: 1
+                  markdownUri: ''
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 0
               y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: lb.id
+                          }
+                          name: 'ByteCount'
+                          aggregationType: 1
+                          namespace: 'microsoft.network/loadbalancers'
+                          metricVisualization: {
+                            displayName: 'Byte Count'
+                            resourceDisplayName: lbName
+                          }
+                        }
+                      ]
+                      title: 'Total byte traffic on photon load balancer'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 6
+              y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: vmss.id
+                          }
+                          name: 'Available Memory Percentage'
+                          aggregationType: 4
+                          namespace: 'microsoft.compute/virtualmachinescalesets'
+                          metricVisualization: {
+                            displayName: 'Available Memory Percentage'
+                            resourceDisplayName: vmssName
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: vmss.id
+                          }
+                          name: 'Percentage CPU'
+                          aggregationType: 4
+                          namespace: 'microsoft.compute/virtualmachinescalesets'
+                          metricVisualization: {
+                            displayName: 'Percentage CPU used'
+                            resourceDisplayName: vmssName
+                          }
+                        }
+                      ]
+                      title: 'VMSS available memory and used CPU'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 12
+              y: 4
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MarkdownPart'
+              settings: {
+                content: {
+                  title: 'Photon memory percentage'
+                  content: '''
+Requires that the AMA is configured to report it, so probably from KQL
+
+    InsightsMetrics
+    | where Namespace == "Memory"
+    | where Name == "UsedPercent"
+    | summarize AvgMem = avg(Val) by bin(TimeGenerated, 5m)
+'''
+                  markdownSource: 1
+                  markdownUri: ''
+                }
+              }
+            }
+          }
+          {
+            position: {
+              x: 0
+              y: 8
               colSpan: 8
               rowSpan: 4
             }
@@ -844,4 +1095,3 @@ module vmRoutineReimage './alert.bicep' = {
     '''
   }
 }
-

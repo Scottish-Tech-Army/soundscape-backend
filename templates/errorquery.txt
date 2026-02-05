@@ -1,5 +1,6 @@
 AzureDiagnostics
 | where Category == "FrontDoorAccessLog"
+| where requestUri_s startswith "prd2." or requestUri_s startswith "tst."
 | extend status = toint(httpStatusCode_s)
 | extend isTiles = tostring(requestUri_s) contains "tiles"
 | summarize
