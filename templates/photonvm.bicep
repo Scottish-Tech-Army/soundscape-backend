@@ -664,7 +664,7 @@ module vmWorkbook './workbook.bicep' = {
   params: {
     kqlQuery: vmKqlQuery
     title: 'VM Instance Counts'
-    ySettings: '{}' // Default ySettings
+    ySettings: '{"min": 0}' // Default ySettings
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-vmss-counter'
   }
@@ -992,7 +992,7 @@ Requires that the AMA is configured to report it, so probably from KQL
                 }
                 {
                   name: 'StepSettings'
-                  value: '{"version":"KqlItem/1.0","query":${vmKqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}'
+                  value: '{"version":"KqlItem/1.0","query":${vmKqlQuery},"size":0,"aggregation":2,"title":"VM instances","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated","ySettings":{"min": 0}}}'
                   isOptional: true
                 }
                 {
