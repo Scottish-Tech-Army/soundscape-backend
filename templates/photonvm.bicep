@@ -365,6 +365,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
     upgradePolicy: {
       mode: 'Manual'
     }
+    overprovision: false
     // It would be nice to have automaticRepairsPolicy set, but they have a max grace period of 90 minutes, which is less than our startup time.
     virtualMachineProfile: {
       storageProfile: {
@@ -562,7 +563,7 @@ resource dcrAssoc 'Microsoft.Insights/dataCollectionRuleAssociations@2022-06-01'
 }
 
 // Note that the DCR can only be created after the custom table, created in the earlier bicep script.
-resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
+resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   name: 'datacollectionrule'
   location: resourceGroup().location
   kind: 'Linux'
@@ -616,8 +617,56 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
           name: 'linuxPerfCounters'
           streams: ['Microsoft-Perf']
           samplingFrequencyInSeconds: 60
+          // In theory, you get all counters if you provide '*' here, but it does not seem to work.
           counterSpecifiers: [
-            '*' // AMA will collect all Linux-supported counters
+            'Processor(*)\\% Processor Time'
+            'Processor(*)\\% Idle Time'
+            'Processor(*)\\% User Time'
+            'Processor(*)\\% Nice Time'
+            'Processor(*)\\% Privileged Time'
+            'Processor(*)\\% IO Wait Time'
+            'Processor(*)\\% Interrupt Time'
+            'Memory(*)\\Available MBytes Memory'
+            'Memory(*)\\% Available Memory'
+            'Memory(*)\\Used Memory MBytes'
+            'Memory(*)\\% Used Memory'
+            'Memory(*)\\Pages/sec'
+            'Memory(*)\\Page Reads/sec'
+            'Memory(*)\\Page Writes/sec'
+            'Memory(*)\\Available MBytes Swap'
+            'Memory(*)\\% Available Swap Space'
+            'Memory(*)\\Used MBytes Swap Space'
+            'Memory(*)\\% Used Swap Space'
+            'Process(*)\\Pct User Time'
+            'Process(*)\\Pct Privileged Time'
+            'Process(*)\\Used Memory'
+            'Process(*)\\Virtual Shared Memory'
+            'Logical Disk(*)\\% Free Inodes'
+            'Logical Disk(*)\\% Used Inodes'
+            'Logical Disk(*)\\Free Megabytes'
+            'Logical Disk(*)\\% Free Space'
+            'Logical Disk(*)\\% Used Space'
+            'Logical Disk(*)\\Logical Disk Bytes/sec'
+            'Logical Disk(*)\\Disk Read Bytes/sec'
+            'Logical Disk(*)\\Disk Write Bytes/sec'
+            'Logical Disk(*)\\Disk Transfers/sec'
+            'Logical Disk(*)\\Disk Reads/sec'
+            'Logical Disk(*)\\Disk Writes/sec'
+            'Network(*)\\Total Bytes Transmitted'
+            'Network(*)\\Total Bytes Received'
+            'Network(*)\\Total Bytes'
+            'Network(*)\\Total Packets Transmitted'
+            'Network(*)\\Total Packets Received'
+            'Network(*)\\Total Rx Errors'
+            'Network(*)\\Total Tx Errors'
+            'Network(*)\\Total Collisions'
+            'System(*)\\Uptime'
+            'System(*)\\Load1'
+            'System(*)\\Load5'
+            'System(*)\\Load15'
+            'System(*)\\Users'
+            'System(*)\\Unique Users'
+            'System(*)\\CPUs'
           ]
         }
       ]
