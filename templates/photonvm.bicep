@@ -198,6 +198,12 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2020-08-01' exis
   name: logAnalyticsWorkspaceName
 }
 
+// Get shared LA workspace
+resource sharedLogAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
+  name: sharedLAW
+  scope: resourceGroup(sharedRGName)
+}
+
 // Grant UAMI rights to publish to LAW
 resource roleAssignMetrics 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(logAnalytics.id, 'ama-metrics-publisher')
@@ -657,6 +663,7 @@ module functionApps './functions.bicep' = {
 }
 
 var vmKqlQuery = loadTextContent('../build/vmquery-escaped.txt')
+var errorKqlQuery = loadTextContent('../build/error-escaped.txt')
 
 // Workbook for VMSS metrics
 module vmWorkbook './workbook.bicep' = {
@@ -667,6 +674,17 @@ module vmWorkbook './workbook.bicep' = {
     ySettings: '{"min": 0}' // Default ySettings
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-vmss-counter'
+  }
+}
+
+// Workbook for FrontDoor errors
+module errorWorkbook './workbook.bicep' = {
+  name: 'errorWorkbook'
+  params: {
+    kqlQuery: errorKqlQuery
+    title: 'Front door errors'
+    logAnalyticsId: sharedLogAnalytics.id
+    workbookDisplayName: '${prefix}-error-counter'
   }
 }
 
@@ -773,6 +791,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
               }
             }
           }
+
           {
             position: {
               x: 12
@@ -781,16 +800,76 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
               rowSpan: 4
             }
             metadata: {
-              inputs: []
-              type: 'Extension/HubsExtension/PartType/MarkdownPart'
-              settings: {
-                content: {
-                  title: 'FD error counts'
-                  content: 'Filtered FD error counts from the logs'
-                  markdownSource: 1
-                  markdownUri: ''
+              inputs: [
+                {
+                  name: 'ComponentId'
+                  value: 'azure monitor'
+                  isOptional: true
                 }
-              }
+                {
+                  name: 'TimeContext'
+                  value: null
+                  isOptional: true
+                }
+                {
+                  name: 'ResourceIds'
+                  value: [
+                    'azure monitor'
+                  ]
+                  isOptional: true
+                }
+                {
+                  name: 'ConfigurationId'
+                  value: errorWorkbook.outputs.id
+                  isOptional: true
+                }
+                {
+                  name: 'Type'
+                  value: 'workbook'
+                  isOptional: true
+                }
+                {
+                  name: 'GalleryResourceType'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'PinName'
+                  value: errorWorkbook.outputs.title
+                  isOptional: true
+                }
+                {
+                  name: 'StepSettings'
+                  // Aggregation 0 is Sum, 1 is Min, 2 is Max, 3 is Avg, 4 is First, 5 is Last
+                  value: '{"version":"KqlItem/1.0","query":${errorKqlQuery},"size":0,"aggregation":0,"title":"Error counts","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${sharedLogAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated"}}'
+                  isOptional: true
+                }
+                {
+                  name: 'ParameterValues'
+                  value: {
+                    TimeRange: {
+                      type: 4
+                      value: {
+                        durationMs: 86400000
+                      }
+                      isPending: false
+                      isWaiting: false
+                      isFailed: false
+                      isGlobal: false
+                      labelValue: 'Last 24 hours'
+                      displayName: 'Time range picker'
+                      formattedValue: 'Last 24 hours'
+                    }
+                  }
+                  isOptional: true
+                }
+                {
+                  name: 'Location'
+                  value: resourceGroup().location
+                  isOptional: true
+                }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
             }
           }
           {
@@ -929,14 +1008,9 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
               type: 'Extension/HubsExtension/PartType/MarkdownPart'
               settings: {
                 content: {
-                  title: 'Photon memory percentage'
+                  title: 'Legacy URL traffic'
                   content: '''
-Requires that the AMA is configured to report it, so probably from KQL
-
-    InsightsMetrics
-    | where Namespace == "Memory"
-    | where Name == "UsedPercent"
-    | summarize AvgMem = avg(Val) by bin(TimeGenerated, 5m)
+When we support the legacy URL, we should ensure that we have a graph. We will add this in due course.
 '''
                   markdownSource: 1
                   markdownUri: ''
@@ -1021,6 +1095,28 @@ Requires that the AMA is configured to report it, so probably from KQL
                 }
               ]
               type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
+            }
+          }
+          {
+            position: {
+              x: 12
+              y: 8
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MarkdownPart'
+              settings: {
+                content: {
+                  title: 'Placeholder'
+                  content: '''
+This is a documentation placeholder.
+'''
+                  markdownSource: 1
+                  markdownUri: ''
+                }
+              }
             }
           }
         ]

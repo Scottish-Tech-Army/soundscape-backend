@@ -2,8 +2,8 @@ AzureDiagnostics
 | where Category == "FrontDoorAccessLog"
 | where requestUri_s startswith "prd2." or requestUri_s startswith "tst."
 | extend status = toint(httpStatusCode_s)
-| extend isTiles = tostring(requestUri_s) contains "tiles"
+| extend isValid = tostring(requestUri_s) contains "/tiles/"
 | summarize
-    ValidRequests   = countif(isTiles and status != 200),
-    InvalidRequests = countif(status != 200)
+    ValidRequests   = countif(isValid and status != 200),
+    InvalidRequests = countif(not(isValid) and status != 200)
     by TimeGenerated = bin(TimeGenerated, 1h);

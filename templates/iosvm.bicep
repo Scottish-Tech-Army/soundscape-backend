@@ -417,7 +417,7 @@ module errorWorkbook './workbook.bicep' = {
   name: 'errorWorkbook'
   params: {
     kqlQuery: errorKqlQuery
-    title: 'VM Instance Counts'
+    title: 'Front door errors'
     logAnalyticsId: sharedLogAnalytics.id
     workbookDisplayName: '${prefix}-error-counter'
   }
