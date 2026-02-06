@@ -11,7 +11,8 @@ echo "Building files ready to deploy"
 # Build the escaped query file.
 mkdir -p build
 jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
-jq -Rs . templates/ioserrorquery.txt > build/error-escaped.txt
+jq -Rs . templates/photonerrorquery.txt > build/error-escaped.txt
+jq -Rs . templates/photonerrorquery.txt > build/request-escaped.txt
 
 # Build the tar file of scripts
 rm -rf build/tmp build/files.tgz

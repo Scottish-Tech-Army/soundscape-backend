@@ -1,6 +1,6 @@
 AzureDiagnostics
 | where Category == "FrontDoorAccessLog"
-| where requestUri_s startswith "photon." or requestUri_s startswith "photontest."
+| where requestUri_s startswith "https://photon." or requestUri_s startswith "https://photontest."
 | extend status = toint(httpStatusCode_s)
 | extend isValid = tostring(requestUri_s) contains "/photon/"
 | summarize

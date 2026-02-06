@@ -1,6 +1,6 @@
 AzureDiagnostics
 | where Category == "FrontDoorAccessLog"
-| where requestUri_s startswith "prd2." or requestUri_s startswith "tst."
+| where requestUri_s startswith "https://prd2." or requestUri_s startswith "https://tst."
 | extend status = toint(httpStatusCode_s)
 | extend isValid = tostring(requestUri_s) contains "/tiles/"
 | summarize
