@@ -745,7 +745,7 @@ module requestWorkbook './workbook.bicep' = {
     kqlQuery: requestKqlQuery
     title: 'Front door requests'
     logAnalyticsId: sharedLogAnalytics.id
-    workbookDisplayName: '${prefix}-error-counter'
+    workbookDisplayName: '${prefix}-request-counter'
   }
 }
 
