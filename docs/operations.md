@@ -12,7 +12,7 @@ The iOS deployment process creates a dashboard, named after the resource group a
 
 - Count of tile server instances and of trigger instances running.
 
-- Requests handled by Front Door (whether reaching this deployment instance or another one). "Total" is the number reaching Front Door, while "Origin" is the number forwarded on to the back end instance.
+- Requests handled by Front Door (whether reaching this deployment instance or another one). "Total" is the number reaching Front Door, while "Origin" is the number forwarded on to the back end instance. *This includes both iOS and photon server requests.*
 
 - Front Door latency averages.
 
@@ -48,10 +48,19 @@ The android deployment process creates a dashboard, named after the resource gro
 
 The photon deployment process creates a dashboard, named after the resource group as `photonNN`. You can view this in the portal. It displays graphs of the following.
 
-- **FIXME: document the list of graphs when complete**
+- Requests handled by Front Door (whether reaching this deployment instance or another one). "Total" is the number reaching Front Door, while "Origin" is the number forwarded on to the back end instance. *This includes both iOS and photon server requests.*
+
+- Count of requests for real photon data that were handled, how many hit the cache, and how many were errors.
+
+- Count of error requests, including both requests for photon data and invalid requests.
+
+- Total bytes transmitted by the photon load balancer (to Front Door for either health requests or real traffic).
+
+- VMSS memory and CPU usage.
+
+- Legacy URL traffic (to the old URL, when this is enabled).
 
 - Count of VM instances, as for iOS above. Note however that normally one VM will be active and healthy in normal operation, rather than zero.
-
 
 ## Alerts
 

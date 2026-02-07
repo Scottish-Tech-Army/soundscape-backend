@@ -750,14 +750,6 @@ module requestWorkbook './workbook.bicep' = {
 }
 
 // Dashboard with some plausible metrics
-/*
-FIXME: graphs to add
-- LB byte count
-- LB availability fraction
-- Front door metrics - though caveat that includes iOS
-- Request Count, similar to iOS dashboard for errors, using cacheStatus_s to figure out if cached or not
-- Error Count, as per iOS dashboard
-*/
 resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
   location: resourceGroup().location
   name: resourceGroup().name
