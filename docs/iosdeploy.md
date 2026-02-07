@@ -172,7 +172,7 @@ Now we test properly. To validate that the test domain (and so your deployment) 
 - From that directory, run the following command.
 
     ~~~bash
-    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh tst &
+    nohup bash /ROOT_OF_REPO/scripts/iosloadtest.sh tst &
     ~~~
 
     (Note that we are testing the `tst` subdomain here, which points at your new deployment.)
@@ -194,7 +194,7 @@ Now it is time to cut the traffic over.
 - From that directory, run the following command.
 
     ~~~bash
-    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh prd2 &
+    nohup bash /ROOT_OF_REPO/scripts/iosloadtest.sh prd2 &
     ~~~
 
     (Note that we are now testing the live domains.) Double check that the tests are running correctly from the logs. The dashboard should show traffic in Front Door Manager, but (initially) not in your deployment.

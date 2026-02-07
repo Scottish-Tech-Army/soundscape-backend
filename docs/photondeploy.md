@@ -116,7 +116,25 @@ To change over your deployment, perform the following steps.
 
 ### Testing
 
-*FIXME: To be provided - some kind of better test process.*
+Now we test properly. To validate that the test domain (and so your deployment) is working, you should do the following.
+
+- Pick a directory where you will run all your tests (and where all your outputs will go), and switch to it.
+
+- From that directory, run the following command.
+
+    ~~~bash
+    nohup bash /ROOT_OF_REPO/scripts/photonloadtest.sh photontest &
+    ~~~
+
+    (Note that we are testing the `photontest` subdomain here, which points at your new deployment.)
+
+- Check results.
+
+    - There is an output log and a detailed CSV file of results that are being generated in your test directory. You can tail these, but you should not consider the test a success until it has fully completed.
+
+    - You should see load arriving at your deployment.
+
+    - Everything should just work (TM).
 
 ### Cutting over
 
@@ -124,10 +142,10 @@ Now it is time to cut the traffic over.
 
 - Change to your directory.
 
-- From that directory, run the following command. *FIXME: To be provided - some kind of better test process.*
+- From that directory, run the following command.
 
     ~~~bash
-    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh prd2 &
+    nohup bash /ROOT_OF_REPO/scripts/photonloadtest.sh photon &
     ~~~
 
     (Note that we are now testing the live domains.) Double check that the tests are running correctly from the logs. The dashboard should show traffic in Front Door Manager, but (initially) not in your deployment.
