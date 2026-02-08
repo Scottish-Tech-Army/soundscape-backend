@@ -1,6 +1,6 @@
 # Deployment of the Android backend in Azure
 
-This document describes how to deploy a new Android deployment.
+This document describes how to deploy a new Android deployment. Note that there is no manual cutover process; triggering a creation of a new VM in the VMSS will automatically validate the downloaded data and change the Cloudflare configuration to use the new deployment. If you are replacing a deployment, disable the VMSS in it (or Cloudflare will flap between deployment instances, which is benign but wasteful).
 
 ## Prerequisites
 
@@ -48,7 +48,7 @@ Find your Cloudflare DNS domain.
 
     - Otherwise go to your workers, and pick a worker, to again find the domain you want.
 
-        The URL receiving production data should then be `https://workdername.blah.workers.dev` where you found what `blah` should be above.
+        The URL receiving production data should then be `https://workername.blah.workers.dev` where you found what `blah` should be above, and `workername` is the name of the worker in question.
 
 ### Cloudflare secrets
 
@@ -74,7 +74,7 @@ Get secrets from Cloudflare and store them for later storage in a key vault.
 
     - Store off the API key.
 
-- Found your Cloudflare subdomain - the string after the worker name in the URL to access a worker in the account. This was described above.
+- Find your Cloudflare subdomain - the string after the worker name in the URL to access a worker in the account. This was described above.
 
 - Create R2 access credentials. (This could use the same overpowered API token above, but we instead use a dedicated token.)
 
@@ -134,7 +134,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
  - Source the config file.
 
     ~~~bash
-    . config/android_aNN.sh
+    . config/android-aNN.sh
     ~~~
 
 - Run the base deploy script.

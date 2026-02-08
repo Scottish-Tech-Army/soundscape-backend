@@ -16,9 +16,7 @@ The process is as follows.
 
 - [Set up your deployment in Azure](#deploying-in-azure).
 
-- [Test that it all works](#testing-that-your-deployment-works).
-
-- [Cut over live traffic to your new deployment](#switching-over-to-your-deployment).
+- [Cut over live traffic to your new deployment, testing that it works in the process](#switching-over-to-your-deployment).
 
 ## Prerequisites
 
@@ -62,7 +60,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
  - Source the config file.
 
     ~~~bash
-    . config/ios_iNN.sh
+    . config/ios-iNN.sh
     ~~~
 
 - Build and upload images. This creates container images of the specified version, and loads them into the shared repository.

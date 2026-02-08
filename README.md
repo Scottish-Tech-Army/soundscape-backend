@@ -8,7 +8,7 @@ The repository is structured as follows.
 
     - [Architecture](/docs/architecture.md) describes the architecture.
 
-    - [Infrastructure deployment](/docs/infradeploy.md) explains how to deploy common infrastructure, required for other components. This is more a record of what was done that anything that you are likely to need day to day, but it does document tools that you might need in order to run any of the deployment steps.
+    - [Infrastructure deployment](/docs/infradeploy.md) explains how to deploy common infrastructure, required for other components. This is more a record of what was done than anything that you are likely to need day to day, but it does document tools that you might need in order to run any of the deployment steps.
 
     - If you want to deploy a new iOS backend RG and cut over traffic, read the [iOS backend instructions](/docs/iosdeploy.md)
 
@@ -52,4 +52,4 @@ The repository is structured as follows.
 
 ## Third party software
 
-This code contains third party software from the [protomaps PMTiles repository](https://github.com/protomaps/PMTiles), which is licensed according to [its own license](thirdparty/pmtiles/LICENSE) - see [the README](https://github.com/protomaps/README.md) for further information.
+This code contains third party software from the [protomaps PMTiles repository](https://github.com/protomaps/PMTiles), which is licensed according to [its own license](thirdparty/pmtiles/LICENSE) - see [the README of that repo](https://github.com/protomaps/PMTiles) for further information.

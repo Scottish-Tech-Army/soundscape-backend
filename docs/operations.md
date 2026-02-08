@@ -132,7 +132,7 @@ You can see how many VMs were running and when using the following.
 
 The tile server has a range of logs.
 
-- `iOS tilesrv access logs`: all access logs for the tile server, one per request. Does not include
+- `iOS tilesrv access logs`: all access logs for the tile server, one per request. Does not include requests satisfied by front door cache (which do not reach the tilesrv) but does include liveness checks.
 
 - `iOS tilesrv access logs summary`: hourly summary of access logs. *This is very useful for getting an idea of whether all is well.*
 
@@ -154,11 +154,11 @@ Unlike the other logs, the Front Door logs do not appear in the log analytics wo
 
 - `iOS Front Door Errors`: this is a subset of the access log view that only shows errors.
 
-#### PostGreSQL logs
+#### PostgreSQL logs
 
 These logs show errors from the SQL database.
 
-- `iOS SQL Logs`: all SQL logs from PostGreSQL.
+- `iOS SQL Logs`: all SQL logs from PostgreSQL.
 
 ### Android logs
 

@@ -72,7 +72,7 @@ To deploy this infrastructure, follow the steps below.
         # Diags configuration
         # Region and RG
         export DIAGSREGION=westeurope
-        export DIAGSRG=soundscape-shared
+        export DIAGSRG=soundscape-diags
 
         # Subscription
         export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
@@ -159,7 +159,7 @@ In order to add the shared DNS zones and corresponding endpoints in Front Door, 
 
 - `photon` is for live photon search server traffic
 
-- `photontest` is for live photon search server traffic
+- `photontest` is for test photon search server traffic
 
 To deploy and configure them, follow the following process.
 
@@ -181,7 +181,7 @@ To deploy and configure them, follow the following process.
 
     - Open the [portal](https://portal.azure.com).
 
-    - Got to the parent `soundscape.scottishtecharmy.org` DNS zone
+    - Go to the parent `soundscape.scottishtecharmy.org` DNS zone
 
     - Add new NS record for the zone, named `ZONE`. The values should match the NS records for `@` in the zone `ZONE` you just created
 
