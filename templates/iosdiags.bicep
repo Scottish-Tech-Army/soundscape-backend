@@ -229,7 +229,7 @@ module frontDoorAccessLogSummary './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
-    | where requestUri_s startswith "prd2." or requestUri_s startswith "tst."
+    | where requestUri_s startswith "https://prd2." or requestUri_s startswith "https://tst."
     | where requestUri_s contains "tiles"
     | extend User = strcat(clientIp_s, ":", clientPort_s)
     | extend Time = bin(TimeGenerated, 24h)
@@ -257,7 +257,7 @@ module frontDoorAccessLogs './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
-    | where requestUri_s startswith "prd2." or requestUri_s startswith "tst."
+    | where requestUri_s startswith "https://prd2." or requestUri_s startswith "https://tst."
     | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
     | order by TimeGenerated desc
     '''
@@ -273,7 +273,7 @@ module frontDoorAccessLogErrors './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
-    | where requestUri_s startswith "prd2." or requestUri_s startswith "tst."
+    | where requestUri_s startswith "https://prd2." or requestUri_s startswith "https://tst."
     | where httpStatusCode_s != 200
     | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
     | order by TimeGenerated desc

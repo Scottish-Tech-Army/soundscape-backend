@@ -33,7 +33,7 @@ module tileErrorAlert './alert.bicep' = {
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
     | where httpStatusCode_s != 200
-    | where requestUri_s startswith "prd2."
+    | where requestUri_s startswith "https://prd2."
     | where requestUri_s contains "/tiles/"
     '''
   }
@@ -53,7 +53,7 @@ module photonErrorAlert './alert.bicep' = {
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
     | where httpStatusCode_s != 200
-    | where requestUri_s startswith "photon."
+    | where requestUri_s startswith "https://photon."
     | where requestUri_s contains "/photon/"
     '''
   }

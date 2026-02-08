@@ -123,7 +123,7 @@ module frontDoorAccessLogSummary './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
-    | where requestUri_s startswith "photon." or requestUri_s startswith "photontest."
+    | where requestUri_s startswith "https://photon." or requestUri_s startswith "https://photontest."
     | where requestUri_s contains "/photon/"
     | extend User = strcat(clientIp_s, ":", clientPort_s)
     | extend Time = bin(TimeGenerated, 24h)
@@ -151,7 +151,7 @@ module frontDoorAccessLogs './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
-    | where requestUri_s startswith "photon." or requestUri_s startswith "photontest."
+    | where requestUri_s startswith "https://photon." or requestUri_s startswith "https://photontest."
     | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
     | order by TimeGenerated desc
     '''
@@ -167,7 +167,7 @@ module frontDoorAccessLogErrors './query.bicep' = {
     query: '''
     AzureDiagnostics
     | where Category == "FrontDoorAccessLog"
-    | where requestUri_s startswith "photon." or requestUri_s startswith "photontest."
+    | where requestUri_s startswith "https://photon." or requestUri_s startswith "https://photontest."
     | where httpStatusCode_s != 200
     | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
     | order by TimeGenerated desc

@@ -35,21 +35,60 @@ LOGFILE="${OUTDIR}/${DOMAIN}_$(date +%Y%m%d_%H%M%S).log"
 CSVFILE="${OUTDIR}/${DOMAIN}_$(date +%Y%m%d_%H%M%S).csv"
 
 # Initialize CSV with header
-echo "timestamp,test_name,status,details" > "${CSVFILE}"
+echo "timestamp,test_name,status,x_cache,details" > "${CSVFILE}"
 
 # Initialize counters
 PASS_COUNT=0
 FAIL_COUNT=0
 
+# Helper function to randomize case of a string
+randomize_case() {
+    local input="$1"
+    local output=""
+    local char
+    for ((i=0; i<${#input}; i++)); do
+        char="${input:$i:1}"
+        if [[ "$((RANDOM % 2))" -eq 0 ]]; then
+            output+="${char,,}"  # lowercase
+        else
+            output+="${char^^}"  # uppercase
+        fi
+    done
+    echo "$output"
+}
+
+# Helper function to URL-encode a string
+url_encode() {
+    local string="$1"
+    local strlen=${#string}
+    local encoded=""
+    local pos c o
+
+    for ((pos=0; pos<strlen; pos++)); do
+        c=${string:$pos:1}
+        case "$c" in
+            [-_.~a-zA-Z0-9])
+                o="${c}"
+                ;;
+            *)
+                printf -v o '%%%02x' "'$c"
+                ;;
+        esac
+        encoded+="${o}"
+    done
+    echo "${encoded}"
+}
+
 # Helper function to log results
 log_result() {
     local test_name="$1"
     local status="$2"
-    local details="$3"
+    local x_cache="$3"
+    local details="$4"
     local timestamp=$(date +%Y-%m-%d\ %H:%M:%S)
 
-    echo "[${timestamp}] ${test_name}: ${status} - ${details}" | tee -a "${LOGFILE}"
-    echo "\"${timestamp}\",\"${test_name}\",\"${status}\",\"${details}\"" >> "${CSVFILE}"
+    echo "[${timestamp}] ${test_name}: ${status} [x-cache: ${x_cache}] - ${details}" | tee -a "${LOGFILE}"
+    echo "\"${timestamp}\",\"${test_name}\",\"${status}\",\"${x_cache}\",\"${details}\"" >> "${CSVFILE}"
 
     # Update counters
     if [[ "${status}" == "PASS" ]]; then
@@ -66,17 +105,23 @@ run_test() {
     local validation_cmd="$3"
 
     echo "Running test: ${test_name}" | tee -a "${LOGFILE}"
+    echo "  URL: ${url}" | tee -a "${LOGFILE}"
 
-    # Make the request
+    # Make the request and capture headers
+    local temp_headers=$(mktemp)
     local response
     local http_code
-    response=$(curl -s -w "\n%{http_code}" "${url}")
+    response=$(curl -s -D "${temp_headers}" -w "\n%{http_code}" "${url}")
     http_code=$(echo "${response}" | tail -n1)
     local body=$(echo "${response}" | sed '$d')
 
+    # Extract x-cache header
+    local x_cache=$(grep -i "^x-cache:" "${temp_headers}" | sed 's/^x-cache: *//i' | tr -d '\r\n' || echo "N/A")
+    rm -f "${temp_headers}"
+
     # Check HTTP status
     if [[ "${http_code}" != "200" ]]; then
-        log_result "${test_name}" "FAIL" "HTTP ${http_code}"
+        log_result "${test_name}" "FAIL" "${x_cache}" "HTTP ${http_code}"
         return 1
     fi
 
@@ -84,17 +129,17 @@ run_test() {
     if [[ -n "${validation_cmd}" ]]; then
         local validation_result
         if validation_result=$(echo "${body}" | eval "${validation_cmd}" 2>&1); then
-            log_result "${test_name}" "PASS" "Validation succeeded: ${validation_result}"
+            log_result "${test_name}" "PASS" "${x_cache}" "Validation succeeded: ${validation_result}"
             return 0
         else
-            log_result "${test_name}" "FAIL" "Validation failed: ${validation_result}"
+            log_result "${test_name}" "FAIL" "${x_cache}" "Validation failed: ${validation_result}"
             echo "Response body received:" | tee -a "${LOGFILE}"
             echo "${body}" | tee -a "${LOGFILE}"
             echo "" | tee -a "${LOGFILE}"
             return 1
         fi
     else
-        log_result "${test_name}" "PASS" "HTTP 200"
+        log_result "${test_name}" "PASS" "${x_cache}" "HTTP 200"
         return 0
     fi
 }
@@ -107,9 +152,11 @@ echo "CSV file: ${CSVFILE}" | tee -a "${LOGFILE}"
 echo "" | tee -a "${LOGFILE}"
 
 # Test 1: Forward geocoding - Tower of London
+QUERY1=$(randomize_case "Tower of London")
+QUERY1_ENCODED=$(url_encode "${QUERY1}")
 run_test \
     "Forward geocoding: Tower of London" \
-    "${PHOTON_BASE_URL}/api?q=Tower%20of%20London" \
+    "${PHOTON_BASE_URL}/api?q=${QUERY1_ENCODED}" \
     "jq -r '.features[0].properties.postcode' | grep -E '^EC3N'" || true
 
 # Test 2: Reverse geocoding - Tower of London coordinates
@@ -131,15 +178,19 @@ run_test \
     "jq -r '.features[0].properties.country' | grep -E 'Vereinigtes Königreich|Großbritannien'" || true
 
 # Test 5: Forward geocoding - Tokyo (should return Japanese characters)
+QUERY5=$(randomize_case "Tokyo")
+QUERY5_ENCODED=$(url_encode "${QUERY5}")
 run_test \
     "Forward geocoding: Tokyo (Japanese)" \
-    "${PHOTON_BASE_URL}/api?q=Tokyo" \
+    "${PHOTON_BASE_URL}/api?q=${QUERY5_ENCODED}" \
     "jq -r '.features[0].properties.name' | grep '東京'" || true
 
 # Test 6: Forward geocoding - Tokyo with English language
+QUERY6=$(randomize_case "Tokyo")
+QUERY6_ENCODED=$(url_encode "${QUERY6}")
 run_test \
     "Forward geocoding: Tokyo (English)" \
-    "${PHOTON_BASE_URL}/api?q=Tokyo&lang=en" \
+    "${PHOTON_BASE_URL}/api?q=${QUERY6_ENCODED}&lang=en" \
     "jq -r '.features[0].properties.name' | grep -E '^Tokyo$|^Tōkyō$'" || true
 
 echo "" | tee -a "${LOGFILE}"
