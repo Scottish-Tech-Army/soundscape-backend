@@ -174,3 +174,39 @@ module frontDoorAccessLogErrors './query.bicep' = {
     '''
   }
 }
+
+module frontDoorResponseTimes './query.bicep' = {
+  name: 'frontDoorResponseTimes'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Photon Front Door response times'
+    queryDescription: 'Front door response time summary for photon search'
+    query: '''
+    AzureDiagnostics
+    | where Category == "FrontDoorAccessLog"
+    | where requestUri_s startswith "https://photon." or requestUri_s startswith "https://photontest."
+    | where requestUri_s contains "/photon/"
+    | where httpStatusCode_s == 200
+    | extend Time = bin(TimeGenerated, 24h)
+    | extend ResponseTimeMs = tolong(toreal(timeTaken_s) * 1000)
+    | summarize
+        RequestCount = count(),
+        AvgResponseTime = tolong(avg(ResponseTimeMs)),
+        MedianResponseTime = tolong(percentile(ResponseTimeMs, 50)),
+        P95ResponseTime = tolong(percentile(ResponseTimeMs, 95)),
+        P99ResponseTime = tolong(percentile(ResponseTimeMs, 99))
+        by Time, sni_s
+    | project
+        Time,
+        Domain = sni_s,
+        RequestCount,
+        AvgResponseTime,
+        MedianResponseTime,
+        P95ResponseTime,
+        P99ResponseTime
+    | order by Time desc
+    '''
+  }
+}
+
+

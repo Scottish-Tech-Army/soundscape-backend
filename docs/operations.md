@@ -154,6 +154,8 @@ Unlike the other logs, the Front Door logs do not appear in the log analytics wo
 
 - `iOS Front Door Errors`: this is a subset of the access log view that only shows errors.
 
+- `iOS Front Door response times`: this shows a daily summary of response times for successful requests - average, median, and P95 and P99.
+
 #### PostgreSQL logs
 
 These logs show errors from the SQL database.
@@ -208,3 +210,4 @@ Unlike the other logs, the Front Door logs do not appear in the log analytics wo
 
 - `Photon Front Door Errors`: this is a subset of the access log view that only shows errors.
 
+- `Photon Front Door response times`: this shows a daily summary of response times for successful requests - average, median, and P95 and P99.
