@@ -7,12 +7,19 @@ echo "RG: ${RG}"
 cd "$(dirname "$0")/.."
 . scripts/cfgutils.sh
 
+echo "Building files ready to deploy"
+# Build the escaped query file.
+mkdir -p build
+jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
+jq -Rs . templates/photonerrorquery.txt > build/error-escaped.txt
+jq -Rs . templates/photonrequestquery.txt > build/request-escaped.txt
+
 # Build the tar file of scripts
 rm -rf build/tmp build/files.tgz
 mkdir -p build/tmp
 pushd build/tmp
 cp -r ../../src/photon/* .
-tar -zcvf ../files.tgz *
+tar -zcf ../files.tgz *
 popd
 
 # Returns both key1 and key2; pick either
@@ -32,16 +39,24 @@ az storage blob upload-batch \
   --pattern files.tgz \
   --overwrite
 
+# Note the "--no-wait" flag, which makes this return promptly. That is because
+# the deployment waits for the VM to be fully provisioned, which can take a long time.
+echo "Starting deployment of VM - will return before VM is live"
 az deployment group create \
     --resource-group ${RG} --template-file templates/photonvm.bicep \
     --parameters prefix=${PREFIX} \
                  versionTag=${VERSION} \
                  registryName=${REGISTRYNAME} \
                  registryRG=${REGISTRYRG} \
-                 registrySub=${REGISTRYSUB} \
                  registryUAMIName=${REGISTRYUAMI} \
+                 metricAppName=${METRICAPPNAME} \
+                 triggerAppName=${TRIGGERAPPNAME} \
+                 diagsRG=${DIAGSRG} \
                  area=${AREA} \
-                 storageName=${STORAGENAME} \
-    --debug --verbose --no-wait
+                 debug=${DEBUG} \
+                 sharedRGName=${SHAREDRG} \
+                 sharedLAW=${SHAREDLAW} \
+                 frontDoorName=${FRONTDOOR} \
+                 storageName=${STORAGENAME} --no-wait
 
 echo "SUCCESS"

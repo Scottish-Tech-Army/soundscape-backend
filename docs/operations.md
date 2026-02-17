@@ -1,8 +1,10 @@
 # Operations processes
 
-## iOS dashboard
+## Dashboards
 
-The iOS deployment process creates a dashboard, named after the resource group as `rg-pNN`. You can view this in the portal. It displays graphs of the following.
+### iOS dashboard
+
+The iOS deployment process creates a dashboard, named after the resource group as `iosNN`. You can view this in the portal. It displays graphs of the following.
 
 - Tile server requests reaching the deployment, with counts of success and errors. (Some errors are expected, notably 404s for random requests against the domain.)
 
@@ -10,7 +12,7 @@ The iOS deployment process creates a dashboard, named after the resource group a
 
 - Count of tile server instances and of trigger instances running.
 
-- Requests handled by Front Door (whether reaching this deployment instance or another one). "Total" is the number reaching Front Door, while "Origin" is the number forwarded on to the back end instance.
+- Requests handled by Front Door (whether reaching this deployment instance or another one). "Total" is the number reaching Front Door, while "Origin" is the number forwarded on to the back end instance. *This includes both iOS and photon server requests.*
 
 - Front Door latency averages.
 
@@ -26,11 +28,39 @@ The iOS deployment process creates a dashboard, named after the resource group a
 
     - Total instances (how many VMs the VMSS actually has). This may differ from capacity if a spot instance has failed, or if the VMSS is in the middle of scaling.
 
-    - Live instances (how many VMs the VMSS actually has that are running normally). This may differ from total instances only if a VM has failed, or is in the process of starting up.
+    - Healthy instances (how many VMs the VMSS actually has that are running normally). This may differ from total instances only if a VM has failed, or is in the process of starting up.
 
     Generally, all three values should be zero, except when an ingestion occurs when they should all increase to one then return to zero after a few (typically ten) hours.
 
 Most of this data can be viewed in the detailed monitoring queries below, with more information.
+
+### Android dashboard
+
+The android deployment process creates a dashboard, named after the resource group as `androidNN`. You can view this in the portal. It displays graphs of the following.
+
+- Ingress and egress rates for the data transfer storage account.
+
+- Storage capacity used for the data transfer storage account.
+
+- Count of VM instances, as for iOS above.
+
+### Photon dashboard
+
+The photon deployment process creates a dashboard, named after the resource group as `photonNN`. You can view this in the portal. It displays graphs of the following.
+
+- Requests handled by Front Door (whether reaching this deployment instance or another one). "Total" is the number reaching Front Door, while "Origin" is the number forwarded on to the back end instance. *This includes both iOS and photon server requests.*
+
+- Count of requests for real photon data that were handled, how many hit the cache, and how many were errors.
+
+- Count of error requests, including both requests for photon data and invalid requests.
+
+- Total bytes transmitted by the photon load balancer (to Front Door for either health requests or real traffic).
+
+- VMSS memory and CPU usage.
+
+- Legacy URL traffic (to the old URL, when this is enabled).
+
+- Count of VM instances, as for iOS above. Note however that normally one VM will be active and healthy in normal operation, rather than zero.
 
 ## Alerts
 
@@ -42,21 +72,21 @@ A range of alerts are configured, and will be seen in email reports sent to the 
 
 - Severity 1: a VM (iOS or Android) took so long to complete that it must have failed (and presumably the termination script did not work to report the error)
 
-- Severity 3: errors are reported in Azure Front Door for Soundscape requests
+- Severity 2: errors are reported in Azure Front Door for Soundscape iOS requests
+
+For photon:
+
+- Severity 4: a reimage of the photon VMSS has started
+
+- Severity 1: no healthy VMs exist in the photon VMSS
+
+- Severity 1: more than one VM exists in the photon VMSS, implying that the VMSS reimage failed to complete in some way
+
+- Severity 2: errors are reported in Azure Front Door for photon requests
 
 ## Detailed log monitoring
 
 A range of detailed diagnostics queries have been created which should allow easier checking of logs, with standard logs queries.
-
-### Deploying the tooling
-
-To deploy the tooling, run the following from the base of the repo. This need only be done once; it is safe to delete and recreate the resource group then redeploy the queries.
-
-~~~bash
-. scripts/diags-cfg.sh
-bash scripts/androiddiags.sh
-bash scripts/iosdiags.sh
-~~~
 
 ### Using the queries
 
@@ -102,7 +132,7 @@ You can see how many VMs were running and when using the following.
 
 The tile server has a range of logs.
 
-- `iOS tilesrv access logs`: all access logs for the tile server, one per request. Does not include
+- `iOS tilesrv access logs`: all access logs for the tile server, one per request. Does not include requests satisfied by front door cache (which do not reach the tilesrv) but does include liveness checks.
 
 - `iOS tilesrv access logs summary`: hourly summary of access logs. *This is very useful for getting an idea of whether all is well.*
 
@@ -114,9 +144,9 @@ The function apps (that trigger VM creation for ingestion) generate logs when th
 
 #### Front door logs
 
-Unlike the other logs, the Front Door logs do not appear in the log analytics workspace in the deployment RG, but in the one in the shared resource group `rg-ssp-shared-dev-uks`. There is one such query stored.
+Unlike the other logs, the Front Door logs do not appear in the log analytics workspace in the deployment RG, but in the one in the shared resource group `soundscape-shared`.
 
-- `iOS Front Door metrics`: this shows an hourly summary of incoming traffic to Front Door.
+- `iOS Front Door metrics`: this shows an hourly summary of incoming traffic to Front Door. *It includes both iOS and photon search requests, unlike the other Front Door requests based on access logs.*
 
 - `iOS Front Door Access Log summary`: this shows a daily summary of incoming traffic, with counts based on parsed into country, URL, and unique users.
 
@@ -124,11 +154,13 @@ Unlike the other logs, the Front Door logs do not appear in the log analytics wo
 
 - `iOS Front Door Errors`: this is a subset of the access log view that only shows errors.
 
-#### PostGreSQL logs
+- `iOS Front Door response times`: this shows a daily summary of response times for successful requests - average, median, and P95 and P99.
+
+#### PostgreSQL logs
 
 These logs show errors from the SQL database.
 
-- `iOS SQL Logs`: all SQL logs from PostGreSQL.
+- `iOS SQL Logs`: all SQL logs from PostgreSQL.
 
 ### Android logs
 
@@ -148,4 +180,34 @@ You can see how many VMs were running and when using the following.
 
 The function app (that triggers VM creation for ingestion) generate logs when they run. They are not usually very important, but if you need them, they are shown here.
 
-- `Andoroid function app logs`: all low level logs from Azure Functions.
+- `Android function app logs`: all low level logs from Azure Functions.
+
+### Photon logs
+
+Photon log queries are as follows.
+
+#### Photon VM
+
+- `Photon VM logs - high level`: high level logs from the photon server, showing initialisation
+
+- `Photon Container logs`: logs from the containers running on the photon server, showing what both the photon instance itself and the health container are doing.
+
+- `Photon VM instance count`: a view of VM capacity and instance counts over time.
+
+#### Function app
+
+- `Photon function app logs`: all low level logs from Azure Functions; more interesting than for the other cases as the function app logic is more complex.
+
+#### Front door logs
+
+Unlike the other logs, the Front Door logs do not appear in the log analytics workspace in the deployment RG, but in the one in the shared resource group `soundscape-shared`.
+
+- `Photon Front Door metrics`: this shows an hourly summary of incoming traffic to Front Door. *It includes both iOS and photon search requests, unlike the other Front Door requests based on access logs.*
+
+- `Photon Front Door Access Log summary`: this shows a daily summary of incoming traffic, with counts based on parsed into country, URL, and unique users.
+
+- `Photon Front Door Access Logs`: this shows all access logs from Front Door, with some useful information.
+
+- `Photon Front Door Errors`: this is a subset of the access log view that only shows errors.
+
+- `Photon Front Door response times`: this shows a daily summary of response times for successful requests - average, median, and P95 and P99.

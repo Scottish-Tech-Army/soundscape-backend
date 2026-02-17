@@ -18,11 +18,11 @@ The different resources are split into five resource groups.
 
     - Some alert rules
 
-- There is an iOS instance RG, described in detail in the [iOS Architecture](#ios-architecture) section below. This contains an Azure PostGreSQL database and an Azure Container App to serve the data from it. New iOS instance RGs can be created and the traffic cut over as required (for example to allow configuration changes).
+- There is an iOS instance RG, described in detail in the [iOS Architecture](#ios-architecture) section below. This contains an Azure PostgreSQL database and an Azure Container App to serve the data from it. New iOS instance RGs can be created and the traffic cut over as required (for example to allow configuration changes).
 
 - There is an Android instance RG, described in detail in the [Android Architecture](#android-architecture) section below. This contains a storage account with tile data, used by the Cloudflare components, and tooling to update that storage account's content and copy data over to Cloudflare regularly. As for iOS, new instances can be created and the configuration cut over to use them as required (for example to allow configuration changes).
 
-- Finally, there is a Photon Server RG, which is not yet fully complete (and is not currently live). That contains a Photon Server that handles Android search traffic, fronted by the shared Front Door instance.
+- Finally, there is a Photon Server RG. This contains a Photon Server that handles Android search traffic, fronted by the shared Front Door instance.
 
 # iOS Architecture
 
@@ -36,7 +36,7 @@ Each deployed instance is in Azure, and contains the components below in a singl
 
 - The backend database is an [Azure Database for PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/) instance, with the PostGIS extension installed.
 
-- The actual web interface is served by the Tile Server [Azure Container App](https://learn.microsoft.com/en-us/azure/container-apps/overview), usually abreviated to `tilesrv`. This container app runs code that uses the `aiohttp` async web framework to provide a simple interface that queries the database. It expects a GET request in the `/z/x/y` format `/{zoom}/{x}/{y}.json`, where `zoom` must be 16. This app also has a `/metrics` interface which returns statistics about tiles served, errors, etc. and a `/probe/alive` interface to check if the service is up (though most metrics are actually passed through OpenTelemetry to Application Insights in practice).
+- The actual web interface is served by the Tile Server [Azure Container App](https://learn.microsoft.com/en-us/azure/container-apps/overview), usually abbreviated to `tilesrv`. This container app runs code that uses the `aiohttp` async web framework to provide a simple interface that queries the database. It expects a GET request in the `/z/x/y` format `/{zoom}/{x}/{y}.json`, where `zoom` must be 16. This app also has a `/metrics` interface which returns statistics about tiles served, errors, etc. and a `/probe/alive` interface to check if the service is up (though most metrics are actually passed through OpenTelemetry to Application Insights in practice).
 
 - The database is populated by ingestion tooling consisting of a [VM Scale Set](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview), triggered by an [Azure Function](https://learn.microsoft.com/en-us/azure/azure-functions/functions-overview). This is described in detail below.
 
@@ -66,7 +66,7 @@ The high level flow is shown in the architecture diagram above.
 
     - It builds tiles using the function `soundscape_tile` defined in `tilefunc.sql`.
 
-    - That in turn relies on the bounding funtion `TileBBox` and various utility functions defined `postgis-vt-util.sql`.
+    - That in turn relies on the bounding function `TileBBox` and various utility functions defined in `postgis-vt-util.sql`.
 
 ## Ingestion
 
@@ -80,7 +80,7 @@ The data in the database is downloaded and ingested from public data at [Geofabr
 
   - then atomically rotates the data into the live namespace when it completes.
 
-    This entire process takes about ten hours for the entire globe.
+    This entire process takes about eight to ten hours for the entire globe.
 
 - The VMSS scaling is managed as follows.
 
@@ -98,7 +98,7 @@ There are three components to the Android architecture.
 
 2. There is an offline maps download component that again runs in Cloudflare, orchestrated from Azure.
 
-3. There is a search component. This is not contained in this repository at all, and is not shown in the architecture diagram.
+3. There is a search component, using photon server. This is covered in the [last section on photon](#photon-server-architecture), as it is logically distinct from the rest of the Android components, and is not shown in the architecture diagram.
 
 ![Android Architecture Diagram](android.svg)
 
@@ -165,3 +165,22 @@ The data is uploaded and the workers are configured from tooling running in Azur
     - It updates the production worker `EXTRACTS_BUCKET` configuration to match the configuration tested above, and retests. This is the worker that handles requests from the app itself.
 
 - Finally, after a pause, it tidies up old data, removing the previous versions from R2 and from Azure storage.
+
+# Photon server architecture
+
+The photon server architecture consists of the following.
+
+- There is a VMSS containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from graphhopper.
+
+- There is a load balancer, that exposes the search URL to use.
+
+- The Front Door instance (shared with the iOS deployment) routes traffic to the VMSS.
+
+Every month, the VM reloads its data. This occurs as follows.
+
+- A function app triggers on a timer to scale the VMSS to capacity 2, normally once per month.
+
+- A new VM instance is then created and configures itself.
+
+- When both instances are healthy, the older one is tidied up by the function app (which checks every five minutes to see if the new VM is healthy yet).
+

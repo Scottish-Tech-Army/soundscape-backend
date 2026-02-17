@@ -1,0 +1,9 @@
+AzureDiagnostics
+| where Category == "FrontDoorAccessLog"
+| where requestUri_s startswith "https://prd2." or requestUri_s startswith "https://tst."
+| extend status = toint(httpStatusCode_s)
+| extend isValid = tostring(requestUri_s) contains "/tiles/"
+| summarize
+    ValidRequests   = countif(isValid and status != 200),
+    InvalidRequests = countif(not(isValid) and status != 200)
+    by TimeGenerated = bin(TimeGenerated, 1h);

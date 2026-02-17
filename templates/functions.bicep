@@ -6,6 +6,14 @@ param storageName string
 param vmssName string
 param logAnalyticsWorkspaceName string
 param triggerSchedule string
+
+@description('Trigger type - must be SCALE or REIMAGE')
+@allowed([
+  'SCALE'
+  'REIMAGE'
+])
+param triggerType string
+
 // Plans - every function app needs one.
 var triggerPlanName = '${prefix}-trigger-plan'
 var metricPlanName  = '${prefix}-metric-plan'
@@ -174,6 +182,7 @@ resource triggerApp 'Microsoft.Web/sites@2024-11-01' = {
         { name: 'VMSS_NAME',                        value: vmssName }
         { name: 'VMSS_RESOURCE_ID',                 value: vmss.id }
         { name: 'TRIGGER_SCHEDULE',                 value: triggerSchedule }
+        { name: 'TRIGGER_TYPE',                     value: triggerType }
       ]
     }
   }

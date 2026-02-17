@@ -16,9 +16,7 @@ The process is as follows.
 
 - [Set up your deployment in Azure](#deploying-in-azure).
 
-- [Test that it all works](#testing-that-your-deployment-works).
-
-- [Cut over live traffic to your new deployment](#switching-over-to-your-deployment).
+- [Cut over live traffic to your new deployment, testing that it works in the process](#switching-over-to-your-deployment).
 
 ## Prerequisites
 
@@ -62,7 +60,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
  - Source the config file.
 
     ~~~bash
-    . config/ios_iNN.sh
+    . config/ios-iNN.sh
     ~~~
 
 - Build and upload images. This creates container images of the specified version, and loads them into the shared repository.
@@ -172,7 +170,7 @@ Now we test properly. To validate that the test domain (and so your deployment) 
 - From that directory, run the following command.
 
     ~~~bash
-    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh tst &
+    nohup bash /ROOT_OF_REPO/scripts/iosloadtest.sh tst &
     ~~~
 
     (Note that we are testing the `tst` subdomain here, which points at your new deployment.)
@@ -194,7 +192,7 @@ Now it is time to cut the traffic over.
 - From that directory, run the following command.
 
     ~~~bash
-    nohup bash /ROOT_OF_REPO/scripts/loadtest.sh prd2 &
+    nohup bash /ROOT_OF_REPO/scripts/iosloadtest.sh prd2 &
     ~~~
 
     (Note that we are now testing the live domains.) Double check that the tests are running correctly from the logs. The dashboard should show traffic in Front Door Manager, but (initially) not in your deployment.

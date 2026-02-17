@@ -1,8 +1,0 @@
-AzureDiagnostics
-| where Category == "FrontDoorAccessLog"
-| extend status = toint(httpStatusCode_s)
-| extend isTiles = tostring(requestUri_s) contains "tiles"
-| summarize
-    ValidRequests   = countif(isTiles and status != 200),
-    InvalidRequests = countif(status != 200)
-    by TimeGenerated = bin(TimeGenerated, 1h);

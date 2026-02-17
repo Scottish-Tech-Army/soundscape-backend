@@ -72,7 +72,7 @@ To deploy this infrastructure, follow the steps below.
         # Diags configuration
         # Region and RG
         export DIAGSREGION=westeurope
-        export DIAGSRG=soundscape-shared
+        export DIAGSRG=soundscape-diags
 
         # Subscription
         export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
@@ -151,9 +151,19 @@ Shared infrastructure contains the Azure Front Door, Azure Container Registry, a
 
 ## Adding DNS zones and endpoints
 
-In order to add the shared DNS zones and corresponding endpoints in Front Door, you should do the following, for each of the relevant zones (`tst` and `prd2`, which here we will denote as `ZONE`).
+In order to add the shared DNS zones and corresponding endpoints in Front Door, you should do the following, for each of the relevant zones, which here we will denote as `ZONE` in the instructions. There are four relevant zones.
 
-- Source the config file.
+- `prd2` is for live iOS traffic
+
+- `tst` is for test iOS traffic
+
+- `photon` is for live photon search server traffic
+
+- `photontest` is for test photon search server traffic
+
+To deploy and configure them, follow the following process.
+
+-  Source the config file.
 
     ~~~bash
     . config/shared-cfg.sh
@@ -161,17 +171,17 @@ In order to add the shared DNS zones and corresponding endpoints in Front Door, 
 
 - Ensure that the DNS zone and custom domain do not exist anywhere else (i.e. the old tenant).
 
-- Create the DNS zone and custom domain.
+- Create the DNS zone and custom domain; here `TYPE` must be either `ios` or `photon`
 
     ~~~bash
-    bash scripts/sharedzone.sh ZONE
+    bash scripts/sharedzone.sh ZONE TYPE
     ~~~
 
 - Check the `NS` records in the parent zone. (Unless the parent zone has already moved to the new tenant.)
 
     - Open the [portal](https://portal.azure.com).
 
-    - Got to the parent `soundscape.scottishtecharmy.org` DNS zone
+    - Go to the parent `soundscape.scottishtecharmy.org` DNS zone
 
     - Add new NS record for the zone, named `ZONE`. The values should match the NS records for `@` in the zone `ZONE` you just created
 

@@ -13,13 +13,22 @@ fs_setup:
 mounts:
   - [ /dev/disk/azure/scsi1/lun0-part1, /mnt, auto, "defaults,nofail", "0", "2" ]
 
+apt:
+  sources:
+    azure-cli:
+      source: "deb [arch=arm64 signed-by=$KEY_FILE] https://packages.microsoft.com/repos/azure-cli noble main"
+      keyid: BC528686B50D79E339D3721CEB3E94ADBE1229CF
+
 package_update: true
 packages:
   - curl
+  - net-tools
+  - sysstat
   - wget
   - unzip
-  - sysstat
   - docker.io
+  - azure-cli
+  - python-is-python3
 
 write_files:
   - path: /opt/photon/env.sh
@@ -34,16 +43,15 @@ write_files:
     permissions: '0700'
     content: |
       #!/bin/bash
+      echo "Running setup"
       set -euo pipefail
       . /opt/photon/env.sh
 
       mkdir -p ${BASE}/logs
 
-      # Install Azure CLI
-      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-
-      # Download files from storage account.
+      echo "Log into azure"
       az login --identity --client-id ${CLIENT_ID}
+      echo "Download files from storage account"
       az storage blob download-batch \
         --auth-mode login \
         --account-name ${STORAGE_ACCOUNT_NAME} \
@@ -52,12 +60,26 @@ write_files:
         --pattern files.tgz
       tar -xzf ${BASE}/files.tgz -C ${BASE}
 
+      echo "Set docker fields"
       # Let the user access docker
       usermod -aG docker azureuser
+
+      cp ${BASE}/photon.service /etc/systemd/system/
+      echo "Setup complete"
 
 runcmd:
   - [ bash, /opt/photon/setup.sh ]
   - [ chown, -R, azureuser:azureuser, /opt/photon ]
   - [ chmod, '0777', /mnt ]
   - [ chmod, '0755', /opt/photon/photon.sh ]
-  - [ su, '-', azureuser, -c, /opt/photon/photon.sh ]
+  - [ systemctl, daemon-reload ]
+  - [ systemctl, enable, photon.service ]
+
+# For reasons, it is easier to get the photon service to run properly if we do an immediate reboot rather
+# than playing silly games; there are timing windows about creating the photon service, multi-user.target being reached
+# and the AMA managing to start, and we can only get systemd to sort it all out from the next reboot.
+power_state:
+  mode: reboot
+  message: "Rebooting after first-boot configuration"
+  timeout: 30
+  condition: true

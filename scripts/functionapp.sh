@@ -13,6 +13,7 @@ pushd src/trigger
 func azure functionapp publish ${TRIGGERAPPNAME} --python
 popd
 
+echo "Build and push VM count function"
 pushd src/vmcount
 func azure functionapp publish ${METRICAPPNAME} --python
 popd

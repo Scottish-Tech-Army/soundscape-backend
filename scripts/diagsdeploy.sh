@@ -34,13 +34,14 @@ fi
 
 echo "Deploying android diags resources"
 az deployment group create \
-    --resource-group ${DIAGSRG} --template-file templates/androiddiags.bicep \
-    --debug --verbose
+    --resource-group ${DIAGSRG} --template-file templates/androiddiags.bicep
 
 echo "Deploying iOS diags resources"
 az deployment group create \
-    --resource-group ${DIAGSRG} --template-file templates/iosdiags.bicep \
-    --debug --verbose
+    --resource-group ${DIAGSRG} --template-file templates/iosdiags.bicep
 
+echo "Deploying photon diags resources"
+az deployment group create \
+    --resource-group ${DIAGSRG} --template-file templates/photondiags.bicep
 
 echo "SUCCESS"

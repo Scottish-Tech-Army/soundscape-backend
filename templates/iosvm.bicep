@@ -394,6 +394,7 @@ module functionApps './functions.bicep' = {
     vmssName: vmssName
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     triggerSchedule: triggerSchedule
+    triggerType: 'SCALE'
   }
 }
 
@@ -416,7 +417,7 @@ module errorWorkbook './workbook.bicep' = {
   name: 'errorWorkbook'
   params: {
     kqlQuery: errorKqlQuery
-    title: 'VM Instance Counts'
+    title: 'Front door errors'
     logAnalyticsId: sharedLogAnalytics.id
     workbookDisplayName: '${prefix}-error-counter'
   }
@@ -795,7 +796,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                           }
                         }
                       ]
-                      title: 'Total and Origin request counts for Front Door'
+                      title: 'Total and Origin request counts for Front Door (iOS and photon combined)'
                       titleKind: 1
                       visualization: {
                         chartType: 2
@@ -1091,7 +1092,7 @@ module vmSuccessAlert './alert.bicep' = {
   }
 }
 
-// Scheduled query alert rule for detecting "VM SUCCESS" in LAW logs
+// Scheduled query alert rule for detecting where VM timed out without completion
 module vmTimeoutAlert './alert.bicep' = {
   name: 'vm-timeout-alert'
   params: {

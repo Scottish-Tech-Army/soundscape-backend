@@ -8,21 +8,34 @@ cd "$(dirname "$0")/.."
 # Check we are logged into the correct subscription
 az account set --subscription ${SUBSCRIPTION}
 
-# Retrieve the base domain from the parameters
-if [[ $# -ne 1 ]]
+# Retrieve the base domain and endpoint type from the parameters
+if [[ $# -ne 2 ]]
 then
-  echo "Usage: $0 <BASE_DOMAIN>"
+  echo "Usage: $0 <BASE_DOMAIN> <ENDPOINT_TYPE>"
   echo "  where BASE_DOMAIN is the alphanumeric prefix for the shared zone"
+  echo "  and ENDPOINT_TYPE is either 'ios' or 'photon'"
   exit 1
 fi
+
+BASE_DOMAIN=$1
+ENDPOINT_TYPE=$2
+
+if [[ ! "$BASE_DOMAIN" =~ ^[a-zA-Z0-9]+$ ]]; then
+  echo "Error: base_domain must contain only letters and numbers."
+  exit 1
+fi
+
+if [[ "$ENDPOINT_TYPE" != "ios" && "$ENDPOINT_TYPE" != "photon" ]]; then
+  echo "Error: ENDPOINT_TYPE must be either 'ios' or 'photon'."
+  exit 1
+fi
+
+BASE_DOMAIN=${BASE_DOMAIN,,} # convert to lowercase
 
 if [[ ! "$1" =~ ^[a-zA-Z0-9]+$ ]]; then
   echo "Error: base_domain must contain only letters and numbers."
   exit 1
 fi
-
-BASE_DOMAIN=$1
-BASE_DOMAIN=${BASE_DOMAIN,,} # convert to lowercase
 
 DNS_SUFFIX="soundscape.scottishtecharmy.org"  # fixed suffix
 
@@ -85,6 +98,14 @@ else
     --certificate-type ManagedCertificate
 fi
 
+if [[ "$ENDPOINT_TYPE" == "ios" ]]; then
+  FWDPROTOCOL="" # No forwarding protocol; keep protocol as is
+  PATTERN="tiles"
+else
+  FWDPROTOCOL="--forwarding-protocol HttpOnly"
+  PATTERN="photon"
+fi
+
 # AFD route; created pointing to the dummy origin, but can be updated later
 if az afd route show \
     -g ${SHAREDRG} \
@@ -109,7 +130,7 @@ else
     --enable-caching true \
     --query-string-caching-behavior UseQueryString \
     --link-to-default-domain Disabled \
-    --patterns-to-match "/tiles/*" \
+    ${FWDPROTOCOL} --patterns-to-match "/${PATTERN}/*" \
     --origin-path "/" \
     --origin-group dummy-blackhole
 fi
