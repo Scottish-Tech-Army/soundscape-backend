@@ -47,6 +47,8 @@ docker run -dit \
     -e BASE_URL=https://download1.graphhopper.com/public/ \
     -e INITIAL_DOWNLOAD=TRUE \
     -e REGION=${AREA} \
+    -e JAVA_PARAMS="${JAVA_ARGS}" \
+    -e ENABLE_METRICS=true \
     --log-driver=json-file \
     --log-opt max-size=100m \
     --log-opt max-file=10 \

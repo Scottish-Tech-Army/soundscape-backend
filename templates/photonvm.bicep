@@ -43,6 +43,10 @@ var sshPublicKey string = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK3Nyaoy93lLUDkZY
 @description('VM size supporting ephemeral NVMe OS disk')
 var vmSize string = 'Standard_E2ps_v6' // 2 core, 16GB RAM, ARM processor
 
+// By default, the VM ends up with just 2GB of RAM, so we beef it up a bit
+@description('Java arguments')
+var javaArgs string = '-Xmx8G -Xms8G -XX:+UseG1GC'
+
 @description('VMSS name')
 var vmssName string = '${prefix}-vmss'
 
@@ -247,6 +251,7 @@ var envLines = [
   'export UPLOAD_CONTAINER_NAME=${uploadContainerName}'
   'export DOWNLOAD_CONTAINER_NAME=${downloadContainerName}'
   'export AREA=${area}'
+  'export JAVA_ARGS="${javaArgs}"'
 ]
 var envBlock = join(envLines, '\n      ')
 
@@ -318,6 +323,7 @@ resource lb 'Microsoft.Network/loadBalancers@2024-10-01' = {
           loadDistribution: 'Default'
         }
       }
+/*
       {
         name: 'health-probe-rule'
         properties: {
@@ -336,6 +342,7 @@ resource lb 'Microsoft.Network/loadBalancers@2024-10-01' = {
           disableOutboundSnat: true
         }
       }
+*/
     ]
     probes: [
       {
@@ -373,7 +380,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
           createOption: 'FromImage'
           caching: 'ReadOnly'
           managedDisk: {
-            storageAccountType: 'Premium_LRS'
+            storageAccountType: 'Standard_LRS'
           }
           diskSizeGB: 32
         }
@@ -390,10 +397,10 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
           {
             lun: 0
             createOption: 'Empty'
-            diskSizeGB: 400
-            caching: 'ReadWrite'
+            diskSizeGB: 256
+            caching: 'ReadOnly'
             managedDisk: {
-              storageAccountType: 'Premium_LRS'
+              storageAccountType: 'Standard_LRS'
             }
           }
         ]
@@ -404,16 +411,16 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2025-04-01' = {
         customData: base64(cloudInitRendered)
         linuxConfiguration: {
           disablePasswordAuthentication: true
-          ...(debug ? {
-            ssh: {
-              publicKeys: [
-                {
-                  path: '/home/${adminUsername}/.ssh/authorized_keys'
-                  keyData: sshPublicKey
-                }
-              ]
-            }
-          } : {})
+            // We have to put an ssh key here; VMs must have either a key or a password.
+            // Thus do not remove if debug is set.
+          ssh: {
+            publicKeys: [
+              {
+                path: '/home/${adminUsername}/.ssh/authorized_keys'
+                keyData: sshPublicKey
+              }
+            ]
+          }
         }
       }
       extensionProfile: {
@@ -721,7 +728,7 @@ module vmWorkbook './workbook.bicep' = {
   params: {
     kqlQuery: vmKqlQuery
     title: 'VM Instance Counts'
-    ySettings: '{"min": 0}' // Default ySettings
+    ySettings: '{"min": 0}' // Do not let the Y axis scale only to 1
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-vmss-counter'
   }
@@ -733,6 +740,7 @@ module errorWorkbook './workbook.bicep' = {
   params: {
     kqlQuery: errorKqlQuery
     title: 'Front door errors'
+    ySettings: '{"min": 0}' // Do not let the Y axis scale only to 1
     logAnalyticsId: sharedLogAnalytics.id
     workbookDisplayName: '${prefix}-error-counter'
   }
@@ -744,6 +752,7 @@ module requestWorkbook './workbook.bicep' = {
   params: {
     kqlQuery: requestKqlQuery
     title: 'Front door requests'
+    ySettings: '{"min": 0}' // Do not let the Y axis scale only to 1
     logAnalyticsId: sharedLogAnalytics.id
     workbookDisplayName: '${prefix}-request-counter'
   }

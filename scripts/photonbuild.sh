@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 az acr login -n ${REGISTRYNAME}
 
 # Pull the image to retag and push
-SRCIMAGE=rtuszik/photon-docker:latest
+SRCIMAGE=rtuszik/photon-docker:${VERSION}
 DESTIMAGE=${REGISTRYNAME}.azurecr.io/photon/photon-docker:${VERSION}
 
 docker pull --platform linux/arm64 ${SRCIMAGE}
