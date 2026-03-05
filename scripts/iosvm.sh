@@ -27,6 +27,7 @@ popd
 # Build the escaped query file.
 jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
 jq -Rs . templates/ioserrorquery.txt > build/error-escaped.txt
+jq -Rs . templates/iosrequestquery.txt > build/request-escaped.txt
 
 # Returns both key1 and key2; pick either
 echo "Getting storage account key"

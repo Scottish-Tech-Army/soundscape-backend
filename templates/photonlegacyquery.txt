@@ -1,0 +1,10 @@
+AzureDiagnostics
+| where Category == "FrontDoorAccessLog"
+| where requestUri_s startswith "https://ph.sta-assets.org"
+| extend isSuccess = toint(httpStatusCode_s) == 200
+| extend isMiss = tostring(cacheStatus_s) == "MISS"
+| summarize
+    Errors = countif(not(isSuccess)),
+    TotalSuccesses = countif(isSuccess),
+    TotalOriginSuccesses = countif(isSuccess and isMiss)
+    by TimeGenerated = bin(TimeGenerated, 1h);
