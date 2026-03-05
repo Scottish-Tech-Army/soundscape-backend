@@ -1,0 +1,11 @@
+AzureDiagnostics
+| where Category == "FrontDoorAccessLog"
+| where requestUri_s startswith "https://prd2." or requestUri_s startswith "https://tst."
+| where requestUri_s contains "/tiles/"
+| extend isSuccess = toint(httpStatusCode_s) == 200
+| extend isMiss = tostring(cacheStatus_s) == "MISS"
+| summarize
+    Errors = countif(not(isSuccess)),
+    TotalSuccesses = countif(isSuccess),
+    TotalOriginSuccesses = countif(isSuccess and isMiss)
+    by TimeGenerated = bin(TimeGenerated, 1h);

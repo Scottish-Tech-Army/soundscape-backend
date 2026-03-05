@@ -400,6 +400,7 @@ module functionApps './functions.bicep' = {
 
 var vmKqlQuery = loadTextContent('../build/vmquery-escaped.txt')
 var errorKqlQuery = loadTextContent('../build/error-escaped.txt')
+var requestKqlQuery = loadTextContent('../build/request-escaped.txt')
 
 // Workbook for VMSS metrics
 module vmWorkbook './workbook.bicep' = {
@@ -423,6 +424,18 @@ module errorWorkbook './workbook.bicep' = {
   }
 }
 
+// Workbook for FrontDoor requests
+module requestWorkbook './workbook.bicep' = {
+  name: 'requestWorkbook'
+  params: {
+    kqlQuery: requestKqlQuery
+    title: 'Front door requests'
+    ySettings: '{"min": 0}' // Do not let the Y axis scale only to 1
+    logAnalyticsId: sharedLogAnalytics.id
+    workbookDisplayName: '${prefix}-request-counter'
+  }
+}
+
 // Dashboard with some plausible metrics
 resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
   location: resourceGroup().location
@@ -440,64 +453,76 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
               rowSpan: 4
             }
             metadata: {
-              inputs: []
-              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
-              settings: {
-                content: {
-                  options: {
-                    chart: {
-                      metrics: [
-                        {
-                          resourceMetadata: {
-                            id: appInsights.id
-                          }
-                          name: 'requests/count'
-                          aggregationType: 7
-                          namespace: 'microsoft.insights/components'
-                          metricVisualization: {
-                            displayName: 'Server requests'
-                            resourceDisplayName: tilesrvAppName
-                          }
-                        }
-                        {
-                          resourceMetadata: {
-                            id: appInsights.id
-                          }
-                          name: 'requests/failed'
-                          aggregationType: 7
-                          namespace: 'microsoft.insights/components'
-                          metricVisualization: {
-                            displayName: 'Failed requests'
-                            resourceDisplayName: tilesrvAppName
-                          }
-                        }
-                      ]
-                      title: 'Tile server requests and failures'
-                      titleKind: 1
-                      visualization: {
-                        chartType: 2
-                        legendVisualization: {
-                          isVisible: true
-                          position: 2
-                          hideHoverCard: false
-                          hideLabelNames: true
-                        }
-                        axisVisualization: {
-                          x: {
-                            isVisible: true
-                            axisType: 2
-                          }
-                          y: {
-                            isVisible: true
-                            axisType: 1
-                          }
-                        }
-                        disablePinning: false
+              inputs: [
+                {
+                  name: 'ComponentId'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'TimeContext'
+                  value: null
+                  isOptional: true
+                }
+                {
+                  name: 'ResourceIds'
+                  value: [
+                    'azure monitor'
+                  ]
+                  isOptional: true
+                }
+                {
+                  name: 'ConfigurationId'
+                  value: requestWorkbook.outputs.id
+                  isOptional: true
+                }
+                {
+                  name: 'Type'
+                  value: 'workbook'
+                  isOptional: true
+                }
+                {
+                  name: 'GalleryResourceType'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'PinName'
+                  value: requestWorkbook.outputs.title
+                  isOptional: true
+                }
+                {
+                  name: 'StepSettings'
+                  // Aggregation 0 is Sum, 1 is Min, 2 is Max, 3 is Avg, 4 is First, 5 is Last
+                  value: '{"version":"KqlItem/1.0","query":${requestKqlQuery},"size":0,"aggregation":0,"title":"Front Door requests","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${sharedLogAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated"}}'
+                  isOptional: true
+                }
+                {
+                  name: 'ParameterValues'
+                  value: {
+                    TimeRange: {
+                      type: 4
+                      value: {
+                        durationMs: 86400000
                       }
+                      isPending: false
+                      isWaiting: false
+                      isFailed: false
+                      isGlobal: false
+                      labelValue: 'Last 24 hours'
+                      displayName: 'Time range picker'
+                      formattedValue: 'Last 24 hours'
                     }
                   }
+                  isOptional: true
                 }
-              }
+                {
+                  name: 'Location'
+                  value: resourceGroup().location
+                  isOptional: true
+                }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
             }
           }
           {
@@ -1047,6 +1072,74 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 }
               ]
               type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
+            }
+          }
+          {
+            position: {
+              x: 0
+              y: 12
+              colSpan: 6
+              rowSpan: 4
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
+              settings: {
+                content: {
+                  options: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsights.id
+                          }
+                          name: 'requests/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Server requests'
+                            resourceDisplayName: tilesrvAppName
+                          }
+                        }
+                        {
+                          resourceMetadata: {
+                            id: appInsights.id
+                          }
+                          name: 'requests/failed'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Failed requests'
+                            resourceDisplayName: tilesrvAppName
+                          }
+                        }
+                      ]
+                      title: 'Tile server requests and failures'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideHoverCard: false
+                          hideLabelNames: true
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                        disablePinning: false
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         ]
