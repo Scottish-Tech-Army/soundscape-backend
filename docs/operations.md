@@ -6,7 +6,7 @@
 
 The iOS deployment process creates a dashboard, named after the resource group as `iosNN`. You can view this in the portal. It displays graphs of the following.
 
-- Tile server requests reaching the deployment, with counts of success and errors. (Some errors are expected, notably 404s for random requests against the domain.)
+- Front Door requests that are at least plausibly valid - i.e. are requesting tiles from one of the valid domains.
 
 - Tile server CPU and memory usage.
 
@@ -32,6 +32,8 @@ The iOS deployment process creates a dashboard, named after the resource group a
 
     Generally, all three values should be zero, except when an ingestion occurs when they should all increase to one then return to zero after a few (typically ten) hours.
 
+- Tile server requests reaching the actual tile server itself. (This includes metrics for health checks.)
+
 Most of this data can be viewed in the detailed monitoring queries below, with more information.
 
 ### Android dashboard
@@ -50,7 +52,7 @@ The photon deployment process creates a dashboard, named after the resource grou
 
 - Requests handled by Front Door (whether reaching this deployment instance or another one). "Total" is the number reaching Front Door, while "Origin" is the number forwarded on to the back end instance. *This includes both iOS and photon server requests.*
 
-- Count of requests for real photon data that were handled, how many hit the cache, and how many were errors.
+- Count of requests for real photon data that were handled on the main domains, how many hit the cache, and how many were errors.
 
 - Count of error requests, including both requests for photon data and invalid requests.
 
@@ -58,7 +60,7 @@ The photon deployment process creates a dashboard, named after the resource grou
 
 - VMSS memory and CPU usage.
 
-- Legacy URL traffic (to the old URL, when this is enabled).
+- Legacy URL traffic (to the old URL, from legacy devices).
 
 - Count of VM instances, as for iOS above. Note however that normally one VM will be active and healthy in normal operation, rather than zero.
 
