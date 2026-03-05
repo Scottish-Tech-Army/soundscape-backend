@@ -209,4 +209,19 @@ module frontDoorResponseTimes './query.bicep' = {
   }
 }
 
+module frontDoorLegacyAccessLogs './query.bicep' = {
+  name: 'frontDoorLegacyAccessLogs'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Photon Front Door Legacy Access Logs'
+    queryDescription: 'All Front Door access logs for photon search using Legacy URLs'
+    query: '''
+    AzureDiagnostics
+    | where Category == "FrontDoorAccessLog"
+    | where requestUri_s startswith "https://ph.sta-assets.org"
+    | project TimeGenerated, requestUri_s, userAgent_s, httpMethod_s, httpStatusCode_s, httpStatusDetails_s, clientCountry_s, errorInfo_s, timeTaken_s
+    | order by TimeGenerated desc
+    '''
+  }
+}
 

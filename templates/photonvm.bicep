@@ -721,6 +721,7 @@ module functionApps './functions.bicep' = {
 var vmKqlQuery = loadTextContent('../build/vmquery-escaped.txt')
 var errorKqlQuery = loadTextContent('../build/error-escaped.txt')
 var requestKqlQuery = loadTextContent('../build/request-escaped.txt')
+var legacyKqlQuery = loadTextContent('../build/legacy-escaped.txt')
 
 // Workbook for VMSS metrics
 module vmWorkbook './workbook.bicep' = {
@@ -755,6 +756,18 @@ module requestWorkbook './workbook.bicep' = {
     ySettings: '{"min": 0}' // Do not let the Y axis scale only to 1
     logAnalyticsId: sharedLogAnalytics.id
     workbookDisplayName: '${prefix}-request-counter'
+  }
+}
+
+// Workbook for FrontDoor requests to legacy domain
+module legacyWorkbook './workbook.bicep' = {
+  name: 'legacyWorkbook'
+  params: {
+    kqlQuery: legacyKqlQuery
+    title: 'Front door legacy URL requests'
+    ySettings: '{"min": 0}' // Do not let the Y axis scale only to 1
+    logAnalyticsId: sharedLogAnalytics.id
+    workbookDisplayName: '${prefix}-legacy-request-counter'
   }
 }
 
@@ -833,7 +846,6 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
               }
             }
           }
-
           {
             position: {
               x: 6
@@ -1126,18 +1138,76 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
               rowSpan: 4
             }
             metadata: {
-              inputs: []
-              type: 'Extension/HubsExtension/PartType/MarkdownPart'
-              settings: {
-                content: {
-                  title: 'Legacy URL traffic'
-                  content: '''
-When we support the legacy URL, we should ensure that we have a graph. We will add this in due course.
-'''
-                  markdownSource: 1
-                  markdownUri: ''
+              inputs: [
+                {
+                  name: 'ComponentId'
+                  value: 'azure monitor'
+                  isOptional: true
                 }
-              }
+                {
+                  name: 'TimeContext'
+                  value: null
+                  isOptional: true
+                }
+                {
+                  name: 'ResourceIds'
+                  value: [
+                    'azure monitor'
+                  ]
+                  isOptional: true
+                }
+                {
+                  name: 'ConfigurationId'
+                  value: requestWorkbook.outputs.id
+                  isOptional: true
+                }
+                {
+                  name: 'Type'
+                  value: 'workbook'
+                  isOptional: true
+                }
+                {
+                  name: 'GalleryResourceType'
+                  value: 'azure monitor'
+                  isOptional: true
+                }
+                {
+                  name: 'PinName'
+                  value: requestWorkbook.outputs.title
+                  isOptional: true
+                }
+                {
+                  name: 'StepSettings'
+                  // Aggregation 0 is Sum, 1 is Min, 2 is Max, 3 is Avg, 4 is First, 5 is Last
+                  value: '{"version":"KqlItem/1.0","query":${legacyKqlQuery},"size":0,"aggregation":0,"title":"Front Door legacy URL requests","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${sharedLogAnalytics.id}"],"visualization":"linechart","gridSettings":{"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}]},"sortBy":[{"itemKey":"TimeGenerated","sortOrder":1}],"chartSettings":{"xAxis":"TimeGenerated"}}'
+                  isOptional: true
+                }
+                {
+                  name: 'ParameterValues'
+                  value: {
+                    TimeRange: {
+                      type: 4
+                      value: {
+                        durationMs: 86400000
+                      }
+                      isPending: false
+                      isWaiting: false
+                      isFailed: false
+                      isGlobal: false
+                      labelValue: 'Last 24 hours'
+                      displayName: 'Time range picker'
+                      formattedValue: 'Last 24 hours'
+                    }
+                  }
+                  isOptional: true
+                }
+                {
+                  name: 'Location'
+                  value: resourceGroup().location
+                  isOptional: true
+                }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
             }
           }
           {

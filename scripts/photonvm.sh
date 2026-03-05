@@ -13,6 +13,7 @@ mkdir -p build
 jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
 jq -Rs . templates/photonerrorquery.txt > build/error-escaped.txt
 jq -Rs . templates/photonrequestquery.txt > build/request-escaped.txt
+jq -Rs . templates/photonlegacyquery.txt > build/legacy-escaped.txt
 
 # Build the tar file of scripts
 rm -rf build/tmp build/files.tgz
