@@ -8,7 +8,7 @@ The different resources are split into five resource groups.
 
 - There is a shared RG, `soundscape-shared`. This contains
 
-    - DNS zones for external traffic. *Note that the top level DNS zone is duplicated, and the live one is in the old tenant; that is something that will ultimately be tidied up.*
+    - DNS zones for external traffic.
 
     - An Azure Front Door instance which routes incoming traffic for iOS and for Photon Server to the correct endpoint.
 
