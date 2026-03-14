@@ -23,7 +23,7 @@ Before you can initially use any of the tooling to deploy any components, you ne
 
     - The contents of this repo checked out locally, to allow running of the various scripts.
 
-- Access to the Azure subscription which contains all of the resources in question. You should log into the relevant tenant before you run any other commands.
+- Access to the Azure subscription which contains all of the resources in question. You should log into the Tech For Good Alliance tenant before you run any other commands.
 
     ~~~bash
     az login --use-device-code
@@ -169,21 +169,13 @@ To deploy and configure them, follow the following process.
     . config/shared-cfg.sh
     ~~~
 
-- Ensure that the DNS zone and custom domain do not exist anywhere else (i.e. the old tenant).
-
 - Create the DNS zone and custom domain; here `TYPE` must be either `ios` or `photon`
 
     ~~~bash
     bash scripts/sharedzone.sh ZONE TYPE
     ~~~
 
-- Check the `NS` records in the parent zone. (Unless the parent zone has already moved to the new tenant.)
-
-    - Open the [portal](https://portal.azure.com).
-
-    - Go to the parent `soundscape.scottishtecharmy.org` DNS zone
-
-    - Add new NS record for the zone, named `ZONE`. The values should match the NS records for `@` in the zone `ZONE` you just created
+    Note that this will automatically add the correct `NS` records in the parent `soundscape.scottishtecharmy.org` DNS zone.
 
 - Validate the Front Door custom domain
 
