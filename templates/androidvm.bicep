@@ -459,7 +459,7 @@ module cfR2ObjectsWorkbook './workbook.bicep' = {
     title: 'R2 object counts'
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-cf-r2-objects'
-    ySettings: '{}'
+    ySettings: '{"min": 0}'
   }
 }
 
@@ -467,10 +467,10 @@ module cfR2SizesWorkbook './workbook.bicep' = {
   name: 'cfR2SizesWorkbook'
   params: {
     kqlQuery: cfR2SizesQuery
-    title: 'R2 payload sizes'
+    title: 'R2 payload sizes (GiB)'
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-cf-r2-sizes'
-    ySettings: '{}'
+    ySettings: '{"min": 0}'
   }
 }
 
@@ -481,7 +481,7 @@ module cfPmtilesRequestsWorkbook './workbook.bicep' = {
     title: 'pmtiles worker requests by outcome'
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-cf-pmtiles-requests'
-    ySettings: '{}'
+    ySettings: '{"min": 0}'
   }
 }
 
@@ -492,7 +492,7 @@ module cfExtractsRequestsWorkbook './workbook.bicep' = {
     title: 'extracts worker requests by outcome'
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-cf-extracts-requests'
-    ySettings: '{}'
+    ySettings: '{"min": 0}'
   }
 }
 
@@ -717,7 +717,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 { name: 'Type',            value: 'workbook',      isOptional: true }
                 { name: 'GalleryResourceType', value: 'azure monitor', isOptional: true }
                 { name: 'PinName',         value: cfR2ObjectsWorkbook.outputs.title, isOptional: true }
-                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfR2ObjectsQuery},"size":0,"aggregation":2,"title":"R2 object counts","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}', isOptional: true }
+                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfR2ObjectsQuery},"size":0,"aggregation":2,"title":"R2 object counts","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{"min":0}}}', isOptional: true }
                 { name: 'ParameterValues', value: { TimeRange: { type: 4, value: { durationMs: 86400000 }, isPending: false, isWaiting: false, isFailed: false, isGlobal: false, labelValue: 'Last 24 hours', displayName: 'Time range picker', formattedValue: 'Last 24 hours' } }, isOptional: true }
                 { name: 'Location',        value: resourceGroup().location, isOptional: true }
               ]
@@ -735,7 +735,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 { name: 'Type',            value: 'workbook',      isOptional: true }
                 { name: 'GalleryResourceType', value: 'azure monitor', isOptional: true }
                 { name: 'PinName',         value: cfR2SizesWorkbook.outputs.title, isOptional: true }
-                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfR2SizesQuery},"size":0,"aggregation":2,"title":"R2 payload sizes","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}', isOptional: true }
+                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfR2SizesQuery},"size":0,"aggregation":2,"title":"R2 payload sizes (GiB)","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{"min":0}}}', isOptional: true }
                 { name: 'ParameterValues', value: { TimeRange: { type: 4, value: { durationMs: 86400000 }, isPending: false, isWaiting: false, isFailed: false, isGlobal: false, labelValue: 'Last 24 hours', displayName: 'Time range picker', formattedValue: 'Last 24 hours' } }, isOptional: true }
                 { name: 'Location',        value: resourceGroup().location, isOptional: true }
               ]
@@ -754,7 +754,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 { name: 'Type',            value: 'workbook',      isOptional: true }
                 { name: 'GalleryResourceType', value: 'azure monitor', isOptional: true }
                 { name: 'PinName',         value: cfPmtilesRequestsWorkbook.outputs.title, isOptional: true }
-                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfPmtilesRequestsQuery},"size":0,"aggregation":2,"title":"pmtiles worker requests by outcome","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}', isOptional: true }
+                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfPmtilesRequestsQuery},"size":0,"aggregation":0,"title":"pmtiles worker requests by outcome","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{"min":0}}}', isOptional: true }
                 { name: 'ParameterValues', value: { TimeRange: { type: 4, value: { durationMs: 86400000 }, isPending: false, isWaiting: false, isFailed: false, isGlobal: false, labelValue: 'Last 24 hours', displayName: 'Time range picker', formattedValue: 'Last 24 hours' } }, isOptional: true }
                 { name: 'Location',        value: resourceGroup().location, isOptional: true }
               ]
@@ -772,7 +772,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                 { name: 'Type',            value: 'workbook',      isOptional: true }
                 { name: 'GalleryResourceType', value: 'azure monitor', isOptional: true }
                 { name: 'PinName',         value: cfExtractsRequestsWorkbook.outputs.title, isOptional: true }
-                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfExtractsRequestsQuery},"size":0,"aggregation":2,"title":"extracts worker requests by outcome","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}', isOptional: true }
+                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfExtractsRequestsQuery},"size":0,"aggregation":0,"title":"extracts worker requests by outcome","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{"min":0}}}', isOptional: true }
                 { name: 'ParameterValues', value: { TimeRange: { type: 4, value: { durationMs: 86400000 }, isPending: false, isWaiting: false, isFailed: false, isGlobal: false, labelValue: 'Last 24 hours', displayName: 'Time range picker', formattedValue: 'Last 24 hours' } }, isOptional: true }
                 { name: 'Location',        value: resourceGroup().location, isOptional: true }
               ]

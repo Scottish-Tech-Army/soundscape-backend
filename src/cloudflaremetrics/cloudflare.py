@@ -150,8 +150,14 @@ def fetch_r2_storage(token, account_id, bucket, start, end):
 
 
 def time_window(hours):
-    """Return (start_str, end_str) covering the last N hours."""
-    now   = datetime.now(timezone.utc)
-    start = now - timedelta(hours=hours)
-    fmt   = "%Y-%m-%dT%H:%M:%SZ"
-    return start.strftime(fmt), now.strftime(fmt)
+    """Return (start_str, end_str) covering the last N complete clock hours.
+
+    The window is aligned to the clock hour (e.g. 14:00–15:00) rather than
+    ending at the current second, so successive hourly runs produce
+    non-overlapping, gap-free windows regardless of cold-start latency.
+    """
+    now = datetime.now(timezone.utc)
+    end = now.replace(minute=0, second=0, microsecond=0)
+    start = end - timedelta(hours=hours)
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    return start.strftime(fmt), end.strftime(fmt)
