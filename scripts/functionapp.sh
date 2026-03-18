@@ -18,4 +18,11 @@ pushd src/vmcount
 func azure functionapp publish ${METRICAPPNAME} --python
 popd
 
+if [ "${DEPLOY_CFMETRICS:-false}" = "true" ]; then
+  echo "Build and push Cloudflare metrics function"
+  pushd src/cloudflaremetrics
+  func azure functionapp publish ${CFMETRICSAPPNAME} --python
+  popd
+fi
+
 echo "SUCCESS"

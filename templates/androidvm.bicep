@@ -8,6 +8,9 @@ param triggerAppName string
 @description('Metric function app name')
 param metricAppName string
 
+@description('Cloudflare metrics function app name')
+param cfMetricsAppName string
+
 @description('Storage account name')
 param storageName string
 
@@ -419,11 +422,15 @@ module functionApps './functions.bicep' = {
     prefix: prefix
     triggerAppName: triggerAppName
     metricAppName: metricAppName
+    cfMetricsAppName: cfMetricsAppName
     storageName: storageName
     vmssName: vmssName
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     triggerSchedule: triggerSchedule
     triggerType: 'SCALE'
+    pmtilesBucket: pmtilesBucket
+    extractsBucket: extractsBucket
+    keyVaultName: keyVaultName
   }
 }
 

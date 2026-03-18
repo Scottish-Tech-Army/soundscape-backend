@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 """Fetch Cloudflare Worker and R2 bucket metrics for pmtiles and extracts.
 
-Workers run on workers.dev (no custom zone), so all queries are account-scoped.
-
-Worker metrics (workersInvocationsAdaptive):
-  request counts by execution status, response bytes, wall time, CPU time.
-
-R2 bucket metrics (r2StorageAdaptiveGroups):
-  object count and payload size. Bucket names match worker script names.
+Stage 1 validation tool — uses the same query logic as the function app.
 
 Note: HTTP response status codes (e.g. 503 "data not available yet") are NOT
 available via the Cloudflare analytics API for workers.dev workers on this
@@ -30,94 +24,17 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timedelta, timezone
 
 import requests
 
-GRAPHQL_URL = "https://api.cloudflare.com/client/v4/graphql"
-
-# Grouped by execution status so we see the breakdown of outcomes:
-#   success, scriptThrewException, clientDisconnected, etc.
-WORKER_ANALYTICS_QUERY = """
-query WorkerMetrics(
-    $accountId: String!,
-    $scriptName: String!,
-    $start: Time!,
-    $end: Time!
-) {
-  viewer {
-    accounts(filter: {accountTag: $accountId}) {
-      workersInvocationsAdaptive(
-        limit: 10000,
-        filter: {
-          scriptName: $scriptName,
-          datetime_geq: $start,
-          datetime_leq: $end
-        },
-        orderBy: [sum_requests_DESC]
-      ) {
-        sum {
-          requests
-          errors
-          responseBodySize
-          wallTime
-          cpuTimeUs
-        }
-        dimensions {
-          status
-        }
-      }
-    }
-  }
-}
-"""
-
-# Storage is a gauge so we use max rather than sum. limit: 1 with
-# orderBy datetime_DESC gives us the most recent snapshot in the window.
-R2_STORAGE_QUERY = """
-query R2Storage(
-    $accountId: String!,
-    $bucketName: String!,
-    $start: Time!,
-    $end: Time!
-) {
-  viewer {
-    accounts(filter: {accountTag: $accountId}) {
-      r2StorageAdaptiveGroups(
-        limit: 1,
-        filter: {
-          bucketName: $bucketName,
-          datetime_geq: $start,
-          datetime_leq: $end
-        },
-        orderBy: [datetimeHour_DESC]
-      ) {
-        max {
-          objectCount
-          payloadSize
-        }
-        dimensions {
-          datetimeHour
-        }
-      }
-    }
-  }
-}
-"""
-
-
-def run_query(token, query, variables):
-    response = requests.post(
-        GRAPHQL_URL,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
-        json={"query": query, "variables": variables},
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.json()
+from cloudflare import (
+    fetch_r2_storage,
+    fetch_worker_metrics,
+    run_query,
+    time_window,
+    WORKER_ANALYTICS_QUERY,
+    R2_STORAGE_QUERY,
+)
 
 
 def fmt_bytes(b):
@@ -131,66 +48,10 @@ def fmt_bytes(b):
 
 
 def fmt_ms(us):
-    """Format microseconds as milliseconds."""
     return f"{us / 1000:.1f} ms"
 
 
-def print_worker_analytics(result, raw):
-    if raw:
-        print(json.dumps(result, indent=2))
-        return
-
-    if result.get("errors"):
-        print(f"  GraphQL errors: {result['errors']}")
-        return
-
-    groups = result["data"]["viewer"]["accounts"][0]["workersInvocationsAdaptive"]
-    if not groups:
-        print("  No data for this period.")
-        return
-
-    total_requests = sum(g["sum"]["requests"] for g in groups)
-    total_errors   = sum(g["sum"]["errors"] for g in groups)
-    total_bytes    = sum(g["sum"]["responseBodySize"] for g in groups)
-    total_wall     = sum(g["sum"]["wallTime"] for g in groups)
-    total_cpu      = sum(g["sum"]["cpuTimeUs"] for g in groups)
-
-    print(f"  Requests:          {total_requests}")
-    print(f"  Script errors:     {total_errors}  (uncaught exceptions)")
-    print(f"  Response bytes:    {fmt_bytes(total_bytes)}")
-    print(f"  Total wall time:   {fmt_ms(total_wall)}")
-    print(f"  Total CPU time:    {fmt_ms(total_cpu)}")
-    if total_requests:
-        print(f"  Avg wall time:     {fmt_ms(total_wall / total_requests)} / request")
-
-    print(f"\n  Execution status:")
-    for g in groups:
-        status = g["dimensions"]["status"]
-        reqs   = g["sum"]["requests"]
-        print(f"    {status or '(none)':<30} {reqs:>10} requests")
-
-
-def print_r2_storage(result, raw):
-    if raw:
-        print(json.dumps(result, indent=2))
-        return
-
-    if result.get("errors"):
-        print(f"  GraphQL errors: {result['errors']}")
-        return
-
-    groups = result["data"]["viewer"]["accounts"][0]["r2StorageAdaptiveGroups"]
-    if not groups:
-        print("  No data for this period.")
-        return
-
-    obj_count    = groups[0]["max"]["objectCount"]
-    payload_size = groups[0]["max"]["payloadSize"]
-    print(f"  Objects:           {obj_count:,}")
-    print(f"  Payload size:      {fmt_bytes(payload_size)}")
-
-
-def fetch_for_script(token, account_id, script, start, end, raw):
+def fetch_and_print(token, account_id, script, start, end, raw):
     print(f"\n{'=' * 56}")
     print(f"  Worker / bucket: {script}")
     print(f"  Period: {start}  →  {end}")
@@ -198,27 +59,44 @@ def fetch_for_script(token, account_id, script, start, end, raw):
 
     print("\nWorker metrics:")
     try:
-        result = run_query(token, WORKER_ANALYTICS_QUERY, {
-            "accountId": account_id,
-            "scriptName": script,
-            "start": start,
-            "end": end,
-        })
-        print_worker_analytics(result, raw)
-    except requests.HTTPError as e:
-        print(f"  HTTP error: {e}")
+        if raw:
+            result = run_query(token, WORKER_ANALYTICS_QUERY, {
+                "accountId": account_id, "scriptName": script,
+                "start": start, "end": end,
+            })
+            print(json.dumps(result, indent=2))
+        else:
+            m = fetch_worker_metrics(token, account_id, script, start, end)
+            print(f"  Requests:          {m['total_requests']}")
+            print(f"  Script errors:     {m['total_errors']}  (uncaught exceptions)")
+            print(f"  Response bytes:    {fmt_bytes(m['total_bytes'])}")
+            print(f"  Total wall time:   {fmt_ms(m['total_wall_us'])}")
+            print(f"  Total CPU time:    {fmt_ms(m['total_cpu_us'])}")
+            if m['total_requests']:
+                print(f"  Avg wall time:     {fmt_ms(m['total_wall_us'] / m['total_requests'])} / request")
+            print(f"\n  Execution status:")
+            for status, count in sorted(m['requests_by_status'].items()):
+                print(f"    {status:<30} {count:>10} requests")
+    except (RuntimeError, requests.HTTPError) as e:
+        print(f"  Error: {e}")
 
     print("\nR2 bucket storage:")
     try:
-        result = run_query(token, R2_STORAGE_QUERY, {
-            "accountId": account_id,
-            "bucketName": script,
-            "start": start,
-            "end": end,
-        })
-        print_r2_storage(result, raw)
-    except requests.HTTPError as e:
-        print(f"  HTTP error: {e}")
+        if raw:
+            result = run_query(token, R2_STORAGE_QUERY, {
+                "accountId": account_id, "bucketName": script,
+                "start": start, "end": end,
+            })
+            print(json.dumps(result, indent=2))
+        else:
+            r2 = fetch_r2_storage(token, account_id, script, start, end)
+            if r2["object_count"] == 0 and r2["payload_size"] == 0:
+                print("  No data for this period.")
+            else:
+                print(f"  Objects:           {r2['object_count']:,}")
+                print(f"  Payload size:      {fmt_bytes(r2['payload_size'])}")
+    except (RuntimeError, requests.HTTPError) as e:
+        print(f"  Error: {e}")
 
 
 def main():
@@ -253,17 +131,9 @@ def main():
         print(f"Error: missing environment variables: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)
 
-    now   = datetime.now(timezone.utc)
-    start = now - timedelta(hours=args.hours)
-    start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
-    end_str   = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-
+    start, end = time_window(args.hours)
     for script in [pmtiles_script, extracts_script]:
-        try:
-            fetch_for_script(token, account_id, script, start_str, end_str, args.raw)
-        except KeyError as e:
-            print(f"\nUnexpected response structure for {script}: missing key {e}", file=sys.stderr)
-            print("Re-run with --raw to inspect the full response.", file=sys.stderr)
+        fetch_and_print(token, account_id, script, start, end, args.raw)
 
     print()
 
