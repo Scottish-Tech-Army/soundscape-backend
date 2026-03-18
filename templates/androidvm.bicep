@@ -579,8 +579,8 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
           }
           {
             position: {
-              x: 0
-              y: 4
+              x: 12
+              y: 0
               colSpan: 6
               rowSpan: 4
             }
