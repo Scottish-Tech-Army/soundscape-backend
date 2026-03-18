@@ -293,6 +293,7 @@ resource cfMetricsApp 'Microsoft.Web/sites@2024-11-01' = if (cfMetricsAppName !=
   }
   properties: {
     serverFarmId: cfMetricsPlan.id
+    keyVaultReferenceIdentity: uami.id  // Which UAMI to use when resolving KV references in app settings
     functionAppConfig: {
       runtime: {
         name: 'python'
