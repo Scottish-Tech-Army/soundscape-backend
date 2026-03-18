@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Fetch Cloudflare Worker metrics for the pmtiles and extracts workers.
+"""Fetch Cloudflare Worker and R2 bucket metrics for pmtiles and extracts.
 
 Workers run on workers.dev (no custom zone), so all queries are account-scoped.
-Uses workersInvocationsAdaptive which provides request counts, response bytes,
-wall time, CPU time, and execution status (success / scriptThrewException /
-clientDisconnected).
+
+Worker metrics (workersInvocationsAdaptive):
+  request counts by execution status, response bytes, wall time, CPU time.
+
+R2 bucket metrics (r2StorageAdaptiveGroups):
+  object count and payload size. Bucket names match worker script names.
 
 Note: HTTP response status codes (e.g. 503 "data not available yet") are NOT
 available via the Cloudflare analytics API for workers.dev workers on this
@@ -14,13 +17,13 @@ worker via the Workers Analytics Engine — deferred to a later phase.
 Required environment variables:
     CF_API_TOKEN        Cloudflare API token (needs Analytics:Read permission)
     CF_ACCOUNT_ID       Cloudflare account tag (hex ID)
-    CF_PMTILES_SCRIPT   Name of the pmtiles (tiles) worker script
-    CF_EXTRACTS_SCRIPT  Name of the extracts worker script
+    CF_PMTILES_SCRIPT   Name of the pmtiles worker script (also the bucket name)
+    CF_EXTRACTS_SCRIPT  Name of the extracts worker script (also the bucket name)
 
 Usage:
     CF_API_TOKEN=xxx CF_ACCOUNT_ID=yyy ... python getmetrics.py
     python getmetrics.py --hours 24
-    python getmetrics.py --raw     # dump raw GraphQL response for inspection
+    python getmetrics.py --raw     # dump raw GraphQL responses for inspection
 """
 
 import argparse
@@ -69,6 +72,39 @@ query WorkerMetrics(
 }
 """
 
+# Storage is a gauge so we use max rather than sum. limit: 1 with
+# orderBy datetime_DESC gives us the most recent snapshot in the window.
+R2_STORAGE_QUERY = """
+query R2Storage(
+    $accountId: String!,
+    $bucketName: String!,
+    $start: Time!,
+    $end: Time!
+) {
+  viewer {
+    accounts(filter: {accountTag: $accountId}) {
+      r2StorageAdaptiveGroups(
+        limit: 1,
+        filter: {
+          bucketName: $bucketName,
+          datetime_geq: $start,
+          datetime_leq: $end
+        },
+        orderBy: [datetimeHour_DESC]
+      ) {
+        max {
+          objectCount
+          payloadSize
+        }
+        dimensions {
+          datetimeHour
+        }
+      }
+    }
+  }
+}
+"""
+
 
 def run_query(token, query, variables):
     response = requests.post(
@@ -89,7 +125,9 @@ def fmt_bytes(b):
         return f"{b} B"
     if b < 1024 ** 2:
         return f"{b / 1024:.1f} KB"
-    return f"{b / 1024 ** 2:.1f} MB"
+    if b < 1024 ** 3:
+        return f"{b / 1024 ** 2:.1f} MB"
+    return f"{b / 1024 ** 3:.1f} GB"
 
 
 def fmt_ms(us):
@@ -132,12 +170,33 @@ def print_worker_analytics(result, raw):
         print(f"    {status or '(none)':<30} {reqs:>10} requests")
 
 
+def print_r2_storage(result, raw):
+    if raw:
+        print(json.dumps(result, indent=2))
+        return
+
+    if result.get("errors"):
+        print(f"  GraphQL errors: {result['errors']}")
+        return
+
+    groups = result["data"]["viewer"]["accounts"][0]["r2StorageAdaptiveGroups"]
+    if not groups:
+        print("  No data for this period.")
+        return
+
+    obj_count    = groups[0]["max"]["objectCount"]
+    payload_size = groups[0]["max"]["payloadSize"]
+    print(f"  Objects:           {obj_count:,}")
+    print(f"  Payload size:      {fmt_bytes(payload_size)}")
+
+
 def fetch_for_script(token, account_id, script, start, end, raw):
     print(f"\n{'=' * 56}")
-    print(f"  Worker: {script}")
+    print(f"  Worker / bucket: {script}")
     print(f"  Period: {start}  →  {end}")
     print(f"{'=' * 56}")
 
+    print("\nWorker metrics:")
     try:
         result = run_query(token, WORKER_ANALYTICS_QUERY, {
             "accountId": account_id,
@@ -149,10 +208,22 @@ def fetch_for_script(token, account_id, script, start, end, raw):
     except requests.HTTPError as e:
         print(f"  HTTP error: {e}")
 
+    print("\nR2 bucket storage:")
+    try:
+        result = run_query(token, R2_STORAGE_QUERY, {
+            "accountId": account_id,
+            "bucketName": script,
+            "start": start,
+            "end": end,
+        })
+        print_r2_storage(result, raw)
+    except requests.HTTPError as e:
+        print(f"  HTTP error: {e}")
+
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Fetch Cloudflare Worker metrics for pmtiles and extracts"
+        description="Fetch Cloudflare Worker and R2 bucket metrics for pmtiles and extracts"
     )
     parser.add_argument(
         "--hours", type=int, default=1,
@@ -160,7 +231,7 @@ def main():
     )
     parser.add_argument(
         "--raw", action="store_true",
-        help="Print raw GraphQL response for inspection"
+        help="Print raw GraphQL responses for inspection"
     )
     args = parser.parse_args()
 
