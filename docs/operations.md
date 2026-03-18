@@ -184,6 +184,26 @@ The function app (that triggers VM creation for ingestion) generate logs when th
 
 - `Android function app logs`: all low level logs from Azure Functions.
 
+#### Cloudflare metrics
+
+The cfmetrics function app runs hourly and writes worker and R2 bucket metrics to Application Insights. All entries use the `CLOUDFLARE:` prefix. The following query is available.
+
+- `Android Cloudflare worker and R2 metrics`: hourly summary of Cloudflare metrics, one row per hour/script/metric combination. Metrics include:
+
+    - `worker requests`: total worker invocations in the hour
+    - `worker requests success`: invocations that completed successfully
+    - `worker requests scriptThrewException`: invocations where the worker threw an uncaught exception
+    - `worker requests clientDisconnected`: invocations where the client disconnected before the response was sent
+    - `worker responseBodySize`: total response body bytes sent to clients
+    - `worker wallTimeMs`: total wall-clock time in milliseconds across all invocations
+    - `worker cpuTimeMs`: total CPU time in milliseconds across all invocations
+    - `r2 objectCount`: current number of objects in the R2 bucket
+    - `r2 payloadSizeBytes`: current total payload size of the R2 bucket in bytes
+
+    All metrics are reported for both the pmtiles and extracts scripts.
+
+Note: HTTP response status codes (e.g. 503 "data not available yet" from the extracts worker) are not available via the Cloudflare analytics API at the account level. Distinguishing 503s from 200s requires instrumenting the workers with the Workers Analytics Engine — this is deferred to a future phase.
+
 ### Photon logs
 
 Photon log queries are as follows.

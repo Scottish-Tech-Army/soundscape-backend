@@ -166,6 +166,18 @@ The data is uploaded and the workers are configured from tooling running in Azur
 
 - Finally, after a pause, it tidies up old data, removing the previous versions from R2 and from Azure storage.
 
+## Azure function apps
+
+Three function apps run in the Android resource group.
+
+- The **trigger function app** (`TRIGGERAPPNAME`) runs on a timer (the 6th of each month at 12:00 GMT) and scales the VMSS up to 1 to start a data ingestion run. It is deployed from `src/trigger/`.
+
+- The **vmcount function app** (`METRICAPPNAME`) runs every five minutes and writes the current VMSS capacity and instance counts to Application Insights using the `METRIC:` prefix. It is deployed from `src/vmcount/`.
+
+- The **cfmetrics function app** (`CFMETRICSAPPNAME`) runs hourly and calls the Cloudflare GraphQL API to collect worker invocation metrics (request counts by outcome, response body size, wall and CPU time) and R2 bucket storage metrics (object count, payload size) for both the pmtiles and extracts workers. It writes these to Application Insights using the `CLOUDFLARE:` prefix. It is deployed from `src/cloudflaremetrics/`. Cloudflare credentials (`cloudflare-api-token` and `cloudflare-account-id`) are read from the Key Vault at runtime via Key Vault references in the function app settings — they are never stored in config files or deployment parameters.
+
+All three function apps use the FlexConsumption plan (Python 3.12) and authenticate to Azure resources using the shared User-Assigned Managed Identity (UAMI).
+
 # Photon server architecture
 
 The photon server architecture consists of the following.

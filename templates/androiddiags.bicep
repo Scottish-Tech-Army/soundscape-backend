@@ -65,3 +65,22 @@ module vmCount './query.bicep' = {
     '''
   }
 }
+
+module cloudflareMetrics './query.bicep' = {
+  name: 'cloudflareMetrics'
+  params: {
+    queryPackName: queryPackName
+    displayName: 'Android Cloudflare worker and R2 metrics'
+    queryDescription: 'Hourly Cloudflare worker request counts, data transferred, processing times, and R2 bucket sizes'
+    query: '''
+    AppTraces
+    | where Message startswith "CLOUDFLARE:"
+    | extend Script    = extract(@"CLOUDFLARE: (\S+) ", 1, Message)
+    | extend MetricName = extract(@"CLOUDFLARE: \S+ ([\w ]+): \d+", 1, Message)
+    | extend Value     = tolong(extract(@"CLOUDFLARE: \S+ [\w ]+: (\d+)", 1, Message))
+    | extend Hour      = bin(TimeGenerated, 1h)
+    | summarize Value  = max(Value) by Hour, Script, MetricName
+    | order by Hour desc, Script asc, MetricName asc
+    '''
+  }
+}

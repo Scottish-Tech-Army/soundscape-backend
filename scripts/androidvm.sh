@@ -52,6 +52,7 @@ az deployment group create \
                  area=${AREA} \
                  triggerAppName=${TRIGGERAPPNAME} \
                  metricAppName=${METRICAPPNAME} \
+                 cfMetricsAppName=${CFMETRICSAPPNAME} \
                  pmtilesBucket=${PMTILES_BUCKET} \
                  extractsBucket=${EXTRACTS_BUCKET} \
                  useSpot=${USE_SPOT} \
