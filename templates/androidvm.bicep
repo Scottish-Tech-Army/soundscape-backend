@@ -434,7 +434,11 @@ module functionApps './functions.bicep' = {
   }
 }
 
-var vmKqlQuery = loadTextContent('../build/vmquery-escaped.txt')
+var vmKqlQuery               = loadTextContent('../build/vmquery-escaped.txt')
+var cfR2ObjectsQuery         = loadTextContent('../build/cf-r2-objects-query-escaped.txt')
+var cfR2SizesQuery           = loadTextContent('../build/cf-r2-sizes-query-escaped.txt')
+var cfPmtilesRequestsQuery   = loadTextContent('../build/cf-pmtiles-requests-query-escaped.txt')
+var cfExtractsRequestsQuery  = loadTextContent('../build/cf-extracts-requests-query-escaped.txt')
 
 // Workbook for VMSS metrics
 module vmWorkbook './workbook.bicep' = {
@@ -444,6 +448,51 @@ module vmWorkbook './workbook.bicep' = {
     title: 'VM Instance Counts'
     logAnalyticsId: logAnalytics.id
     workbookDisplayName: '${prefix}-vmss-counter'
+  }
+}
+
+// Workbooks for Cloudflare metrics
+module cfR2ObjectsWorkbook './workbook.bicep' = {
+  name: 'cfR2ObjectsWorkbook'
+  params: {
+    kqlQuery: cfR2ObjectsQuery
+    title: 'R2 object counts'
+    logAnalyticsId: logAnalytics.id
+    workbookDisplayName: '${prefix}-cf-r2-objects'
+    ySettings: '{}'
+  }
+}
+
+module cfR2SizesWorkbook './workbook.bicep' = {
+  name: 'cfR2SizesWorkbook'
+  params: {
+    kqlQuery: cfR2SizesQuery
+    title: 'R2 payload sizes'
+    logAnalyticsId: logAnalytics.id
+    workbookDisplayName: '${prefix}-cf-r2-sizes'
+    ySettings: '{}'
+  }
+}
+
+module cfPmtilesRequestsWorkbook './workbook.bicep' = {
+  name: 'cfPmtilesRequestsWorkbook'
+  params: {
+    kqlQuery: cfPmtilesRequestsQuery
+    title: 'pmtiles worker requests by outcome'
+    logAnalyticsId: logAnalytics.id
+    workbookDisplayName: '${prefix}-cf-pmtiles-requests'
+    ySettings: '{}'
+  }
+}
+
+module cfExtractsRequestsWorkbook './workbook.bicep' = {
+  name: 'cfExtractsRequestsWorkbook'
+  params: {
+    kqlQuery: cfExtractsRequestsQuery
+    title: 'extracts worker requests by outcome'
+    logAnalyticsId: logAnalytics.id
+    workbookDisplayName: '${prefix}-cf-extracts-requests'
+    ySettings: '{}'
   }
 }
 
@@ -652,6 +701,80 @@ resource dashboard 'Microsoft.Portal/dashboards@2022-12-01-preview' = {
                   value: resourceGroup().location
                   isOptional: true
                 }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
+            }
+          }
+          // Row 2: Cloudflare R2 storage metrics
+          {
+            position: { x: 0, y: 4, colSpan: 6, rowSpan: 4 }
+            metadata: {
+              inputs: [
+                { name: 'ComponentId',     value: 'azure monitor', isOptional: true }
+                { name: 'TimeContext',      value: null,            isOptional: true }
+                { name: 'ResourceIds',      value: [ 'azure monitor' ], isOptional: true }
+                { name: 'ConfigurationId', value: cfR2ObjectsWorkbook.outputs.id,    isOptional: true }
+                { name: 'Type',            value: 'workbook',      isOptional: true }
+                { name: 'GalleryResourceType', value: 'azure monitor', isOptional: true }
+                { name: 'PinName',         value: cfR2ObjectsWorkbook.outputs.title, isOptional: true }
+                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfR2ObjectsQuery},"size":0,"aggregation":2,"title":"R2 object counts","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}', isOptional: true }
+                { name: 'ParameterValues', value: { TimeRange: { type: 4, value: { durationMs: 86400000 }, isPending: false, isWaiting: false, isFailed: false, isGlobal: false, labelValue: 'Last 24 hours', displayName: 'Time range picker', formattedValue: 'Last 24 hours' } }, isOptional: true }
+                { name: 'Location',        value: resourceGroup().location, isOptional: true }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
+            }
+          }
+          {
+            position: { x: 6, y: 4, colSpan: 6, rowSpan: 4 }
+            metadata: {
+              inputs: [
+                { name: 'ComponentId',     value: 'azure monitor', isOptional: true }
+                { name: 'TimeContext',      value: null,            isOptional: true }
+                { name: 'ResourceIds',      value: [ 'azure monitor' ], isOptional: true }
+                { name: 'ConfigurationId', value: cfR2SizesWorkbook.outputs.id,    isOptional: true }
+                { name: 'Type',            value: 'workbook',      isOptional: true }
+                { name: 'GalleryResourceType', value: 'azure monitor', isOptional: true }
+                { name: 'PinName',         value: cfR2SizesWorkbook.outputs.title, isOptional: true }
+                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfR2SizesQuery},"size":0,"aggregation":2,"title":"R2 payload sizes","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}', isOptional: true }
+                { name: 'ParameterValues', value: { TimeRange: { type: 4, value: { durationMs: 86400000 }, isPending: false, isWaiting: false, isFailed: false, isGlobal: false, labelValue: 'Last 24 hours', displayName: 'Time range picker', formattedValue: 'Last 24 hours' } }, isOptional: true }
+                { name: 'Location',        value: resourceGroup().location, isOptional: true }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
+            }
+          }
+          // Row 3: Cloudflare worker request counts by outcome
+          {
+            position: { x: 0, y: 8, colSpan: 6, rowSpan: 4 }
+            metadata: {
+              inputs: [
+                { name: 'ComponentId',     value: 'azure monitor', isOptional: true }
+                { name: 'TimeContext',      value: null,            isOptional: true }
+                { name: 'ResourceIds',      value: [ 'azure monitor' ], isOptional: true }
+                { name: 'ConfigurationId', value: cfPmtilesRequestsWorkbook.outputs.id,    isOptional: true }
+                { name: 'Type',            value: 'workbook',      isOptional: true }
+                { name: 'GalleryResourceType', value: 'azure monitor', isOptional: true }
+                { name: 'PinName',         value: cfPmtilesRequestsWorkbook.outputs.title, isOptional: true }
+                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfPmtilesRequestsQuery},"size":0,"aggregation":2,"title":"pmtiles worker requests by outcome","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}', isOptional: true }
+                { name: 'ParameterValues', value: { TimeRange: { type: 4, value: { durationMs: 86400000 }, isPending: false, isWaiting: false, isFailed: false, isGlobal: false, labelValue: 'Last 24 hours', displayName: 'Time range picker', formattedValue: 'Last 24 hours' } }, isOptional: true }
+                { name: 'Location',        value: resourceGroup().location, isOptional: true }
+              ]
+              type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
+            }
+          }
+          {
+            position: { x: 6, y: 8, colSpan: 6, rowSpan: 4 }
+            metadata: {
+              inputs: [
+                { name: 'ComponentId',     value: 'azure monitor', isOptional: true }
+                { name: 'TimeContext',      value: null,            isOptional: true }
+                { name: 'ResourceIds',      value: [ 'azure monitor' ], isOptional: true }
+                { name: 'ConfigurationId', value: cfExtractsRequestsWorkbook.outputs.id,    isOptional: true }
+                { name: 'Type',            value: 'workbook',      isOptional: true }
+                { name: 'GalleryResourceType', value: 'azure monitor', isOptional: true }
+                { name: 'PinName',         value: cfExtractsRequestsWorkbook.outputs.title, isOptional: true }
+                { name: 'StepSettings',    value: '{"version":"KqlItem/1.0","query":${cfExtractsRequestsQuery},"size":0,"aggregation":2,"title":"extracts worker requests by outcome","timeContextFromParameter":"TimeRange","queryType":0,"resourceType":"microsoft.operationalinsights/workspaces","crossComponentResources":["${logAnalytics.id}"],"visualization":"linechart","chartSettings":{"xAxis":"TimeGenerated","ySettings":{}}}', isOptional: true }
+                { name: 'ParameterValues', value: { TimeRange: { type: 4, value: { durationMs: 86400000 }, isPending: false, isWaiting: false, isFailed: false, isGlobal: false, labelValue: 'Last 24 hours', displayName: 'Time range picker', formattedValue: 'Last 24 hours' } }, isOptional: true }
+                { name: 'Location',        value: resourceGroup().location, isOptional: true }
               ]
               type: 'Extension/AppInsightsExtension/PartType/PinnedNotebookQueryPart'
             }
