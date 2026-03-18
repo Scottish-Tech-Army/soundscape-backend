@@ -1,0 +1,7 @@
+AppTraces
+| where Message matches regex @"^CLOUDFLARE: \S+ r2 payloadSizeBytes: \d+"
+| extend Script = extract(@"^CLOUDFLARE: (\S+) ", 1, Message)
+| extend Bytes  = tolong(extract(@"r2 payloadSizeBytes: (\d+)", 1, Message))
+| summarize Bytes = max(Bytes) by bin(TimeGenerated, 1h), Script
+| evaluate pivot(Script, max(Bytes), TimeGenerated)
+| sort by TimeGenerated asc

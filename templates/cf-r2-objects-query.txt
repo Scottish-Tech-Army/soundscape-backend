@@ -1,0 +1,7 @@
+AppTraces
+| where Message matches regex @"^CLOUDFLARE: \S+ r2 objectCount: \d+"
+| extend Script = extract(@"^CLOUDFLARE: (\S+) ", 1, Message)
+| extend Count  = tolong(extract(@"r2 objectCount: (\d+)", 1, Message))
+| summarize Count = max(Count) by bin(TimeGenerated, 1h), Script
+| evaluate pivot(Script, max(Count), TimeGenerated)
+| sort by TimeGenerated asc

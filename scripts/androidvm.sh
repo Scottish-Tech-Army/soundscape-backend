@@ -13,9 +13,13 @@ if [ -z "${USE_SPOT:-}" ]; then
 fi
 USE_SPOT=${USE_SPOT,,}  # Lower case as Azure CLI is case sensitive about booleans
 
-# Build the escaped query file.
+# Build escaped query files for workbook charts.
 mkdir -p build
-jq -Rs . templates/vmquery.txt > build/vmquery-escaped.txt
+jq -Rs . templates/vmquery.txt                  > build/vmquery-escaped.txt
+jq -Rs . templates/cf-r2-objects-query.txt      > build/cf-r2-objects-query-escaped.txt
+jq -Rs . templates/cf-r2-sizes-query.txt        > build/cf-r2-sizes-query-escaped.txt
+jq -Rs . templates/cf-pmtiles-requests-query.txt  > build/cf-pmtiles-requests-query-escaped.txt
+jq -Rs . templates/cf-extracts-requests-query.txt > build/cf-extracts-requests-query-escaped.txt
 
 # Build the tar file of scripts
 rm -rf build/tmp build/files.tgz
