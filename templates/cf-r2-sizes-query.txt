@@ -1,6 +1,7 @@
 AppTraces
-| where Message matches regex @"^CLOUDFLARE: \S+ r2 payloadSizeBytes: \d+"
-| extend Script = extract(@"^CLOUDFLARE: (\S+) ", 1, Message)
+| where OperationName == "cfmetrics"
+| where Message matches regex @"^METRIC: \S+ r2 payloadSizeBytes: \d+"
+| extend Script = extract(@"^METRIC: (\S+) ", 1, Message)
 | extend GiB    = toreal(extract(@"r2 payloadSizeBytes: (\d+)", 1, Message)) / 1073741824.0
 | summarize GiB = max(GiB) by bin(TimeGenerated, 1h), Script
 | evaluate pivot(Script, max(GiB), TimeGenerated)
