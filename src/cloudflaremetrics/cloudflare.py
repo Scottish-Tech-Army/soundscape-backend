@@ -4,6 +4,7 @@ Shared between the CLI tool (getmetrics.py) and the Azure function app
 (function_app.py).
 """
 
+import logging
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -142,7 +143,11 @@ def fetch_r2_storage(token, account_id, bucket, start, end):
     })
     groups = result["data"]["viewer"]["accounts"][0]["r2StorageAdaptiveGroups"]
     if not groups:
-        return {"object_count": 0, "payload_size": 0}
+        raise RuntimeError(
+            f"R2 storage query for bucket '{bucket}' returned no data "
+            f"for window {start}–{end} (Cloudflare analytics lag?)"
+        )
+    logging.debug("R2 storage for '%s': snapshot at %s", bucket, groups[0]["dimensions"]["datetimeHour"])
     return {
         "object_count": groups[0]["max"]["objectCount"],
         "payload_size": groups[0]["max"]["payloadSize"],
