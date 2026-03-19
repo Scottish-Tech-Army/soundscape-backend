@@ -31,8 +31,8 @@ var cfMetricsPlanName  = '${prefix}-cfmetrics-plan'
 @description('Metric schedule in cron format, e.g. "*/5 * * * *" for every five minutes')
 var metricSchedule string = '*/5 * * * *'
 
-@description('Cloudflare metrics schedule - hourly is sufficient')
-var cfMetricsSchedule string = '0 * * * *'
+@description('Cloudflare metrics schedule - 10 minutes past the hour so that the full hour of R2 storage data is available from the Cloudflare analytics API')
+var cfMetricsSchedule string = '10 * * * *'
 
 // Existing storage account
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
