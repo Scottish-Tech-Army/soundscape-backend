@@ -57,6 +57,7 @@ module vmCount './query.bicep' = {
     queryDescription: 'Capacity and VM instance counts for the VM scale set'
     query: '''
     AppTraces
+    | where OperationName == "vmcount"
     | where Message contains "METRIC:"
     | extend MetricName = extract(@"METRIC: ([\w ]+):", 1, Message)
     | extend Value = toint(extract(@"METRIC: [\w ]+: (\d+)", 1, Message))
@@ -74,10 +75,10 @@ module cloudflareMetrics './query.bicep' = {
     queryDescription: 'Hourly Cloudflare worker request counts, data transferred, processing times, and R2 bucket sizes'
     query: '''
     AppTraces
-    | where OperationName contains "cfmetrics"
-    | where Message startswith "CLOUDFLARE:"
-    | extend MetricName = extract(@"CLOUDFLARE: ([\w ]+): \d+", 1, Message)
-    | extend Value      = tolong(extract(@"CLOUDFLARE: \S+ [\w ]+: (\d+)", 1, Message))
+    | where OperationName == "cfmetrics"
+    | where Message startswith "METRIC:"
+    | extend MetricName = extract(@"METRIC: ([\w ]+): \d+", 1, Message)
+    | extend Value      = tolong(extract(@"METRIC: \S+ [\w ]+: (\d+)", 1, Message))
     | extend Time       = bin(TimeGenerated, 1h)
     | evaluate pivot(MetricName, max(Value), Time)
     '''

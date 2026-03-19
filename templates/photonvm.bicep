@@ -1331,6 +1331,7 @@ module vmUnhealthyAlert './alert.bicep' = {
     severity: 1
     alertQuery: '''
       AppTraces
+      | where OperationName == "vmcount"
       | where Message contains "METRIC:" and Message contains "Healthy instance count"
       | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
       | where TimeGenerated > ago(1h)
@@ -1353,6 +1354,7 @@ module vmMultipleAlert './alert.bicep' = {
     severity: 1
     alertQuery: '''
       AppTraces
+      | where OperationName == "vmcount"
       | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
       | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
       | where TimeGenerated > ago(12h)
@@ -1375,6 +1377,7 @@ module vmRoutineReimage './alert.bicep' = {
     severity: 4
     alertQuery: '''
       AppTraces
+      | where OperationName == "vmcount"
       | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
       | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
       | where TimeGenerated > ago(1h)

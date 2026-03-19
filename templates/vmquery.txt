@@ -1,4 +1,5 @@
 AppTraces
+| where OperationName == "vmcount"
 | where Message contains "METRIC:"
 | project TimeGenerated, Message
 | extend MetricName = extract(@"METRIC: ([\w ]+):", 1, Message)

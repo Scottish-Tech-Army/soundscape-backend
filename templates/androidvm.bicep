@@ -835,6 +835,7 @@ module vmTimeoutAlert './alert.bicep' = {
     severity: 1
     alertQuery: '''
       AppTraces
+      | where OperationName == "vmcount"
       | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
       | where TimeGenerated > ago(6h)
       | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))

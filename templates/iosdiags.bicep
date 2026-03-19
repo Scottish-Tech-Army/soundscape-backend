@@ -169,6 +169,7 @@ module vmCount './query.bicep' = {
     queryDescription: 'Capacity and VM instance counts for the ingestion scale set'
     query: '''
     AppTraces
+    | where OperationName == "vmcount"
     | where Message contains "METRIC:"
     | extend MetricName = extract(@"METRIC: ([\w ]+):", 1, Message)
     | extend Value = toint(extract(@"METRIC: [\w ]+: (\d+)", 1, Message))
