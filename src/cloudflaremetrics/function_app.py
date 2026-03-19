@@ -19,6 +19,7 @@ def cfmetrics(timer: func.TimerRequest):
     extracts_script = os.environ["CF_EXTRACTS_SCRIPT"]
 
     start, end = time_window(1)  # metrics for the last hour
+    logging.info("Fetching metrics for window %s–%s", start, end)
 
     for script in [pmtiles_script, extracts_script]:
         try:
