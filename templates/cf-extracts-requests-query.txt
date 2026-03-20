@@ -1,0 +1,8 @@
+AppTraces
+| where OperationName == "cfmetrics"
+| where Message matches regex @"^METRIC: extracts worker requests [a-zA-Z]"
+| extend Status = extract(@"worker requests (\w+):", 1, Message)
+| extend Count  = tolong(extract(@"worker requests \w+: (\d+)", 1, Message))
+| summarize Count = max(Count) by bin(TimeGenerated, 1h), Status
+| evaluate pivot(Status, max(Count), TimeGenerated)
+| sort by TimeGenerated asc

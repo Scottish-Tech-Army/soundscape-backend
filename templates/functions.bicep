@@ -1,4 +1,4 @@
-@description('Various parameters passed directly through')
+// Parameters required for all deployments
 param prefix string
 param triggerAppName string
 param metricAppName string
@@ -14,12 +14,25 @@ param triggerSchedule string
 ])
 param triggerType string
 
+// Parameters only required when deploying the Cloudflare metrics function app.
+// If cfMetricsAppName is empty (the default) the app and all its associated resources
+// are not created. This allows functions.bicep to be reused across deployments that
+// do not need Cloudflare metrics (e.g. iOS).
+param cfMetricsAppName string = ''
+param keyVaultName string = ''   // Key vault containing cloudflare-api-token and cloudflare-account-id
+param pmtilesBucket string = ''  // Cloudflare worker / R2 bucket name for tile data
+param extractsBucket string = '' // Cloudflare worker / R2 bucket name for offline extracts
+
 // Plans - every function app needs one.
-var triggerPlanName = '${prefix}-trigger-plan'
-var metricPlanName  = '${prefix}-metric-plan'
+var triggerPlanName    = '${prefix}-trigger-plan'
+var metricPlanName     = '${prefix}-metric-plan'
+var cfMetricsPlanName  = '${prefix}-cfmetrics-plan'
 
 @description('Metric schedule in cron format, e.g. "*/5 * * * *" for every five minutes')
 var metricSchedule string = '*/5 * * * *'
+
+@description('Cloudflare metrics schedule - 10 minutes past the hour so that the full hour of R2 storage data is available from the Cloudflare analytics API')
+var cfMetricsSchedule string = '10 * * * *'
 
 // Existing storage account
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
@@ -30,8 +43,9 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
 var storageKey = storage.listKeys().keys[0].value
 
 // Blob service and storage in that account for the function app code
-var triggerContainerName = 'triggerapp'
-var metricContainerName = 'metricapp'
+var triggerContainerName    = 'triggerapp'
+var metricContainerName     = 'metricapp'
+var cfMetricsContainerName  = 'cfmetricsapp'
 
 @description('App insights name')
 var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
@@ -66,6 +80,11 @@ resource triggerContainer 'Microsoft.Storage/storageAccounts/blobServices/contai
 
 resource metricContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
   name: metricContainerName
+  parent: blobService
+}
+
+resource cfMetricsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = if (cfMetricsAppName != '') {
+  name: cfMetricsContainerName
   parent: blobService
 }
 
@@ -244,6 +263,78 @@ resource metricApp 'Microsoft.Web/sites@2024-11-01' = {
         { name: 'VMSS_NAME',                        value: vmssName }
         { name: 'VMSS_RESOURCE_ID',                 value: vmss.id }
         { name: 'TRIGGER_SCHEDULE',                 value: metricSchedule }
+      ]
+    }
+  }
+}
+
+resource cfMetricsPlan 'Microsoft.Web/serverfarms@2021-02-01' = if (cfMetricsAppName != '') {
+  name: cfMetricsPlanName
+  kind: 'functionapp'
+  location: resourceGroup().location
+  sku: {
+    tier: 'FlexConsumption'
+    name: 'FC1'
+  }
+  properties: {
+    reserved: true // Linux
+  }
+}
+
+resource cfMetricsApp 'Microsoft.Web/sites@2024-11-01' = if (cfMetricsAppName != '') {
+  name: cfMetricsAppName
+  location: resourceGroup().location
+  kind: 'functionapp,linux,flex'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${uami.id}': {}
+    }
+  }
+  properties: {
+    serverFarmId: cfMetricsPlan.id
+    keyVaultReferenceIdentity: uami.id  // Which UAMI to use when resolving KV references in app settings
+    functionAppConfig: {
+      runtime: {
+        name: 'python'
+        version: '3.12'
+      }
+      scaleAndConcurrency: {
+        instanceMemoryMB: 2048
+        maximumInstanceCount: 40
+      }
+      deployment: {
+        storage: {
+          type: 'BlobContainer'
+          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${cfMetricsContainerName}'
+          authentication: {
+            type: 'UserAssignedIdentity'
+            userAssignedIdentityResourceId: uami.id
+          }
+        }
+      }
+    }
+    siteConfig: {
+      cors: {
+        allowedOrigins: [
+          'https://portal.azure.com'
+        ]
+      }
+      appSettings: [
+        { name: 'AzureWebJobsStorage',                    value: 'DefaultEndpointsProtocol=https;AccountName=${storageName};AccountKey=${storageKey};EndpointSuffix=${environment().suffixes.storage}' }
+        { name: 'FUNCTIONS_EXTENSION_VERSION',            value: '~4' }
+        // Diags settings
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',  value: appInsights.properties.ConnectionString }
+        { name: 'APPINSIGHTS_INSTRUMENTATIONKEY',         value: appInsights.properties.InstrumentationKey }
+        { name: 'APPLICATIONINSIGHTS_ROLE_NAME',          value: cfMetricsAppName }
+        // Cloudflare credentials
+        { name: 'CF_API_TOKEN',                           value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=cloudflare-api-token)' }
+        { name: 'CF_ACCOUNT_ID',                          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=cloudflare-account-id)' }
+        // Worker and bucket names
+        { name: 'CF_PMTILES_SCRIPT',                      value: pmtilesBucket }
+        { name: 'CF_EXTRACTS_SCRIPT',                     value: extractsBucket }
+        // Schedule
+        { name: 'TRIGGER_SCHEDULE',                       value: cfMetricsSchedule }
       ]
     }
   }

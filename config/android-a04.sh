@@ -14,6 +14,10 @@ export UNIQUESTRING=9cf07a7f610487d10734
 export EXTRACTS_BUCKET=extracts
 export PMTILES_BUCKET=pmtiles
 
+# Deploy the Cloudflare metrics function app (requires cloudflare-api-token and
+# cloudflare-account-id to be set in the Key Vault before running functionapp.sh)
+export DEPLOY_CFMETRICS=true
+
 # Area to use - should normally be "monaco" or "planet"
 export AREA=planet
 
