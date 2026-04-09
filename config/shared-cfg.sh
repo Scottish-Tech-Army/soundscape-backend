@@ -1,6 +1,7 @@
 # Shared RG configuration
 # Region and RG
 export SHAREDREGION=westeurope
+export DNS_SUFFIX=soundscape.scottishtecharmy.org
 export SHAREDRG=soundscape-shared
 export SHAREDLAW=shared-law
 export REGISTRYNAME=soundscape
