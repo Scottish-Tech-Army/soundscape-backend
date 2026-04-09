@@ -2,6 +2,8 @@
 # Script to run tests on the Photon geocoding API
 set -euo pipefail
 
+DNS_SUFFIX=soundscape.scottishtecharmy.org
+
 # This script should be run from the location where the outputs are to go
 # This file takes a single argument, which specifies the domain to test
 if [[ $# -ne 1 ]]; then
@@ -12,11 +14,11 @@ fi
 case "$1" in
     photon)
         DOMAIN="$1"
-        PHOTON_BASE_URL="https://photon.soundscape.scottishtecharmy.org/photon"
+        PHOTON_BASE_URL="https://photon.${DNS_SUFFIX}/photon"
         ;;
     photontest)
         DOMAIN="$1"
-        PHOTON_BASE_URL="https://photontest.soundscape.scottishtecharmy.org/photon"
+        PHOTON_BASE_URL="https://photontest.${DNS_SUFFIX}/photon"
         ;;
     legacy)
         DOMAIN="$1"

@@ -2,7 +2,7 @@
 
 This documents the architecture of how both Android and iOS back ends for Soundscape work. While they are very different, there are some common components; after this overview section there are sections that describe the iOS and Android architectures in detail.
 
-The different resources are split into five resource groups.
+The different resources are split into six resource groups.
 
 - There is a diagnostics RG, `soundscape-diags`. This contains the shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications).
 
@@ -10,7 +10,7 @@ The different resources are split into five resource groups.
 
     - DNS zones for external traffic.
 
-    - An Azure Front Door instance which routes incoming traffic for iOS and for Photon Server to the correct endpoint.
+    - An Azure Front Door instance which routes incoming traffic for iOS, Photon Server, and the links site to the correct endpoint.
 
     - An Azure Container Registry.
 
@@ -22,7 +22,9 @@ The different resources are split into five resource groups.
 
 - There is an Android instance RG, described in detail in the [Android Architecture](#android-architecture) section below. This contains a storage account with tile data, used by the Cloudflare components, and tooling to update that storage account's content and copy data over to Cloudflare regularly. As for iOS, new instances can be created and the configuration cut over to use them as required (for example to allow configuration changes).
 
-- Finally, there is a Photon Server RG. This contains a Photon Server that handles Android search traffic, fronted by the shared Front Door instance.
+- There is a Photon Server RG, described in detail in the [Photon Server Architecture](#photon-server-architecture) section below. This contains a Photon Server that handles Android search traffic, fronted by the shared Front Door instance.
+
+- Finally, there is a links site RG, `soundscape-links`, described in the [Links Site Architecture](#links-site-architecture) section below. This contains the storage account that serves the Android App Links verification file.
 
 # iOS Architecture
 
@@ -195,4 +197,20 @@ Every month, the VM reloads its data. This occurs as follows.
 - A new VM instance is then created and configures itself.
 
 - When both instances are healthy, the older one is tidied up by the function app (which checks every five minutes to see if the new VM is healthy yet).
+
+# Links site architecture
+
+The links site at `https://links.soundscape.scottishtecharmy.org` supports Android App Links verification and provides a landing page redirect. It is a static site with no server-side logic.
+
+- A storage account in the `soundscape-links` RG has static website hosting enabled. It holds a single file: `/.well-known/assetlinks.json`, which Android uses to verify that the app is authorised to handle links for the domain.
+
+- The shared Front Door instance (`soundscape-fd`) has a dedicated endpoint and route for `links.soundscape.scottishtecharmy.org`. Its rules engine provides two behaviours:
+
+    - Requests for `/.well-known/assetlinks.json` are forwarded to the storage origin and returned as `application/json`.
+
+    - All other requests receive a 301 redirect to `https://scottish-tech-army.github.io/Soundscape-Android/`.
+
+- HTTP requests are redirected to HTTPS by Front Door natively.
+
+- The DNS zone `links.soundscape.scottishtecharmy.org` is a child of the existing `soundscape.scottishtecharmy.org` zone in the shared RG, with an A record aliased to the Front Door endpoint.
 

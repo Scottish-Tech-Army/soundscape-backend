@@ -37,8 +37,6 @@ if [[ ! "$1" =~ ^[a-zA-Z0-9]+$ ]]; then
   exit 1
 fi
 
-DNS_SUFFIX="soundscape.scottishtecharmy.org"  # fixed suffix
-
 ZONE_NAME="${BASE_DOMAIN}.${DNS_SUFFIX}"
 
 echo "Creating DNS zone and AFD infra ${ZONE_NAME} in RG ${SHAREDRG}"

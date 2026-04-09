@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.scottishtecharmy.soundscape",
+      "sha256_cert_fingerprints": [
+        "61:C6:8F:43:A0:7C:BF:48:32:8A:29:E4:5D:FD:35:76:21:04:23:37:0F:65:B3:78:CD:6E:C8:0D:E7:11:D4:15"
+      ]
+    }
+  }
+]
