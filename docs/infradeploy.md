@@ -12,18 +12,22 @@ It covers the following.
 
 - [Adding DNS zones and endpoints](#adding-dns-zones-and-endpoints) describes how to add the shared DNS zones and corresponding endpoints in Front Door for iOS and photon traffic.
 
+- [Front Door cutover pattern](#front-door-cutover-pattern) is a shared appendix describing the test-then-cut-over flow used by both the iOS and photon deployment procedures.
+
 
 ## Common prerequisites
 
 Before you can initially use any of the tooling to deploy any components, you need the following.
 
-- A PC to run the tooling on. The tooling was tested using Linux, but anything running bash should be fine, including a Mac or WSL on Windows. This PC must have various utilities installed . These include the following.
+- A PC to run the tooling on. The tooling was tested using Linux, but anything running bash (4.0+) should be fine, including a Mac or WSL on Windows. This PC must have various utilities installed. The tools, which components require them, and tested versions are as follows.
 
-    - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
+    - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (2.50 or later) — required for all components.
 
-    - [Docker](https://docs.docker.com/engine/install/)
+    - [Docker](https://docs.docker.com/engine/install/) (any recent version) — required for components that build container images: iOS (`iosbuild.sh`) and photon (`photonbuild.sh`).
 
-    - [Azure functions core tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=linux)
+    - [Azure functions core tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=linux) (v4) — required for components that publish function apps via `functionapp.sh`: iOS, Android, and photon.
+
+    - Python 3.12 — only required if you want to run function app code locally. Not needed for normal deployment, since `func azure functionapp publish` builds in the cloud.
 
     - The contents of this repo checked out locally, to allow running of the various scripts.
 
@@ -44,17 +48,19 @@ Before you can initially use any of the tooling to deploy any components, you ne
 
     - In the left hand section, select `Settings/Usage + quotas`.
 
-    - The necessary values to set are the following.
+    - The necessary values to set are the following. Spot quotas are only required if you intend to enable spot VMs for a deployment (`USE_SPOT=true` in the per-deployment config); see [Note on spot VMs](#note-on-spot-vms) below.
 
-        - Filter to region `westeurope` for Android infrastructure, and ensure `Total Regional Spot vCPUs` is at least 32.
-
-        - Filter to region `westeurope` for Android infrastructure, and ensure `Total Edsv6 Family vCPUs` is at least 32
-
-        - Filter to region `northeurope` for iOS infrastructure, and ensure `Total Regional Spot vCPUs` is at least 32.
+        - Filter to region `westeurope` for Android infrastructure, and ensure `Total Edsv6 Family vCPUs` is at least 32.
 
         - Filter to region `northeurope` for iOS infrastructure, and ensure `Total Edsv6 Family vCPUs` is at least 32.
 
-        If you need to increase any quotas, you can edit them. If that does not work then issue a support request, which normally takes no more than an hour or two to be satisfied. *Spot VMs are not enabled at present; this is because there is a limitation thanks to our free Azure credits, which do not allow us to use spot VMs.*
+        - If using spot VMs, additionally ensure `Total Regional Spot vCPUs` is at least 32 in each of `westeurope` (Android) and `northeurope` (iOS).
+
+        If you need to increase any quotas, you can edit them. If that does not work then issue a support request, which normally takes no more than an hour or two to be satisfied.
+
+### Note on spot VMs
+
+Spot VMs are significantly cheaper than standard VMs, and the configuration files include a `USE_SPOT` flag to enable them per deployment. However, spot VMs are not currently enabled for the live deployments because the free Azure credits used by this project do not permit spot allocation. Set `USE_SPOT=false` in your config unless you know your subscription supports spot VMs.
 
 ## Diagnostics infrastructure
 
@@ -206,3 +212,82 @@ To deploy and configure them, follow the following process.
     ~~~
 
     The route can later be repointed at a real origin group by the iOS or photon deployment process.
+
+## Front Door cutover pattern
+
+The iOS and photon deployment procedures both end with a "test then cut over" step that switches Front Door routes from the previous deployment to the new one. The shape of that step is the same in both cases, so it is documented here once and referred to from both procedures. The steps below use the following placeholders:
+
+- `<TEST_ENDPOINT>` — the test domain (e.g. `tst` for iOS, `photontest` for photon)
+- `<PROD_ENDPOINT>` — the production domain (e.g. `prd2` for iOS, `photon` for photon)
+- `<SMOKE_URL>` — a URL that exercises the deployment end-to-end (varies by component)
+- `<LOADTEST_CMD>` — the per-component load-test command, run with the endpoint name as its argument
+
+The per-component values are listed in the iOS and photon deployment documents, which link back to this section.
+
+### Route test traffic to the new deployment
+
+Switching the test route is the first cutover step: it makes the test endpoint resolve to your new deployment so the subsequent smoke-test and load-test exercise the new instance.
+
+- Open the Azure Front Door instance (the only one, in the `soundscape-shared` resource group) in the [portal](https://portal.azure.com). All steps below operate on this resource.
+
+- Select `Origin Groups` on the left panel and confirm the origin group for your new deployment is present (it was created by `iosorigin.sh` or `photonorigin.sh`).
+
+- Repoint the test route.
+
+    - Click `Front Door manager`.
+
+    - Click the `<TEST_ENDPOINT>.soundscape.scottishtecharmy.org` endpoint.
+
+    - Click on the route under that endpoint.
+
+    - Change the origin group to the one for your new deployment.
+
+- Smoke-test the test endpoint. Requests now hit the new deployment:
+
+    ~~~bash
+    curl -i "<SMOKE_URL>"
+    ~~~
+
+    The `nocache` query parameter (where present in `<SMOKE_URL>`) bypasses Front Door cache. Confirm a successful response.
+
+### Load-test the test endpoint
+
+This is the main correctness gate. The load test runs in your local shell and writes results to the current directory.
+
+- Pick a directory for the test outputs and `cd` to it.
+
+- Run the load test against the test endpoint:
+
+    ~~~bash
+    nohup <LOADTEST_CMD> <TEST_ENDPOINT> &
+    ~~~
+
+- Tail the output log and the CSV results file as the test runs. Wait for the test to complete before treating it as a success — early samples can pass while later ones fail. Load should be visible against your new deployment in the dashboard.
+
+### Cut over production traffic
+
+Only proceed once the load test against `<TEST_ENDPOINT>` has fully completed without errors.
+
+- From your test directory, start the load test against the production endpoint *before* changing the route:
+
+    ~~~bash
+    nohup <LOADTEST_CMD> <PROD_ENDPOINT> &
+    ~~~
+
+    Initially this will continue to hit the previous deployment, which is the point — it gives you a continuous in-flight measurement across the route change.
+
+- Repoint the production route.
+
+    - Click `Front Door manager`.
+
+    - Click the `<PROD_ENDPOINT>.soundscape.scottishtecharmy.org` endpoint.
+
+    - Click on the route and change the origin group to the one for your new deployment.
+
+- Verify the cutover.
+
+    - The load-test output should continue to show no errors across the route change.
+
+    - Load should now be arriving at your new deployment in the dashboard, and falling away on the previous one.
+
+- Once you are satisfied, the previous deployment can be left running for rollback safety and deleted later, or torn down immediately if you have already validated the deployment elsewhere.
