@@ -226,7 +226,9 @@ The cfmetrics function app runs hourly and writes worker and R2 bucket metrics t
 
     All metrics are reported for both the pmtiles and extracts scripts.
 
-Note: HTTP response status codes (e.g. 503 "data not available yet" from the extracts worker) are not available via the Cloudflare analytics API at the account level. Distinguishing 503s from 200s requires instrumenting the workers with the Workers Analytics Engine — this is deferred to a future phase.
+##### Limitations
+
+HTTP response status codes (e.g. 503 "data not available yet" from the extracts worker) are not available via the Cloudflare analytics API at the account level. Distinguishing 503s from 200s requires instrumenting the workers with the Workers Analytics Engine — this is deferred to a future phase.
 
 ### Photon logs
 
@@ -255,3 +257,17 @@ Photon log queries are as follows.
 - `Photon Front Door Errors`: this is a subset of the access log view that only shows errors.
 
 - `Photon Front Door response times`: this shows a daily summary of response times for successful requests - average, median, and P95 and P99.
+
+## Common issues
+
+This section collects known failure modes and the first-look response for each. It is not exhaustive — the alert first-actions above and the per-component log queries are normally sufficient — but it captures recurring issues that are not obvious from the dashboards alone.
+
+- **`PrincipalNotFound` during `iosbase.sh`.** Intermittent. The base deploy script assigns a managed identity a role before Entra has propagated the identity's existence. The script will then fail with `PrincipalNotFound`. Mitigation: simply re-run `iosbase.sh`. The script is safe to re-run.
+
+- **iOS ingestion VM still running after 12 hours.** The full-globe ingestion takes 8–10 hours; significantly longer means the VM is stuck. Run `iOS ingestion - detailed logs` and look for the last log line — `imposm3` typically logs once per minute. If the VM is genuinely hung (no log output for >30 minutes), terminate it manually in the portal; the next scheduled timer run will start cleanly.
+
+- **Android ingestion run failed but no production worker change occurred.** This is the expected behaviour: the upload tooling validates the new data through the `*-test` workers before promoting it to the production workers. A failure during validation leaves production untouched. Check `Android VM processing - high level` to find the failing step, fix the underlying issue, and re-trigger the timer.
+
+- **Photon VMSS has two VMs and never returns to one.** The reimage logic in `src/trigger/reimage.py` waits for both VMs to be healthy before deleting the older one. If the new VM never reaches a healthy state, the VMSS stays at capacity 2 indefinitely. Run `Photon function app logs` and `Photon VM logs - high level` to diagnose; a manual delete of the stuck instance may be required.
+
+- **Front Door 5xx spike with no corresponding origin spike.** Front Door reports errors that the origin never sees (TLS handshake failures, Front Door internal errors). Run `iOS Front Door Errors` (or `Photon Front Door Errors`) and check the error category column — `OriginConnectionAborted` and similar indicate origin-side issues; other categories may indicate Front Door or client-side issues.

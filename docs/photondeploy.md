@@ -4,6 +4,14 @@
 
 The basic model is that the photon server runs on a VM in a VMSS. When the VM is first created, it downloads all the software it needs and builds a full photon database, with a load balancer IP in front of it, accessible only from Front Door.
 
+The process is as follows.
+
+- Check some [prerequisites](#prerequisites)
+
+- [Set up your deployment in Azure](#instructions).
+
+- [Cut over live traffic to your new deployment](#switching-over-to-your-deployment).
+
 ## Prerequisites
 
 - General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including in particular:
@@ -18,7 +26,7 @@ The basic model is that the photon server runs on a VM in a VMSS. When the VM is
 
 ## Instructions
 
-Deployment of the photon server works as follows.
+Deployment of the photon server works as follows. Each deploy script under `scripts/` prints `SUCCESS` as its final line and exits 0 on completion. If you do not see `SUCCESS`, treat the run as failed and investigate before continuing to the next step.
 
 - Set up a config file. Photon instances should be named `pNN` where `NN` is a two digit number that should be monotonically increasing, such as `p01`.
 

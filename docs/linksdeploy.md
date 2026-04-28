@@ -4,6 +4,8 @@
 
 The links site is a once-only deployment (unlike iOS or Photon, there is no multi-instance cutover model). It serves three static files (one for Android, one for iOS, and one to allow health checks) and a redirect rule, both configured through Azure Front Door. See [architecture.md](architecture.md) for a full description.
 
+All scripts in this procedure are idempotent — re-running on partial failure is safe.
+
 ## Prerequisites
 
 - You must be logged into the correct Azure subscription.
@@ -11,8 +13,6 @@ The links site is a once-only deployment (unlike iOS or Photon, there is no mult
 - The shared infrastructure must already be deployed (`soundscape-shared` RG and `soundscape-fd` Front Door profile must exist).
 
 ## Instructions
-
-All scripts are idempotent.
 
 - Source the config file.
 
@@ -96,3 +96,7 @@ Once the certificate is active, verify the two behaviours.
     ~~~
 
     Expected: HTTP 301 or 302 redirect to the HTTPS equivalent.
+
+## Operations
+
+The links site is not actively monitored — there are no dedicated dashboards, alerts, or saved log queries in [operations.md](operations.md). Front Door health checks against `/.well-known/health` provide implicit availability monitoring (Front Door will mark the origin unhealthy if `health` stops returning 200), but this is not surfaced as an alert. If a problem is suspected, re-run the smoke test above.

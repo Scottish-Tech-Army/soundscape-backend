@@ -14,6 +14,9 @@ It covers the following.
 
 - [Front Door cutover pattern](#front-door-cutover-pattern) is a shared appendix describing the test-then-cut-over flow used by both the iOS and photon deployment procedures.
 
+## Config file convention
+
+Each deployment procedure begins by sourcing a config file under `config/`. These config files are pre-checked-in for the live deployments — you should only edit them if you are moving to another subscription, changing region, or similar. When a procedure says "set up a config file", it is documenting what the file should contain rather than asking you to write it from scratch. The deploy scripts assume the config has already been sourced into your shell.
 
 ## Common prerequisites
 
@@ -72,7 +75,7 @@ Diagnostics infrastructure is stored in a shared resource group, with both iOS a
 
 To deploy this infrastructure, follow the steps below.
 
-- Set up a config file (this will have already been done for you - you should only ever change this if you are in the process of moving to another subscription or something).
+- Set up a config file (see [Config file convention](#config-file-convention)).
 
     - The file should be in the [config](config) directory, and be named `diags-cfg.sh`
 
@@ -120,7 +123,7 @@ To deploy this infrastructure, follow the steps below.
 
 Shared infrastructure contains the Azure Front Door, Azure Container Registry, and DNS components for the deployment. To deploy this infrastructure, follow the steps below.
 
-- Set up a config file (this will have already been done for you - you should only ever change this if you are in the process of moving to another subscription or something).
+- Set up a config file (see [Config file convention](#config-file-convention)).
 
     - The file should be in the [config](config) directory, and be named `shared-cfg.sh`
 
@@ -153,7 +156,7 @@ Shared infrastructure contains the Azure Front Door, Azure Container Registry, a
     bash scripts/shareddeploy.sh
     ~~~
 
-- Once you have got traffic running through the Front Door (which only occurs later when you have created some deployments), you should set up the alerts. *Until some traffic has been logged by Front Door, this script will fail with cryptic errors.*
+- Once traffic is flowing through Front Door (which only happens after the first deployment is up), set up the alerts. *Until some traffic has been logged by Front Door, this script will fail with cryptic errors.*
 
     ~~~bash
     bash scripts/sharedalerts.sh
@@ -171,7 +174,7 @@ In order to add the shared DNS zones and corresponding endpoints in Front Door, 
 
 - `photontest` is for test photon search server traffic
 
-To deploy and configure them, follow the following process.
+To deploy and configure them, follow these steps.
 
 -  Source the config file.
 

@@ -30,7 +30,7 @@ The process is as follows.
 
 ## Deploying in Azure
 
-Follow the following steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
+Follow these steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
 
 Each deploy script under `scripts/` prints `SUCCESS` as its final line and exits 0 on completion. If you do not see `SUCCESS`, treat the run as failed and investigate before continuing to the next step.
 
@@ -109,8 +109,6 @@ If you are redeploying an existing `iNN` rather than deploying a fresh one, also
 
 ## Ingesting data and basic validation
 
-### Triggering ingestion
-
 Your deployment still does not work, because ingestion has not occurred. You can just wait until the weekly ingestion run happens, but a smarter idea is to kick it off manually.
 
 - Open the [Azure portal](https://portal.azure.com).
@@ -121,13 +119,11 @@ Your deployment still does not work, because ingestion has not occurred. You can
 
 - Click on the only function in the list, `ingest-timer`.
 
-- In the `Code&Test` blade, click on `Test/Run`
+- In the `Code&Test` blade, click on `Test/Run`.
 
 - This will cause a new subwindow to open with a big `Run` button. Click it.
 
-### Validating that your run has completed
-
-The ingestion will take around 8-10 hours. To monitor its progress, check the dashboard and the ingestion logs as described in the [operations document](operations.md).
+The ingestion will take around 8-10 hours. To monitor progress, check the dashboard and the ingestion logs as described in the [operations document](operations.md).
 
 ## Switching over to your deployment
 

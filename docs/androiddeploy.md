@@ -88,7 +88,9 @@ Get secrets from Cloudflare and store them for later storage in a key vault.
 
 ## Deploying in Azure
 
-Follow the following steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
+Follow these steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
+
+Each deploy script under `scripts/` prints `SUCCESS` as its final line and exits 0 on completion. If you do not see `SUCCESS`, treat the run as failed and investigate before continuing to the next step.
 
 - Set up a config file. Android instances should be named `aNN` where `NN` is a two digit number that should be monotonically increasing, such as `a01`.
 

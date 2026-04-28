@@ -134,11 +134,11 @@ There are a number of Cloudflare components.
 
         - If the data is present in the R2 bucket already, then it is returned to the client.
 
-        - If the data is not present in the R2 bucket, then an HTTP HEAD request is issued to the Azure storage. If the header shows that it is smaller than a threshold (currently 100MB) it is retrieved from Azure directly by the worker and stored in R2 before being returned to the client. *For simplicity, this flow is not shown in the architecture diagram.*
+        - If the data is not present in the R2 bucket, then an HTTP HEAD request is issued to the Azure storage. If the header shows that it is smaller than a threshold (currently 100MB) it is retrieved from Azure directly by the worker and stored in R2 before being returned to the client.
 
         - If the header shows that it is larger than that threshold, then a 503 error is returned with a `Retry-After` header. A message is put on the queue (see below).
 
-        All extracts files are both named and datastamped, and the manifest file references datestamped files. Hence if the extracts list changes while a client is still processing the manifest, the old extracts are still available for a limited time (around twenty minutes). After this period, clients must download the manifest and recalculate which extract they should use.
+        All extracts files are both named and datestamped, and the manifest file references datestamped files. Hence if the extracts list changes while a client is still processing the manifest, the old extracts are still available for a limited time (around twenty minutes). After this period, clients must download the manifest and recalculate which extract they should use.
 
     - The consumer worker `EXTRACTS_BUCKET-queue` monitors a queue, and receives messages whenever a request indicates that an extract was not available and was too large to download inline. When it receives such a message, it does the following.
 
@@ -146,9 +146,13 @@ There are a number of Cloudflare components.
 
         - Otherwise, it retrieves the file from Azure and stores it in R2.
 
-        This model is used because ordinary workers are terminated as soon as the client disconnects. Any download lasting more than a couple of seconds before data is available to stream is likely to end with the client disconnecting, and so the download never succeeds. The user impact is that the first download of any large extract fails, but should succeed on a later retry (for all users, not just the first to download).
-
 - In addition to the workers `PMTILES_BUCKET`, `EXTRACTS_BUCKET`, and `EXTRACTS_BUCKET-queue`, there are three workers called `PMTILES_BUCKET-test`, `EXTRACTS_BUCKET-test`, and `EXTRACTS_BUCKET-queue-test`, used for testing during the upload process, not by clients. These use the same R2 buckets as the main workers.
+
+> **Note:** The architecture diagram omits the inline R2-fill path (worker fetches from Azure storage and writes to R2 on a cache miss for files under the threshold) for clarity; only the queue-worker path is shown.
+
+### Why a queue worker is needed
+
+The queue model is used because ordinary Cloudflare workers are terminated as soon as the client disconnects. Any download lasting more than a couple of seconds before data is available to stream is likely to end with the client disconnecting, and so the download never succeeds. The user impact of the queue worker model is that the first download of any large extract fails (with a helpful message in the app), but should succeed on a later retry (for all users, not just the first to download).
 
 ## Uploading of new data from Azure
 
@@ -194,7 +198,7 @@ All three function apps use the FlexConsumption plan (Python 3.12) and authentic
 
 The photon server architecture consists of the following.
 
-- There is a VMSS containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from graphhopper.
+- There is a [VM Scale Set (VMSS)](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from graphhopper.
 
 - There is a load balancer, that exposes the search URL to use.
 

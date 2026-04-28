@@ -1,10 +1,12 @@
 # Soundscape Backend
 
-This repository contains code for the backend services for the Soundscape app running in Azure. It is concerned with both iOS and Android apps.
+This repository contains code for the backend services for the [Soundscape app](https://scottish-tech-army.github.io/Soundscape-Android/) running in Azure. It is concerned with both iOS and Android apps.
+
+Soundscape is a navigation and audio app for blind and visually impaired users; this repository contains only the Azure backend that serves it. It is intended for people deploying or operating that backend, not for app developers.
 
 The repository is structured as follows.
 
-- [docs](docs) contains documentation. Please read it, or the author will be sad.
+- [docs](docs) contains documentation. Read these documents before deploying or modifying any component.
 
     - [Architecture](/docs/architecture.md) describes the architecture.
 
@@ -16,7 +18,7 @@ The repository is structured as follows.
 
     - If you want to deploy a new Photon server instance and cut over traffic, read the [Photon server instructions](/docs/photondeploy.md).
 
-    - [Links site deployment](/docs/linksdeploy.md) documents how to deploy the Android App Links site. This is normally a one off task that does not have to be rerun after initial creation.
+    - [Links site deployment](/docs/linksdeploy.md) documents how to deploy the Android App Links site (one-off; not normally re-run after initial deployment).
 
     - [Operations processes](/docs/operations.md) describes how to operate an existing deployment, including how to use search queries, analyse logs, and monitor load.
 
