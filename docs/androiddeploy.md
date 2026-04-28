@@ -167,9 +167,10 @@ Follow the following steps. Note that some of the scripts here take quite some t
     bash scripts/androidvm.sh
     ~~~
 
-- Deploy the function app code to the deployment.
+- Deploy the function app code to the deployment. By default this deploys only the `trigger` and `vmcount` function apps. To also deploy the Cloudflare metrics function app (`cfmetrics`, see [architecture.md](architecture.md#azure-function-apps)), set `DEPLOY_CFMETRICS=true` before running the script. This is normally what you want for an Android deployment.
 
     ~~~bash
+    export DEPLOY_CFMETRICS=true
     bash scripts/functionapp.sh
     ~~~
 
@@ -194,3 +195,21 @@ Follow the following steps. Note that some of the scripts here take quite some t
     - This will cause a new subwindow to open with a big `Run` button. Click it.
 
 - Monitor the progress of the operations following the [operations instructions](/docs/operations.md).
+
+## Verifying cutover
+
+Unlike iOS and photon, there is no manual cutover step: as the VM completes its run it validates the new data using the `*-test` workers and then updates the production `PMTILES_BUCKET` and `EXTRACTS_BUCKET` worker configurations to point at the new R2 paths. After triggering the ingest run above, verify the cutover succeeded as follows.
+
+- Watch the run complete by following the Android section of the [operations instructions](/docs/operations.md). The dashboard for the new RG shows VMSS state and the function app logs report progress.
+
+- Confirm the production worker configuration has been updated.
+
+    - Log into the [Cloudflare dashboard](https://dash.cloudflare.com/).
+
+    - Click on `Compute (Workers)` then `Workers and Pages`.
+
+    - Open the production `PMTILES_BUCKET` worker (normally named `pmtiles`) and confirm its bound configuration references the new datestamped `pmtiles` file you just uploaded.
+
+    - Repeat for the `EXTRACTS_BUCKET` worker (normally named `extracts`) and confirm it references the new datestamped extracts directory.
+
+- If the run fails partway through, the production workers will not have been updated (validation against the `*-test` workers must succeed first). Consult the VM error log query in the Android section of [operations.md](/docs/operations.md) to investigate the failure, then re-trigger the timer once the underlying issue is fixed.

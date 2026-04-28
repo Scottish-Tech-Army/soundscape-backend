@@ -42,7 +42,15 @@ The repository is structured as follows.
 
         - [pmtiles](src/pmtiles) contains tooling that runs in the Android pmtiles VM to download data and set it up in the Cloudflare account.
 
-        - [photon](src/photon) contains tooling for the photon server, which provides a search server.
+        - [cloudflaremetrics](src/cloudflaremetrics) contains code for an Azure function that periodically queries the Cloudflare GraphQL API to collect worker invocation and R2 bucket metrics, and writes them to Application Insights for dashboarding.
+
+    - For the photon server:
+
+        - [photon](src/photon) contains tooling for the photon server, which provides a search server (used by Android clients but logically distinct from the rest of the Android backend).
+
+    - For the links site:
+
+        - [links](src/links) contains the static files served by the links site (`assetlinks.json`, `apple-app-site-association`, `health`).
 
     - For both Android and iOS:
 

@@ -8,6 +8,10 @@ It covers the following.
 
 - [Diagnostics infrastructure](#diagnostics-infrastructure) describes diagnostics infrastructure required by other components.
 
+- [Shared resource group deployment](#shared-resource-group-deployment) describes how to deploy the shared resource group containing the Azure Front Door, Azure Container Registry, and DNS components.
+
+- [Adding DNS zones and endpoints](#adding-dns-zones-and-endpoints) describes how to add the shared DNS zones and corresponding endpoints in Front Door for iOS and photon traffic.
+
 
 ## Common prerequisites
 
@@ -191,4 +195,14 @@ To deploy and configure them, follow the following process.
 
     - Add the TXT record (`_dnsauth`) to the `ZONE` DNS zone with the value supplied.
 
-    - Wait for at least some minutes, maybe a few hours.
+    - Wait for the validation to complete. Periodically refresh the `Domains` pane until the validation state changes from `Pending` to `Approved`. This normally takes a few minutes but can occasionally take a few hours.
+
+- Wait for Front Door to provision the TLS certificate. Once the domain is approved, Front Door automatically issues a managed certificate. The certificate state on the `Domains` pane will change from `Issuing` to `Approved`. This typically takes under an hour but can take up to 48 hours.
+
+- Verify the zone is live. The route created by `sharedzone.sh` initially points at the `dummy-blackhole` origin group, so a request returns an error from the dummy origin rather than a TLS or DNS failure. A successful response (any HTTP status from the dummy origin, not a connection or certificate error) confirms the zone, route, and certificate are all correctly wired up:
+
+    ~~~bash
+    curl -i "https://ZONE.soundscape.scottishtecharmy.org/"
+    ~~~
+
+    The route can later be repointed at a real origin group by the iOS or photon deployment process.

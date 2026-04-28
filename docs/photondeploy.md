@@ -4,6 +4,18 @@
 
 The basic model is that the photon server runs on a VM in a VMSS. When the VM is first created, it downloads all the software it needs and builds a full photon database, with a load balancer IP in front of it, accessible only from Front Door.
 
+## Prerequisites
+
+- General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including in particular:
+
+    - Making sure that the diags infrastructure has been deployed.
+
+    - Making sure that the shared infrastructure (`soundscape-shared` RG, `soundscape-fd` Front Door, and the Azure Container Registry) has been deployed.
+
+    - Making sure that the `photon` and `photontest` DNS zones and Front Door endpoints have been added (see [Adding DNS zones and endpoints](/docs/infradeploy.md#adding-dns-zones-and-endpoints)).
+
+    - Making sure that quotas have been set.
+
 ## Instructions
 
 Deployment of the photon server works as follows.

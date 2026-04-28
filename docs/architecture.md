@@ -2,6 +2,14 @@
 
 This documents the architecture of how both Android and iOS back ends for Soundscape work. While they are very different, there are some common components; after this overview section there are sections that describe the iOS and Android architectures in detail.
 
+This document is organised as follows.
+
+- [Overview](#overview) — the resource groups and how they fit together.
+- [iOS Architecture](#ios-architecture) — the iOS tile server, database, and ingestion pipeline.
+- [Android architecture](#android-architecture) — the Cloudflare-based tile and extracts components and their Azure-side orchestration.
+- [Photon server architecture](#photon-server-architecture) — the search server used by Android clients.
+- [Links site architecture](#links-site-architecture) — the static site backing App Links verification.
+
 The different resources are split into six resource groups.
 
 - There is a diagnostics RG, `soundscape-diags`. This contains the shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications).
@@ -88,9 +96,11 @@ The data in the database is downloaded and ingested from public data at [Geofabr
 
     - Normally it is zero - i.e. no VM is running. VMs are not cheap.
 
-    - Periodically, a function app with a timer trigger increases the scale to 1, so a single VM is instantiated. This trigger can also be fired manually through the portal to force an update.
+    - Periodically, a function app with a timer trigger increases the scale to 1, so a single VM is instantiated. This trigger can also be fired manually through the portal to force an update. The function app only ever scales the VMSS up; it does not participate in scale-down.
 
-    - The VM when created installs and runs the ingestion jobs through cloud init. If the run is successful, the ingestion job scales the VMSS down again, and the VM disappears.
+    - The VM when created installs and runs the ingestion jobs through cloud init. Cloud init unconditionally finishes by running `src/vmutils/terminate.sh`, which uploads logs and then issues `az vmss scale --new-capacity 0` against its own VMSS using the VM's managed identity. The VMSS therefore scales itself back to zero, and the VM disappears.
+
+    - If the ingestion job fails, `terminate.sh` writes a `VM ERROR` line to the service log before scaling down. This line is picked up by the `VM error` alert in the diagnostics RG (Severity 1, see [operations.md](operations.md)), so a failed run notifies operators even though the VM itself is gone by the time the alert fires.
 
 # Android architecture
 
