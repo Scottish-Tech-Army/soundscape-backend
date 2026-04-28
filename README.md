@@ -1,10 +1,12 @@
 # Soundscape Backend
 
-This repository contains code for the backend services for the Soundscape app running in Azure. It is concerned with both iOS and Android apps.
+This repository contains code for the backend services for the [Soundscape app](https://scottish-tech-army.github.io/Soundscape-Android/) running in Azure. It is concerned with both iOS and Android apps.
+
+Soundscape is a navigation and audio app for blind and visually impaired users; this repository contains only the Azure backend that serves it. It is intended for people deploying or operating that backend, not for app developers.
 
 The repository is structured as follows.
 
-- [docs](docs) contains documentation. Please read it, or the author will be sad.
+- [docs](docs) contains documentation. Read these documents before deploying or modifying any component.
 
     - [Architecture](/docs/architecture.md) describes the architecture.
 
@@ -15,6 +17,8 @@ The repository is structured as follows.
     - If you want to deploy a new Android backend RG and cut over traffic, read the [Android backend instructions](/docs/androiddeploy.md)
 
     - If you want to deploy a new Photon server instance and cut over traffic, read the [Photon server instructions](/docs/photondeploy.md).
+
+    - [Links site deployment](/docs/linksdeploy.md) documents how to deploy the Android App Links site (one-off; not normally re-run after initial deployment).
 
     - [Operations processes](/docs/operations.md) describes how to operate an existing deployment, including how to use search queries, analyse logs, and monitor load.
 
@@ -40,7 +44,15 @@ The repository is structured as follows.
 
         - [pmtiles](src/pmtiles) contains tooling that runs in the Android pmtiles VM to download data and set it up in the Cloudflare account.
 
-        - [photon](src/photon) contains tooling for the photon server, which provides a search server.
+        - [cloudflaremetrics](src/cloudflaremetrics) contains code for an Azure function that periodically queries the Cloudflare GraphQL API to collect worker invocation and R2 bucket metrics, and writes them to Application Insights for dashboarding.
+
+    - For the photon server:
+
+        - [photon](src/photon) contains tooling for the photon server, which provides a search server (used by Android clients but logically distinct from the rest of the Android backend).
+
+    - For the links site:
+
+        - [links](src/links) contains the static files served by the links site (`assetlinks.json`, `apple-app-site-association`, `health`).
 
     - For both Android and iOS:
 

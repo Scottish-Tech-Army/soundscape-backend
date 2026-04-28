@@ -1,5 +1,13 @@
 # Operations processes
 
+This document covers how to monitor and operate an existing deployment. It is intended for operators on call for the running service, not for the deployment process itself (which is described in the per-component deployment documents).
+
+It is organised as follows.
+
+- [Dashboards](#dashboards) — the per-component portal dashboards built by each deployment, and what they show.
+- [Alerts](#alerts) — the alerts that fire when something is wrong, and the first action to take for each.
+- [Detailed log monitoring](#detailed-log-monitoring) — the saved log queries used to investigate issues, grouped by component.
+
 ## Dashboards
 
 ### iOS dashboard
@@ -70,25 +78,43 @@ A range of alerts are configured, and will be seen in email reports sent to the 
 
 - Severity 4: a VM (iOS or Android) successfully ran to completion.
 
-- Severity 1: a VM (iOS or Android) reported an error
+    - First action: none — informational only.
 
-- Severity 1: a VM (iOS or Android) took so long to complete that it must have failed (and presumably the termination script did not work to report the error)
+- Severity 1: a VM (iOS or Android) reported an error.
 
-- Severity 2: errors are reported in Azure Front Door for Soundscape iOS requests
+    - First action: open the relevant dashboard ([iOS](#ios-dashboard) or [Android](#android-dashboard)) to confirm the VMSS state, then run the high-level ingestion query (`iOS ingestion - high level` or `Android VM processing - high level`) to find the failing step. The detailed-logs query for the same component covers the run output.
+
+- Severity 1: a VM (iOS or Android) took so long to complete that it must have failed (and presumably the termination script did not work to report the error).
+
+    - First action: as above. Additionally, check the VMSS in the portal — if a VM is still running, terminate it manually. The next scheduled run will then start cleanly. The cause of the hang is normally visible in the detailed-logs query, even though the VM did not write a final error.
+
+- Severity 2: errors are reported in Azure Front Door for Soundscape iOS requests.
+
+    - First action: run `iOS Front Door Errors` (note that this query lives in the shared workspace, see below). If errors are concentrated on a single endpoint or path, check the corresponding tilesrv logs (`iOS tilesrv access logs`) for the same time window.
 
 For photon:
 
-- Severity 4: a reimage of the photon VMSS has started
+- Severity 4: a reimage of the photon VMSS has started.
 
-- Severity 1: no healthy VMs exist in the photon VMSS
+    - First action: none — informational only.
 
-- Severity 1: more than one VM exists in the photon VMSS, implying that the VMSS reimage failed to complete in some way
+- Severity 1: no healthy VMs exist in the photon VMSS.
 
-- Severity 2: errors are reported in Azure Front Door for photon requests
+    - First action: open the [photon dashboard](#photon-dashboard) and check VM instance counts. Run `Photon VM logs - high level` and `Photon Container logs` to find why the VM failed to come up. If the VM is still attempting startup, allow up to 30 minutes — the photon database build is slow.
+
+- Severity 1: more than one VM exists in the photon VMSS, implying that the VMSS reimage failed to complete in some way.
+
+    - First action: run `Photon function app logs` to find why the reimage health-check loop did not converge. The function app reimage logic lives in `src/trigger/reimage.py` and times out if neither VM reaches a healthy state.
+
+- Severity 2: errors are reported in Azure Front Door for photon requests.
+
+    - First action: run `Photon Front Door Errors` (in the shared workspace, see below) and `Photon Container logs` for the same window.
 
 ## Detailed log monitoring
 
 A range of detailed diagnostics queries have been created which should allow easier checking of logs, with standard logs queries.
+
+*Note on Front Door logs:* unlike the per-component logs (which live in the deployment RG's Log Analytics workspace), all Front Door logs — for both iOS and photon — live in the workspace in the shared resource group `soundscape-shared`. This affects all queries below whose names start with `iOS Front Door` or `Photon Front Door`. Android does not currently have Front Door log queries because Android tile and extracts traffic is served directly by Cloudflare, not Front Door.
 
 ### Using the queries
 
@@ -146,8 +172,6 @@ The function apps (that trigger VM creation for ingestion) generate logs when th
 
 #### Front door logs
 
-Unlike the other logs, the Front Door logs do not appear in the log analytics workspace in the deployment RG, but in the one in the shared resource group `soundscape-shared`.
-
 - `iOS Front Door metrics`: this shows an hourly summary of incoming traffic to Front Door. *It includes both iOS and photon search requests, unlike the other Front Door requests based on access logs.*
 
 - `iOS Front Door Access Log summary`: this shows a daily summary of incoming traffic, with counts based on parsed into country, URL, and unique users.
@@ -202,7 +226,9 @@ The cfmetrics function app runs hourly and writes worker and R2 bucket metrics t
 
     All metrics are reported for both the pmtiles and extracts scripts.
 
-Note: HTTP response status codes (e.g. 503 "data not available yet" from the extracts worker) are not available via the Cloudflare analytics API at the account level. Distinguishing 503s from 200s requires instrumenting the workers with the Workers Analytics Engine — this is deferred to a future phase.
+##### Limitations
+
+HTTP response status codes (e.g. 503 "data not available yet" from the extracts worker) are not available via the Cloudflare analytics API at the account level. Distinguishing 503s from 200s requires instrumenting the workers with the Workers Analytics Engine — this is deferred to a future phase.
 
 ### Photon logs
 
@@ -222,8 +248,6 @@ Photon log queries are as follows.
 
 #### Front door logs
 
-Unlike the other logs, the Front Door logs do not appear in the log analytics workspace in the deployment RG, but in the one in the shared resource group `soundscape-shared`.
-
 - `Photon Front Door metrics`: this shows an hourly summary of incoming traffic to Front Door. *It includes both iOS and photon search requests, unlike the other Front Door requests based on access logs.*
 
 - `Photon Front Door Access Log summary`: this shows a daily summary of incoming traffic, with counts based on parsed into country, URL, and unique users.
@@ -233,3 +257,17 @@ Unlike the other logs, the Front Door logs do not appear in the log analytics wo
 - `Photon Front Door Errors`: this is a subset of the access log view that only shows errors.
 
 - `Photon Front Door response times`: this shows a daily summary of response times for successful requests - average, median, and P95 and P99.
+
+## Common issues
+
+This section collects known failure modes and the first-look response for each. It is not exhaustive — the alert first-actions above and the per-component log queries are normally sufficient — but it captures recurring issues that are not obvious from the dashboards alone.
+
+- **`PrincipalNotFound` during `iosbase.sh`.** Intermittent. The base deploy script assigns a managed identity a role before Entra has propagated the identity's existence. The script will then fail with `PrincipalNotFound`. Mitigation: simply re-run `iosbase.sh`. The script is safe to re-run.
+
+- **iOS ingestion VM still running after 12 hours.** The full-globe ingestion takes 8–10 hours; significantly longer means the VM is stuck. Run `iOS ingestion - detailed logs` and look for the last log line — `imposm3` typically logs once per minute. If the VM is genuinely hung (no log output for >30 minutes), terminate it manually in the portal; the next scheduled timer run will start cleanly.
+
+- **Android ingestion run failed but no production worker change occurred.** This is the expected behaviour: the upload tooling validates the new data through the `*-test` workers before promoting it to the production workers. A failure during validation leaves production untouched. Check `Android VM processing - high level` to find the failing step, fix the underlying issue, and re-trigger the timer.
+
+- **Photon VMSS has two VMs and never returns to one.** The reimage logic in `src/trigger/reimage.py` waits for both VMs to be healthy before deleting the older one. If the new VM never reaches a healthy state, the VMSS stays at capacity 2 indefinitely. Run `Photon function app logs` and `Photon VM logs - high level` to diagnose; a manual delete of the stuck instance may be required.
+
+- **Front Door 5xx spike with no corresponding origin spike.** Front Door reports errors that the origin never sees (TLS handshake failures, Front Door internal errors). Run `iOS Front Door Errors` (or `Photon Front Door Errors`) and check the error category column — `OriginConnectionAborted` and similar indicate origin-side issues; other categories may indicate Front Door or client-side issues.

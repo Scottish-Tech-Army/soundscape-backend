@@ -20,15 +20,21 @@ The process is as follows.
 
 ## Prerequisites
 
+- The shared infrastructure must already be deployed. The `soundscape-diags`, `soundscape-shared`, and the `prd2` and `tst` DNS zones / Front Door endpoints (per [Adding DNS zones and endpoints](/docs/infradeploy.md#adding-dns-zones-and-endpoints)) must all exist before any of the iOS deploy scripts will work.
+
 - General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including in particular:
 
-    - Making sure that the shared infrastructure has been deployed.
+    - Making sure that the diags infrastructure has been deployed.
 
     - Making sure that quotas have been set.
 
 ## Deploying in Azure
 
-Follow the following steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
+Follow these steps. Note that some of the scripts here take quite some time to run - up to ten or fifteen minutes for the slower ones. Be patient, and let them complete.
+
+Each deploy script under `scripts/` prints `SUCCESS` as its final line and exits 0 on completion. If you do not see `SUCCESS`, treat the run as failed and investigate before continuing to the next step.
+
+If you are redeploying an existing `iNN` rather than deploying a fresh one, also see [Appendix: Redeploy gotchas](#appendix-redeploy-gotchas) at the end of this document.
 
 - Set up a config file. Production instances should be named `iNN` where `NN` is a two digit number that should be monotonically increasing, such as `i01`.
 
@@ -101,17 +107,7 @@ Follow the following steps. Note that some of the scripts here take quite some t
     bash scripts/cleanup.sh
     ~~~
 
-### Redeploy gotchas
-
-If you redeploy the various bicep templates, some bad things happen.
-
-- If you reload the `deploy` template, the DB password is changed. This means that all of the `tilesrv` containers restart, and any running ingestion job fails (though this should be a short blip of a few seconds).
-
-- If you reload the `vm` template, any running ingestion job is cancelled as the VMSS is scaled down. This is benign so long as you are not in the middle of a multi-hour ingestion run.
-
 ## Ingesting data and basic validation
-
-### Triggering ingestion
 
 Your deployment still does not work, because ingestion has not occurred. You can just wait until the weekly ingestion run happens, but a smarter idea is to kick it off manually.
 
@@ -123,92 +119,25 @@ Your deployment still does not work, because ingestion has not occurred. You can
 
 - Click on the only function in the list, `ingest-timer`.
 
-- In the `Code&Test` blade, click on `Test/Run`
+- In the `Code&Test` blade, click on `Test/Run`.
 
 - This will cause a new subwindow to open with a big `Run` button. Click it.
 
-### Validating that your run has completed
-
-The ingestion will take around 8-10 hours. To monitor its progress, check the dashboard and the ingestion logs as described in the [operations document](operations.md).
+The ingestion will take around 8-10 hours. To monitor progress, check the dashboard and the ingestion logs as described in the [operations document](operations.md).
 
 ## Switching over to your deployment
 
-Having followed this process, you should cut traffic over to the new backend instance, which can be done as follows.
+Once ingestion has completed, cut traffic over to the new backend instance by following the [Front Door cutover pattern](/docs/infradeploy.md#front-door-cutover-pattern) with the following values:
 
-### Setting up Azure Front Door
+- `<TEST_ENDPOINT>` = `tst`
+- `<PROD_ENDPOINT>` = `prd2`
+- `<SMOKE_URL>` = `https://tst.soundscape.scottishtecharmy.org/tiles/16/32127/21794.json?nocache=1234`
+- `<LOADTEST_CMD>` = `bash /ROOT_OF_REPO/scripts/iosloadtest.sh`
 
-To change over your deployment, perform the following steps.
+## Appendix: Redeploy gotchas
 
-- Select the Azure Front Door instance (the only one, in the `soundscape-shared` resource group) in the portal. All instructions are related to that resource.
+If you redeploy the various bicep templates against an existing `iNN` rather than creating a fresh one, some non-obvious things happen.
 
-- Select `Origin Groups` on the left panel. You should see the origin group for your new instance there.
+- If you reload the `deploy` template, the DB password is changed. This means that all of the `tilesrv` containers restart, and any running ingestion job fails (though this should be a short blip of a few seconds).
 
-- The Front Door instance already has two live endpoints, one for live traffic `prd2` and one for test traffic `tst`. Within each of these there is a single route that you must change.
-
-    - Click on `Front Door manager`
-
-    - Click the `tst.soundscape.scottishtecharmy.org` endpoint.
-
-    - Click on the route.
-
-    - Change the origin group to be the one for your new deployment.
-
-- Double check that the traffic is working - for example, the following
-
-    ~~~bash
-    curl -i https://tst.soundscape.scottishtecharmy.org/tiles/16/32127/21794.json?nocache=1234
-    ~~~
-
-    where you can change the `nocache` number to ensure that caching does not happen.
-
-### Testing
-
-Now we test properly. To validate that the test domain (and so your deployment) is working, you should do the following.
-
-- Pick a directory where you will run all your tests (and where all your outputs will go), and switch to it.
-
-- From that directory, run the following command.
-
-    ~~~bash
-    nohup bash /ROOT_OF_REPO/scripts/iosloadtest.sh tst &
-    ~~~
-
-    (Note that we are testing the `tst` subdomain here, which points at your new deployment.)
-
-- Check results.
-
-    - There is an output log and a detailed CSV file of results that are being generated in your test directory. You can tail these, but you should not consider the test a success until it has fully completed.
-
-    - You should see load arriving at your deployment.
-
-    - Everything should just work (TM).
-
-### Cutting over
-
-Now it is time to cut the traffic over.
-
-- Change to your directory.
-
-- From that directory, run the following command.
-
-    ~~~bash
-    nohup bash /ROOT_OF_REPO/scripts/iosloadtest.sh prd2 &
-    ~~~
-
-    (Note that we are now testing the live domains.) Double check that the tests are running correctly from the logs. The dashboard should show traffic in Front Door Manager, but (initially) not in your deployment.
-
-- While the test is running, cut over traffic.
-
-    - Click on `Front Door manager`
-
-    - Click the `prd2.soundscape.scottishtecharmy.org` endpoint.
-
-    - Change the origin group to be the one for your new deployment.
-
-- You are now live! Check that everything is working correctly.
-
-    - All output logs should continue not to show any errors.
-
-    - You should see load arriving at your deployment.
-
-    - Everything should just work (TM).
+- If you reload the `vm` template, any running ingestion job is cancelled as the VMSS is scaled down. This is benign so long as you are not in the middle of a multi-hour ingestion run.

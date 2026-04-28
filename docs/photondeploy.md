@@ -4,9 +4,29 @@
 
 The basic model is that the photon server runs on a VM in a VMSS. When the VM is first created, it downloads all the software it needs and builds a full photon database, with a load balancer IP in front of it, accessible only from Front Door.
 
+The process is as follows.
+
+- Check some [prerequisites](#prerequisites)
+
+- [Set up your deployment in Azure](#instructions).
+
+- [Cut over live traffic to your new deployment](#switching-over-to-your-deployment).
+
+## Prerequisites
+
+- General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including in particular:
+
+    - Making sure that the diags infrastructure has been deployed.
+
+    - Making sure that the shared infrastructure (`soundscape-shared` RG, `soundscape-fd` Front Door, and the Azure Container Registry) has been deployed.
+
+    - Making sure that the `photon` and `photontest` DNS zones and Front Door endpoints have been added (see [Adding DNS zones and endpoints](/docs/infradeploy.md#adding-dns-zones-and-endpoints)).
+
+    - Making sure that quotas have been set.
+
 ## Instructions
 
-Deployment of the photon server works as follows.
+Deployment of the photon server works as follows. Each deploy script under `scripts/` prints `SUCCESS` as its final line and exits 0 on completion. If you do not see `SUCCESS`, treat the run as failed and investigate before continuing to the next step.
 
 - Set up a config file. Photon instances should be named `pNN` where `NN` is a two digit number that should be monotonically increasing, such as `p01`.
 
@@ -84,83 +104,10 @@ Deployment of the photon server works as follows.
 
 ## Switching over to your deployment
 
-Having followed this process, you should cut traffic over to the new backend instance, which can be done as follows.
+Once the new VM is healthy, cut traffic over to the new backend instance by following the [Front Door cutover pattern](/docs/infradeploy.md#front-door-cutover-pattern) with the following values:
 
-### Setting up Azure Front Door
-
-To change over your deployment, perform the following steps.
-
-- Select the Azure Front Door instance (the only one, in the `soundscape-shared` resource group) in the portal. All instructions are related to that resource.
-
-- Select `Origin Groups` on the left panel. You should see the origin group for your new instance there.
-
-- The Front Door instance already has two live endpoints, one for live traffic `photon` and one for test traffic `photontest`. Within each of these there is a single route that you must change.
-
-    - Click on `Front Door manager`
-
-    - Click the `photontest.soundscape.scottishtecharmy.org` endpoint.
-
-    - Click on the route.
-
-    - Change the origin group to be the one for your new deployment.
-
-- Double check that the traffic is working - for example, the following
-
-    ~~~bash
-    curl -i "https://photontest.soundscape.scottishtecharmy.org/photon/api?q=harbour&nocache=1234"
-    ~~~
-
-    where you can change the `nocache` number to ensure that caching does not happen.
-
-### Testing
-
-Now we test properly. To validate that the test domain (and so your deployment) is working, you should do the following.
-
-- Pick a directory where you will run all your tests (and where all your outputs will go), and switch to it.
-
-- From that directory, run the following command.
-
-    ~~~bash
-    nohup bash /ROOT_OF_REPO/scripts/photonloadtest.sh photontest &
-    ~~~
-
-    (Note that we are testing the `photontest` subdomain here, which points at your new deployment.)
-
-- Check results.
-
-    - There is an output log and a detailed CSV file of results that are being generated in your test directory. You can tail these, but you should not consider the test a success until it has fully completed.
-
-    - You should see load arriving at your deployment.
-
-    - Everything should just work (TM).
-
-### Cutting over
-
-Now it is time to cut the traffic over.
-
-- Change to your directory.
-
-- From that directory, run the following command.
-
-    ~~~bash
-    nohup bash /ROOT_OF_REPO/scripts/photonloadtest.sh photon &
-    ~~~
-
-    (Note that we are now testing the live domains.) Double check that the tests are running correctly from the logs. The dashboard should show traffic in Front Door Manager, but (initially) not in your deployment.
-
-- While the test is running, cut over traffic.
-
-    - Click on `Front Door manager`
-
-    - Click the `photon.soundscape.scottishtecharmy.org` endpoint.
-
-    - Change the origin group to be the one for your new deployment.
-
-- You are now live! Check that everything is working correctly.
-
-    - All output logs should continue not to show any errors.
-
-    - You should see load arriving at your deployment.
-
-    - Everything should just work (TM).
+- `<TEST_ENDPOINT>` = `photontest`
+- `<PROD_ENDPOINT>` = `photon`
+- `<SMOKE_URL>` = `https://photontest.soundscape.scottishtecharmy.org/photon/api?q=harbour&nocache=1234`
+- `<LOADTEST_CMD>` = `bash /ROOT_OF_REPO/scripts/photonloadtest.sh`
 

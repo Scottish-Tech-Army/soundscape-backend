@@ -2,6 +2,14 @@
 
 This documents the architecture of how both Android and iOS back ends for Soundscape work. While they are very different, there are some common components; after this overview section there are sections that describe the iOS and Android architectures in detail.
 
+This document is organised as follows.
+
+- [Overview](#overview) — the resource groups and how they fit together.
+- [iOS Architecture](#ios-architecture) — the iOS tile server, database, and ingestion pipeline.
+- [Android architecture](#android-architecture) — the Cloudflare-based tile and extracts components and their Azure-side orchestration.
+- [Photon server architecture](#photon-server-architecture) — the search server used by Android clients.
+- [Links site architecture](#links-site-architecture) — the static site backing App Links verification.
+
 The different resources are split into six resource groups.
 
 - There is a diagnostics RG, `soundscape-diags`. This contains the shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications).
@@ -24,7 +32,7 @@ The different resources are split into six resource groups.
 
 - There is a Photon Server RG, described in detail in the [Photon Server Architecture](#photon-server-architecture) section below. This contains a Photon Server that handles Android search traffic, fronted by the shared Front Door instance.
 
-- Finally, there is a links site RG, `soundscape-links`, described in the [Links Site Architecture](#links-site-architecture) section below. This contains the storage account that serves the Android App Links verification file.
+- Finally, there is a links site RG, `soundscape-links`, described in the [Links Site Architecture](#links-site-architecture) section below. This contains the storage account that serves the Android App Links and iOS App Links verification files.
 
 # iOS Architecture
 
@@ -88,9 +96,11 @@ The data in the database is downloaded and ingested from public data at [Geofabr
 
     - Normally it is zero - i.e. no VM is running. VMs are not cheap.
 
-    - Periodically, a function app with a timer trigger increases the scale to 1, so a single VM is instantiated. This trigger can also be fired manually through the portal to force an update.
+    - Periodically, a function app with a timer trigger increases the scale to 1, so a single VM is instantiated. This trigger can also be fired manually through the portal to force an update. The function app only ever scales the VMSS up; it does not participate in scale-down.
 
-    - The VM when created installs and runs the ingestion jobs through cloud init. If the run is successful, the ingestion job scales the VMSS down again, and the VM disappears.
+    - The VM when created installs and runs the ingestion jobs through cloud init. Cloud init unconditionally finishes by running `src/vmutils/terminate.sh`, which uploads logs and then issues `az vmss scale --new-capacity 0` against its own VMSS using the VM's managed identity. The VMSS therefore scales itself back to zero, and the VM disappears.
+
+    - If the ingestion job fails, `terminate.sh` writes a `VM ERROR` line to the service log before scaling down. This line is picked up by the `VM error` alert in the diagnostics RG (Severity 1, see [operations.md](operations.md)), so a failed run notifies operators even though the VM itself is gone by the time the alert fires.
 
 # Android architecture
 
@@ -124,11 +134,11 @@ There are a number of Cloudflare components.
 
         - If the data is present in the R2 bucket already, then it is returned to the client.
 
-        - If the data is not present in the R2 bucket, then an HTTP HEAD request is issued to the Azure storage. If the header shows that it is smaller than a threshold (currently 100MB) it is retrieved from Azure directly by the worker and stored in R2 before being returned to the client. *For simplicity, this flow is not shown in the architecture diagram.*
+        - If the data is not present in the R2 bucket, then an HTTP HEAD request is issued to the Azure storage. If the header shows that it is smaller than a threshold (currently 100MB) it is retrieved from Azure directly by the worker and stored in R2 before being returned to the client.
 
         - If the header shows that it is larger than that threshold, then a 503 error is returned with a `Retry-After` header. A message is put on the queue (see below).
 
-        All extracts files are both named and datastamped, and the manifest file references datestamped files. Hence if the extracts list changes while a client is still processing the manifest, the old extracts are still available for a limited time (around twenty minutes). After this period, clients must download the manifest and recalculate which extract they should use.
+        All extracts files are both named and datestamped, and the manifest file references datestamped files. Hence if the extracts list changes while a client is still processing the manifest, the old extracts are still available for a limited time (around twenty minutes). After this period, clients must download the manifest and recalculate which extract they should use.
 
     - The consumer worker `EXTRACTS_BUCKET-queue` monitors a queue, and receives messages whenever a request indicates that an extract was not available and was too large to download inline. When it receives such a message, it does the following.
 
@@ -136,9 +146,13 @@ There are a number of Cloudflare components.
 
         - Otherwise, it retrieves the file from Azure and stores it in R2.
 
-        This model is used because ordinary workers are terminated as soon as the client disconnects. Any download lasting more than a couple of seconds before data is available to stream is likely to end with the client disconnecting, and so the download never succeeds. The user impact is that the first download of any large extract fails, but should succeed on a later retry (for all users, not just the first to download).
-
 - In addition to the workers `PMTILES_BUCKET`, `EXTRACTS_BUCKET`, and `EXTRACTS_BUCKET-queue`, there are three workers called `PMTILES_BUCKET-test`, `EXTRACTS_BUCKET-test`, and `EXTRACTS_BUCKET-queue-test`, used for testing during the upload process, not by clients. These use the same R2 buckets as the main workers.
+
+> **Note:** The architecture diagram omits the inline R2-fill path (worker fetches from Azure storage and writes to R2 on a cache miss for files under the threshold) for clarity; only the queue-worker path is shown.
+
+### Why a queue worker is needed
+
+The queue model is used because ordinary Cloudflare workers are terminated as soon as the client disconnects. Any download lasting more than a couple of seconds before data is available to stream is likely to end with the client disconnecting, and so the download never succeeds. The user impact of the queue worker model is that the first download of any large extract fails (with a helpful message in the app), but should succeed on a later retry (for all users, not just the first to download).
 
 ## Uploading of new data from Azure
 
@@ -184,7 +198,7 @@ All three function apps use the FlexConsumption plan (Python 3.12) and authentic
 
 The photon server architecture consists of the following.
 
-- There is a VMSS containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from graphhopper.
+- There is a [VM Scale Set (VMSS)](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from graphhopper.
 
 - There is a load balancer, that exposes the search URL to use.
 
@@ -202,11 +216,17 @@ Every month, the VM reloads its data. This occurs as follows.
 
 The links site at `https://links.soundscape.scottishtecharmy.org` supports Android App Links verification and provides a landing page redirect. It is a static site with no server-side logic.
 
-- A storage account in the `soundscape-links` RG has static website hosting enabled. It holds a single file: `/.well-known/assetlinks.json`, which Android uses to verify that the app is authorised to handle links for the domain.
+- A storage account in the `soundscape-links` RG has static website hosting enabled. It holds three files.
+
+    - `assetlinks.json` is used by Android to verify that the app is authorised to handle links for the domain.
+
+    - `apple-app-site-association` is used by iOS for the same purpose.
+
+    - `health` is used by Front Door health checks.
 
 - The shared Front Door instance (`soundscape-fd`) has a dedicated endpoint and route for `links.soundscape.scottishtecharmy.org`. Its rules engine provides two behaviours:
 
-    - Requests for `/.well-known/assetlinks.json` are forwarded to the storage origin and returned as `application/json`.
+    - Requests for `/.well-known/*` are forwarded to the storage origin, returning static files.
 
     - All other requests receive a 301 redirect to `https://scottish-tech-army.github.io/Soundscape-Android/`.
 
