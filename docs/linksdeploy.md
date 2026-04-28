@@ -2,11 +2,12 @@
 
 ## Design
 
-The links site is a once-only deployment (unlike iOS or Photon, there is no multi-instance cutover model). It serves a single static file and a redirect rule, both configured through Azure Front Door. See [architecture.md](architecture.md) for a full description.
+The links site is a once-only deployment (unlike iOS or Photon, there is no multi-instance cutover model). It serves three static files (one for Android, one for iOS, and one to allow health checks) and a redirect rule, both configured through Azure Front Door. See [architecture.md](architecture.md) for a full description.
 
 ## Prerequisites
 
 - You must be logged into the correct Azure subscription.
+
 - The shared infrastructure must already be deployed (`soundscape-shared` RG and `soundscape-fd` Front Door profile must exist).
 
 ## Instructions
@@ -19,7 +20,7 @@ All scripts are idempotent.
     . config/links-cfg.sh
     ~~~
 
-- Deploy the storage account and upload the `assetlinks.json` file.
+- Deploy the storage account and upload the static files.
 
     ~~~bash
     bash scripts/linksdeploy.sh
@@ -53,13 +54,32 @@ All scripts are idempotent.
 
 Once the certificate is active, verify the two behaviours.
 
-- Confirm the asset links file is served correctly:
+- Confirm the various static files are served correctly:
 
-    ~~~bash
-    curl -i "https://links.soundscape.scottishtecharmy.org/.well-known/assetlinks.json"
-    ~~~
+    - Android file
 
-    Expected: HTTP 200, `Content-Type: application/json`, body containing the correct package name and certificate fingerprint.
+        ~~~bash
+        curl -i "https://links.soundscape.scottishtecharmy.org/.well-known/assetlinks.json"
+        ~~~
+
+        Expected: HTTP 200, `Content-Type: application/json`, body containing the correct package name and certificate fingerprint.
+
+    - iOS file
+
+        ~~~bash
+        curl -i "https://links.soundscape.scottishtecharmy.org/.well-known/apple-app-site-association"
+        ~~~
+
+        Expected: HTTP 200, `Content-Type: text/plain`, body containing the correct JSON.
+
+    - Health check
+
+        ~~~bash
+        curl -i "https://links.soundscape.scottishtecharmy.org/.well-known/health"
+        ~~~
+
+        Expected: HTTP 200, body containing the text "OK".
+
 
 - Confirm the catch-all redirect works:
 

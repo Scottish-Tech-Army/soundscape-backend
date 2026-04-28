@@ -16,6 +16,8 @@ The repository is structured as follows.
 
     - If you want to deploy a new Photon server instance and cut over traffic, read the [Photon server instructions](/docs/photondeploy.md).
 
+    - [Links site deployment](/docs/linksdeploy.md) documents how to deploy the Android App Links site. This is normally a one off task that does not have to be rerun after initial creation.
+
     - [Operations processes](/docs/operations.md) describes how to operate an existing deployment, including how to use search queries, analyse logs, and monitor load.
 
 - [scripts](scripts) contains scripts that allow you to deploy the solution, using all of the components below.

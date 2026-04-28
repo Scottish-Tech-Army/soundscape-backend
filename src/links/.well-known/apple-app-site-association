@@ -1,0 +1,19 @@
+{
+    "applinks": {
+      "details": [
+        {
+          "appIDs": ["48N3J4V5KM.org.scottishtecharmy.soundscape"],
+          "components": [
+            {
+              "/": "/v1/sharemarker",
+              "comment": "Open shared markers in Soundscape"
+            },
+            {
+              "/": "/v1/sharemarker/*",
+              "comment": "Open shared markers in Soundscape"
+            }
+          ]
+        }
+      ]
+    }
+  }

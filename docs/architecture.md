@@ -24,7 +24,7 @@ The different resources are split into six resource groups.
 
 - There is a Photon Server RG, described in detail in the [Photon Server Architecture](#photon-server-architecture) section below. This contains a Photon Server that handles Android search traffic, fronted by the shared Front Door instance.
 
-- Finally, there is a links site RG, `soundscape-links`, described in the [Links Site Architecture](#links-site-architecture) section below. This contains the storage account that serves the Android App Links verification file.
+- Finally, there is a links site RG, `soundscape-links`, described in the [Links Site Architecture](#links-site-architecture) section below. This contains the storage account that serves the Android App Links and iOS App Links verification files.
 
 # iOS Architecture
 
@@ -202,11 +202,17 @@ Every month, the VM reloads its data. This occurs as follows.
 
 The links site at `https://links.soundscape.scottishtecharmy.org` supports Android App Links verification and provides a landing page redirect. It is a static site with no server-side logic.
 
-- A storage account in the `soundscape-links` RG has static website hosting enabled. It holds a single file: `/.well-known/assetlinks.json`, which Android uses to verify that the app is authorised to handle links for the domain.
+- A storage account in the `soundscape-links` RG has static website hosting enabled. It holds three files.
+
+    - `assetlinks.json` is used by Android to verify that the app is authorised to handle links for the domain.
+
+    - `apple-app-site-association` is used by iOS for the same purpose.
+
+    - `health` is used by Front Door health checks.
 
 - The shared Front Door instance (`soundscape-fd`) has a dedicated endpoint and route for `links.soundscape.scottishtecharmy.org`. Its rules engine provides two behaviours:
 
-    - Requests for `/.well-known/assetlinks.json` are forwarded to the storage origin and returned as `application/json`.
+    - Requests for `/.well-known/*` are forwarded to the storage origin, returning static files.
 
     - All other requests receive a 301 redirect to `https://scottish-tech-army.github.io/Soundscape-Android/`.
 
