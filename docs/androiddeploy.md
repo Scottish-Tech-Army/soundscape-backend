@@ -6,11 +6,11 @@ This document describes how to deploy a new Android deployment. Note that there 
 
 Before you can initially create a deployment, you need the following.
 
-- General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including in particular:
+- General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including setting quotas.
 
-    - Making sure that the diags infrastructure has been deployed.
+- You should ensure that shared infrastructure has been deployed, including in particular the shared RG, diagnostics infrastructure, and usage metrics RG.
 
-    - Making sure that quotas have been set.
+- To run the usage-metrics `--add-writer` step below, you must be the Entra admin of the metrics PostgreSQL server — normally the operator who deployed the metrics store. If that is someone else, either have them run that one step, or take over admin first (see [operations.md](/docs/operations.md#recovering-admin-access)).
 
 - Access to the Cloudflare account. Using this you must
 
@@ -169,11 +169,16 @@ Each deploy script under `scripts/` prints `SUCCESS` as its final line and exits
     bash scripts/androidvm.sh
     ~~~
 
-- Deploy the function app code to the deployment. By default this deploys only the `trigger` and `vmcount` function apps. To also deploy the Cloudflare metrics function app (`cfmetrics`, see [architecture.md](architecture.md#azure-function-apps)), set `DEPLOY_CFMETRICS=true` before running the script. This is normally what you want for an Android deployment.
+- Deploy the function app code to the deployment. `functionapp.sh` discovers the function apps in the given resource group and publishes each from its matching `src/` directory — for an Android instance that is `trigger`, `vmcount`, `cfmetrics`, and the usage-metrics reader (see [architecture.md](architecture.md#azure-function-apps)).
 
     ~~~bash
-    export DEPLOY_CFMETRICS=true
-    bash scripts/functionapp.sh
+    bash scripts/functionapp.sh ${RG}
+    ~~~
+
+- Grant the usage-metrics reader write access to the shared metrics database. Its managed identity (`${PREFIX}-metrics-uami`) is per-instance, so each instance needs a database role created for it against the shared store. Run this as the operator who deployed the metrics store — it connects to that database as its Entra admin (re-run it on each Android cutover):
+
+    ~~~bash
+    bash scripts/metricsschema.sh --add-writer ${PREFIX}-metrics-uami ${RG}
     ~~~
 
 - Clear out temporary build files. This is optional, but it avoids having random built artefacts lying around cluttering up the disk.

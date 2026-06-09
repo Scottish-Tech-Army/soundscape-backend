@@ -23,16 +23,29 @@ param keyVaultName string = ''   // Key vault containing cloudflare-api-token an
 param pmtilesBucket string = ''  // Cloudflare worker / R2 bucket name for tile data
 param extractsBucket string = '' // Cloudflare worker / R2 bucket name for offline extracts
 
+// Parameters only required when deploying the usage-metrics (Cloudflare) reader — the
+// second deployment of src/usagemetrics, here reading this instance's cfmetrics traces
+// and writing pmtiles/offline-maps counts to the shared metrics Postgres DB. Empty
+// usageMetricsAppName (the default) means the app and its resources are not created, so
+// iOS/photon (which do not pass it) skip it entirely.
+param usageMetricsAppName string = ''
+param pgHost string = ''          // shared metrics Postgres server FQDN
+param pgDatabase string = ''      // shared metrics database name
+
 // Plans - every function app needs one.
-var triggerPlanName    = '${prefix}-trigger-plan'
-var metricPlanName     = '${prefix}-metric-plan'
-var cfMetricsPlanName  = '${prefix}-cfmetrics-plan'
+var triggerPlanName      = '${prefix}-trigger-plan'
+var metricPlanName       = '${prefix}-metric-plan'
+var cfMetricsPlanName    = '${prefix}-cfmetrics-plan'
+var usageMetricsPlanName = '${prefix}-usagemetrics-plan'
 
 @description('Metric schedule in cron format, e.g. "*/5 * * * *" for every five minutes')
 var metricSchedule string = '*/5 * * * *'
 
 @description('Cloudflare metrics schedule - 10 minutes past the hour so that the full hour of R2 storage data is available from the Cloudflare analytics API')
 var cfMetricsSchedule string = '10 * * * *'
+
+@description('Usage-metrics reader schedule - daily at 04:00 (offset from the shared reader at 03:00; only re-reads a trailing window so the exact time is not critical)')
+var usageMetricsSchedule string = '0 4 * * *'
 
 // Existing storage account
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
@@ -43,9 +56,10 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
 var storageKey = storage.listKeys().keys[0].value
 
 // Blob service and storage in that account for the function app code
-var triggerContainerName    = 'triggerapp'
-var metricContainerName     = 'metricapp'
-var cfMetricsContainerName  = 'cfmetricsapp'
+var triggerContainerName     = 'triggerapp'
+var metricContainerName      = 'metricapp'
+var cfMetricsContainerName   = 'cfmetricsapp'
+var usageMetricsContainerName = 'usagemetricsapp'
 
 @description('App insights name')
 var appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
@@ -85,6 +99,11 @@ resource metricContainer 'Microsoft.Storage/storageAccounts/blobServices/contain
 
 resource cfMetricsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = if (cfMetricsAppName != '') {
   name: cfMetricsContainerName
+  parent: blobService
+}
+
+resource usageMetricsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = if (usageMetricsAppName != '') {
+  name: usageMetricsContainerName
   parent: blobService
 }
 
@@ -335,6 +354,124 @@ resource cfMetricsApp 'Microsoft.Web/sites@2024-11-01' = if (cfMetricsAppName !=
         { name: 'CF_EXTRACTS_SCRIPT',                     value: extractsBucket }
         // Schedule
         { name: 'TRIGGER_SCHEDULE',                       value: cfMetricsSchedule }
+      ]
+    }
+  }
+}
+
+// --- Usage-metrics (Cloudflare) reader: its own least-privilege identity + function app.
+// A dedicated UAMI (not the broad shared ${prefix}-uami) so the metrics job carries only
+// LA-read + its package-pull right, and the shared identity is never widened with DB write.
+// The UAMI itself is created unconditionally (a UAMI is free, and keeping it non-conditional
+// avoids null-reference warnings from the gated grants/app below); its grants and the app
+// are gated, so on iOS/photon it is created but left inert/unused.
+resource metricsUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: '${prefix}-metrics-uami'
+  location: resourceGroup().location
+}
+
+// Read this instance's Log Analytics workspace (the cfmetrics AppTraces it queries).
+resource metricsLawReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (usageMetricsAppName != '') {
+  name: guid(logAnalytics.id, 'metrics-la-reader', metricsUami.id)
+  scope: logAnalytics
+  properties: {
+    principalId: metricsUami.properties.principalId
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '73c42c96-874c-492b-b04d-ab87d138a893' // Log Analytics Reader
+    )
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Pull its function package from the storage container.
+resource metricsBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (usageMetricsAppName != '') {
+  name: guid(storage.id, 'metrics-blob-contributor', metricsUami.id)
+  scope: storage
+  properties: {
+    principalId: metricsUami.properties.principalId
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+    )
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource usageMetricsPlan 'Microsoft.Web/serverfarms@2021-02-01' = if (usageMetricsAppName != '') {
+  name: usageMetricsPlanName
+  kind: 'functionapp'
+  location: resourceGroup().location
+  sku: {
+    tier: 'FlexConsumption'
+    name: 'FC1'
+  }
+  properties: {
+    reserved: true // Linux
+  }
+}
+
+resource usageMetricsApp 'Microsoft.Web/sites@2024-11-01' = if (usageMetricsAppName != '') {
+  name: usageMetricsAppName
+  location: resourceGroup().location
+  kind: 'functionapp,linux,flex'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${metricsUami.id}': {}
+    }
+  }
+  properties: {
+    serverFarmId: usageMetricsPlan.id
+    functionAppConfig: {
+      runtime: {
+        name: 'python'
+        version: '3.12'
+      }
+      scaleAndConcurrency: {
+        instanceMemoryMB: 2048
+        maximumInstanceCount: 40
+      }
+      deployment: {
+        storage: {
+          type: 'BlobContainer'
+          value: 'https://${storageName}.blob.${environment().suffixes.storage}/${usageMetricsContainerName}'
+          authentication: {
+            type: 'UserAssignedIdentity'
+            userAssignedIdentityResourceId: metricsUami.id
+          }
+        }
+      }
+    }
+    siteConfig: {
+      cors: {
+        allowedOrigins: [
+          'https://portal.azure.com'
+        ]
+      }
+      appSettings: [
+        { name: 'AzureWebJobsStorage',                    value: 'DefaultEndpointsProtocol=https;AccountName=${storageName};AccountKey=${storageKey};EndpointSuffix=${environment().suffixes.storage}' }
+        { name: 'FUNCTIONS_EXTENSION_VERSION',            value: '~4' }
+        // Diagnostics (reuse this instance's App Insights)
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING',  value: appInsights.properties.ConnectionString }
+        { name: 'APPINSIGHTS_INSTRUMENTATIONKEY',         value: appInsights.properties.InstrumentationKey }
+        { name: 'APPLICATIONINSIGHTS_ROLE_NAME',          value: usageMetricsAppName }
+        // Identity used for both the Log Analytics query and the Postgres write
+        { name: 'UAMI_CLIENT_ID',                         value: metricsUami.properties.clientId }
+        // This reader pulls the Cloudflare (cfmetrics) traces from the local workspace
+        { name: 'METRICS_SOURCE',                         value: 'cloudflare' }
+        { name: 'SOURCE_RG',                              value: resourceGroup().name }
+        { name: 'LAW_CUSTOMER_ID',                        value: logAnalytics.properties.customerId }
+        // Target database (Entra-token auth via the UAMI; the role name is the UAMI name)
+        { name: 'PG_HOST',                                value: pgHost }
+        { name: 'PG_DATABASE',                            value: pgDatabase }
+        { name: 'PG_USER',                                value: '${prefix}-metrics-uami' }
+        { name: 'PG_SSLMODE',                             value: 'require' }
+        // Behaviour
+        { name: 'SESSION_TIMEOUT_MINUTES',                value: '30' }
+        { name: 'NIGHTLY_WINDOW_DAYS',                    value: '2' }
+        { name: 'BACKFILL_WINDOW_DAYS',                   value: '30' }
+        { name: 'TRIGGER_SCHEDULE',                       value: usageMetricsSchedule }
       ]
     }
   }

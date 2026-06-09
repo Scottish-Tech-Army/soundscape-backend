@@ -9,8 +9,9 @@ This document is organised as follows.
 - [Android architecture](#android-architecture) — the Cloudflare-based tile and extracts components and their Azure-side orchestration.
 - [Photon server architecture](#photon-server-architecture) — the search server used by Android clients.
 - [Links site architecture](#links-site-architecture) — the static site backing App Links verification.
+- [Usage metrics architecture](#usage-metrics-architecture) — the long-term metrics database and the two readers that populate it.
 
-The different resources are split into six resource groups.
+The different resources are split into seven resource groups.
 
 - There is a diagnostics RG, `soundscape-diags`. This contains the shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications).
 
@@ -31,6 +32,8 @@ The different resources are split into six resource groups.
 - There is an Android instance RG, described in detail in the [Android Architecture](#android-architecture) section below. This contains a storage account with tile data, used by the Cloudflare components, and tooling to update that storage account's content and copy data over to Cloudflare regularly. As for iOS, new instances can be created and the configuration cut over to use them as required (for example to allow configuration changes).
 
 - There is a Photon Server RG, described in detail in the [Photon Server Architecture](#photon-server-architecture) section below. This contains a Photon Server that handles Android search traffic, fronted by the shared Front Door instance.
+
+- There is a metrics RG, `soundscape-metrics`, described in detail in the [Usage Metrics Architecture](#usage-metrics-architecture) section below. This contains a small PostgreSQL database of long-term usage metrics and the "shared reader" function app that populates it from the Front Door logs. It is shared infrastructure so that history survives instance cutovers.
 
 - Finally, there is a links site RG, `soundscape-links`, described in the [Links Site Architecture](#links-site-architecture) section below. This contains the storage account that serves the Android App Links and iOS App Links verification files.
 
@@ -184,15 +187,17 @@ The data is uploaded and the workers are configured from tooling running in Azur
 
 ## Azure function apps
 
-Three function apps run in the Android resource group.
+Four function apps run in the Android resource group.
 
 - The **trigger function app** (`TRIGGERAPPNAME`) runs on a timer (the 6th of each month at 12:00 GMT) and scales the VMSS up to 1 to start a data ingestion run. It is deployed from `src/trigger/`.
 
 - The **vmcount function app** (`METRICAPPNAME`) runs every five minutes and writes the current VMSS capacity and instance counts to Application Insights using the `METRIC:` prefix. It is deployed from `src/vmcount/`.
 
-- The **cfmetrics function app** (`CFMETRICSAPPNAME`) runs hourly and calls the Cloudflare GraphQL API to collect worker invocation metrics (request counts by outcome, response body size, wall and CPU time) and R2 bucket storage metrics (object count, payload size) for both the pmtiles and extracts workers. It writes these to Application Insights using the `CLOUDFLARE:` prefix. It is deployed from `src/cloudflaremetrics/`. Cloudflare credentials (`cloudflare-api-token` and `cloudflare-account-id`) are read from the Key Vault at runtime via Key Vault references in the function app settings — they are never stored in config files or deployment parameters.
+- The **cfmetrics function app** (`CFMETRICSAPPNAME`) runs hourly and calls the Cloudflare GraphQL API to collect worker invocation metrics (request counts by outcome, response body size, wall and CPU time) and R2 bucket storage metrics (object count, payload size) for both the pmtiles and extracts workers. It writes these to Application Insights using the `CLOUDFLARE:` prefix. It is deployed from `src/cfmetrics/`. Cloudflare credentials (`cloudflare-api-token` and `cloudflare-account-id`) are read from the Key Vault at runtime via Key Vault references in the function app settings — they are never stored in config files or deployment parameters.
 
-All three function apps use the FlexConsumption plan (Python 3.12) and authenticate to Azure resources using the shared User-Assigned Managed Identity (UAMI).
+- The **usage-metrics reader function app** (`USAGEMETRICSAPPNAME`, `usagemetrics-*`) runs nightly and reads this instance's `cfmetrics` Application Insights traces, writing the pmtiles and offline-map counts to the shared usage-metrics PostgreSQL database (see [Usage metrics architecture](#usage-metrics-architecture)). It is deployed from `src/usagemetrics/` — the *same* code as the shared Front Door reader, parametrised by `METRICS_SOURCE`. Unlike the other three, it runs under its **own dedicated** UAMI (`${prefix}-metrics-uami`) rather than the shared one, so the metrics job carries only Log Analytics read + database write.
+
+The trigger, vmcount and cfmetrics apps use the FlexConsumption plan (Python 3.12) and authenticate to Azure resources using the shared User-Assigned Managed Identity (UAMI); the usage-metrics reader uses the same plan but its own dedicated UAMI.
 
 # Photon server architecture
 
@@ -233,4 +238,18 @@ The links site at `https://links.soundscape.scottishtecharmy.org` supports Andro
 - HTTP requests are redirected to HTTPS by Front Door natively.
 
 - The DNS zone `links.soundscape.scottishtecharmy.org` is a child of the existing `soundscape.scottishtecharmy.org` zone in the shared RG, with an A record aliased to the Front Door endpoint.
+
+# Usage metrics architecture
+
+Long-term usage metrics — iOS and photon request and session counts, pmtiles downloads, and successful offline-map downloads — are collected into a small PostgreSQL database that [Superset](https://superset.apache.org/) can be pointed at for trend visualisation. The raw data already exists in Log Analytics and Application Insights, but with limited retention; this store keeps it indefinitely in a convenient form for external graphing.
+
+The store lives in its own resource group, `soundscape-metrics`. It contains an **Azure Database for PostgreSQL Flexible Server** (Burstable B1ms — the smallest managed size) with a single narrow table, `usage_metrics`, holding one row per (hour, metric name, source resource group, country). It also contains the **shared reader** function app, which queries the shared Front Door Log Analytics workspace for the iOS and photon counts.
+
+The **same code** (`src/usagemetrics/`) is deployed a second time as the **Android reader** function app, in the Android instance RG, which queries that instance's Application Insights for the Cloudflare (`cfmetrics`) pmtiles and offline-map counts. One codebase serves both, parametrised by the `METRICS_SOURCE` app setting (`frontdoor` vs `cloudflare`); each writes only its own metric names. There are therefore two readers but a single database.
+
+- **Authentication.** Both readers authenticate everywhere with Microsoft Entra tokens, with no stored passwords: each has a dedicated, least-privilege User-Assigned Managed Identity that reads Log Analytics and writes to Postgres through an Entra-mapped database role. Superset is the only password user — a read-only `superset_ro` role whose password is held in Key Vault, reached through a firewall rule for Superset's source IP.
+
+- **Schedule and backfill.** Each reader runs nightly on a timer: it re-reads a trailing window and upserts on the natural key, so late-arriving data is corrected and rows are never deleted (data that ages out of Log Analytics survives in Postgres). Each also exposes an on-demand HTTP backfill route, used to populate history on first deploy. The two sources have different retention (Front Door ~30 days, Application Insights ~90 days), so the backfill reaches back correspondingly further for the Cloudflare metrics.
+
+See [infradeploy.md](infradeploy.md#usage-metrics-resource-group-deployment) for deploying the shared store, [androiddeploy.md](androiddeploy.md#deploying-in-azure) for the Android reader, and [operations.md](operations.md#usage-metrics-database) for connecting to the database (including from Superset).
 

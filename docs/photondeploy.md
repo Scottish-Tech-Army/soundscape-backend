@@ -82,10 +82,10 @@ Deployment of the photon server works as follows. Each deploy script under `scri
     bash scripts/photonvm.sh
     ~~~
 
-- Deploy the function app code to the deployment.
+- Deploy the function app code to the deployment. `functionapp.sh` takes the target resource group as an argument and publishes the function apps it finds there (for photon, `trigger` and `vmcount`).
 
     ~~~bash
-    bash scripts/functionapp.sh
+    bash scripts/functionapp.sh ${RG}
     ~~~
 
 - Create an origin group linking back to the photon instance, so we can later route live traffic. *Warning - doing this when the deployment you are working on is already live can break Front Door traffic. It will recover within half an hour or so, but you don't want to do that with live traffic. The script will check and try to stop you doing this.*

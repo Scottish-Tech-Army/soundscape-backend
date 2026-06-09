@@ -44,7 +44,7 @@ The repository is structured as follows.
 
         - [pmtiles](src/pmtiles) contains tooling that runs in the Android pmtiles VM to download data and set it up in the Cloudflare account.
 
-        - [cloudflaremetrics](src/cloudflaremetrics) contains code for an Azure function that periodically queries the Cloudflare GraphQL API to collect worker invocation and R2 bucket metrics, and writes them to Application Insights for dashboarding.
+        - [cfmetrics](src/cfmetrics) contains code for an Azure function that periodically queries the Cloudflare GraphQL API to collect worker invocation and R2 bucket metrics, and writes them to Application Insights for dashboarding.
 
     - For the photon server:
 
@@ -59,6 +59,8 @@ The repository is structured as follows.
         - [trigger](src/trigger) contains code for the Azure function that periodically (or on demand manually) triggers a new VM to be created to redownload and prepare an updated set of data.
 
         - [vmcount](src/vmcount) contains code for the Azure function that counts the number of active VMs, used purely because this allows dashboard to graph it.
+
+        - [usagemetrics](src/usagemetrics) contains code for the Azure function that collects long-term usage metrics (iOS/photon request and session counts, pmtiles and offline-map downloads) into the shared metrics PostgreSQL database for Superset. The one codebase is deployed twice — a shared reader of the Front Door logs and a per-instance Android reader of the Cloudflare `cfmetrics` traces — selected by the `METRICS_SOURCE` app setting.
 
         - [vmutils](src/vmutils) contains common VM utility code.
 
