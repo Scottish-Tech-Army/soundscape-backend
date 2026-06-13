@@ -10,7 +10,7 @@ REIMAGE="REIMAGE"  # Scale up to 2 instances; will check and shut down one if bo
 app = func.FunctionApp()
 
 # Pull the CRON expression from the environment
-SCALEUP_SCHEDULE = os.environ.get("TRIGGER_SCHEDULE", "0 0 9 * 1 *")  # default if not set; 09:00 on 1st of month
+SCALEUP_SCHEDULE = os.environ.get("TRIGGER_SCHEDULE", "0 0 9 1 * *")  # default if not set; 09:00 on 1st of month (6-field NCRONTAB)
 CHECK_SCHEDULE = "*/5 * * * *" # Every 5 minutes
 TRIGGER_TYPE = os.environ.get("TRIGGER_TYPE", SCALE)
 
