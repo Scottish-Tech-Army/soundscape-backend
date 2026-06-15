@@ -82,11 +82,11 @@ A range of alerts are configured, and will be seen in email reports sent to the 
 
 - Severity 1: a VM (iOS or Android) reported an error.
 
-    - First action: open the relevant dashboard ([iOS](#ios-dashboard) or [Android](#android-dashboard)) to confirm the VMSS state, then run the high-level ingestion query (`iOS ingestion - high level` or `Android VM processing - high level`) to find the failing step. The detailed-logs query for the same component covers the run output.
+    - First action: open the relevant dashboard ([iOS](#ios-dashboard) or [Android](#android-dashboard)) to confirm the VMSS state, then run the high-level ingestion query (`iOS ingestion - high level` or `Android VM processing - high level`) to find the failing step. The detailed-logs query for the same component covers the run output. (For Android, a validation failure is *expected* to leave production untouched: the upload tooling validates new data through the `*-test` workers before promoting it to the production workers, so a failure during validation never changes production. Fix the failing step and re-trigger the timer.)
 
 - Severity 1: a VM (iOS or Android) took so long to complete that it must have failed (and presumably the termination script did not work to report the error).
 
-    - First action: as above. Additionally, check the VMSS in the portal — if a VM is still running, terminate it manually. The next scheduled run will then start cleanly. The cause of the hang is normally visible in the detailed-logs query, even though the VM did not write a final error.
+    - First action: as above. Additionally, check the VMSS in the portal — if a VM is still running, terminate it manually. The next scheduled run will then start cleanly. The cause of the hang is normally visible in the detailed-logs query, even though the VM did not write a final error. (For iOS, the full-globe ingestion normally takes 8–10 hours; in the `iOS ingestion - detailed logs` query `imposm3` logs roughly once a minute, so no output for more than 30 minutes indicates a genuine hang.)
 
 - Severity 2: errors are reported in Azure Front Door for Soundscape iOS requests.
 
@@ -104,7 +104,7 @@ For photon:
 
 - Severity 1: more than one VM exists in the photon VMSS, implying that the VMSS reimage failed to complete in some way.
 
-    - First action: run `Photon function app logs` to find why the reimage health-check loop did not converge. The function app reimage logic lives in `src/trigger/reimage.py` and times out if neither VM reaches a healthy state.
+    - First action: run `Photon function app logs` and `Photon VM logs - high level` to find why the reimage health-check loop did not converge. The function app reimage logic lives in `src/trigger/reimage.py`: it waits for both VMs to be healthy before deleting the older one, and times out if the new VM never reaches a healthy state, leaving the VMSS at capacity 2. A manual delete of the stuck instance may be required.
 
 - Severity 2: errors are reported in Azure Front Door for photon requests.
 
@@ -258,16 +258,147 @@ Photon log queries are as follows.
 
 - `Photon Front Door response times`: this shows a daily summary of response times for successful requests - average, median, and P95 and P99.
 
+## Usage metrics database
+
+The long-term usage metrics live in a PostgreSQL Flexible Server in the `soundscape-metrics` resource group (see [architecture.md](architecture.md#usage-metrics-architecture)). The reader function apps populate it automatically — a nightly timer plus an on-demand backfill run on initial deploy. This section covers connecting to it (including from Superset), and recovering admin access, neither of which are expected in normal operation but are useful for debugging. All the commands assume `. config/shared-cfg.sh` has been sourced (for `METRICS_RG`).
+
+### Connecting to the database
+
+There are two ways in, depending on who you are. Either way the client's source IP must be allowed by a firewall rule (the server's default rule admits only Azure-internal callers).
+
+- **Superset / read-only analytics** use the `superset_ro` login, which can only `SELECT` on `usage_metrics`. Its password is generated once into the metrics Key Vault. The host and database name are deployment outputs:
+
+    ~~~bash
+    KV=$(az deployment group show -g ${METRICS_RG} -n metricsdb --query properties.outputs.keyVaultName.value -o tsv)
+    az keyvault secret show --vault-name ${KV} --name superset-ro-password --query value -o tsv   # password
+    az deployment group show -g ${METRICS_RG} -n metricsdb --query properties.outputs.pgServerFqdn.value -o tsv   # host
+    az deployment group show -g ${METRICS_RG} -n metricsdb --query properties.outputs.pgDatabaseName.value -o tsv # database
+    ~~~
+
+    Superset's egress IP is allowed by setting `METRICS_SUPERSET_IP` in `shared-cfg.sh` and re-running `metricsschema.sh` (see [infradeploy.md](infradeploy.md#usage-metrics-resource-group-deployment)).
+
+- **Operator / admin** access uses Microsoft Entra — connect as yourself (if you are the server's Entra admin) with an access token as the password, opening a temporary firewall rule for your workstation:
+
+    ~~~bash
+    PG_FQDN=$(az deployment group show -g ${METRICS_RG} -n metricsdb --query properties.outputs.pgServerFqdn.value -o tsv)
+    PG_DB=$(az deployment group show   -g ${METRICS_RG} -n metricsdb --query properties.outputs.pgDatabaseName.value -o tsv)
+    PG_SERVER=$(az deployment group show -g ${METRICS_RG} -n metricsdb --query properties.outputs.pgServerName.value -o tsv)
+    MY_IP=$(curl -fsS https://api.ipify.org)
+    az postgres flexible-server firewall-rule create --resource-group ${METRICS_RG} \
+        --server-name ${PG_SERVER} --name operator-adhoc --start-ip-address ${MY_IP} --end-ip-address ${MY_IP}
+    export PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv)
+    psql "host=${PG_FQDN} port=5432 dbname=${PG_DB} user=$(az ad signed-in-user show --query userPrincipalName -o tsv) sslmode=require"
+    # ... and when done, remove the rule:
+    az postgres flexible-server firewall-rule delete --resource-group ${METRICS_RG} \
+        --server-name ${PG_SERVER} --name operator-adhoc --yes
+    ~~~
+
+    The `oss-rdbms` token lasts about an hour.
+
+### Connecting Superset
+
+The whole point of the store is to be a database [Superset](https://superset.apache.org/) can be pointed at. Superset connects with the read-only `superset_ro` login over a SQLAlchemy URI.
+
+- **Allow Superset's source IP.** Set `METRICS_SUPERSET_IP` in `config/shared-cfg.sh` to Superset's egress IP, then run `bash scripts/metricsschema.sh` to add the firewall rule. (The rule lives in the schema script, not the deployment template, so re-running `metricsdeploy.sh` will not add it.)
+
+- **Get the connection string.** This prints a ready-to-paste SQLAlchemy URI for `superset_ro`:
+
+    ~~~bash
+    bash scripts/metricsconnstr.sh
+    ~~~
+
+    The output looks like:
+
+    ~~~
+    postgresql://superset_ro:<url-encoded-password>@<host>:5432/metrics?sslmode=require
+    ~~~
+
+- Create the database in superset (assuming it is not there already).
+
+    - Click on `Settings` (top right)
+
+    - Pick `Database Connections` from the list that appears
+
+    - Click on the `+ Database` button on the top right of the resulting screen.
+
+    - Select `PostgreSQL` as a database type
+
+    - It asks a load of nonsense. Click on `Connect this database using a SQLAlchemy URI string`
+
+    - Fill in the fields.
+
+        - A display name `Soundscape Backend Usage` is good
+
+        - SQLAlchemy URI should be that big old connection string you obtained above.
+
+        - When you have filled in the above, the `Test Connection` option should just work.
+
+        - Then click on the big `Connect` button
+
+- Create a dataset in superset. Do not click on the `Datasets` link, as that is an evil snare to trap the unwary.
+
+    - Click on the `SQL` dropdown at the top of the page.
+
+    - Beneath that, select `SQL Labs`
+
+    - That then gives you some options.
+
+        - Pick your database, that you probably named `Soundscape Backend Usage` above
+
+        - Pick the `public` schema
+
+        - Pick the `usage_metrics` table
+
+    - Enter a query. `SELECT * FROM usage_metrics` is fine
+
+    - Click on `Save dataset` (hidden in a dropdown next to the `Save` option)
+
+    - That then lets you pick a name for the dataset. `Soundscape Backend Usage Data` is good here.
+
+- Create a dashboard in superset, with charts. This is more or less left as an exercise for the reader; initially I created three charts, iOS request, iOS sessions, and all requests. Each of these was a line graph, with:
+
+    - `metric_ts` on the x axis
+
+    - `SUM(value)` on the y axis
+
+    - Either `metric_name` or `country` as the dimensions (the latter for iOS)
+
+    - For the iOS graph, filters to only pick out a single metric.
+
+    I also added a time grain filter so the graph could show daily or weekly data points.
+
+### The data
+
+`usage_metrics` is a narrow table: one row per `(metric_ts, metric_name, source_rg, country)`, all hourly (UTC). `source_rg` lets you sum or split a metric across instance cutovers; `country` is the Front Door client country (NULL for the Cloudflare metrics, which have no country dimension). For example, a per-day summary:
+
+    ~~~sql
+    SELECT date_trunc('day', metric_ts)::date AS day, metric_name, sum(value) AS total
+    FROM usage_metrics
+    GROUP BY day, metric_name ORDER BY day, metric_name;
+    ~~~
+
+Each reader re-reads a trailing window nightly and upserts, so recent hours self-correct and rows are never deleted. History dates back to 30 days before first running (June 2026) for Front Door metrics (`ios_*`, `photon_*`) and 90 days for Cloudflare metrics (`pmtiles_*`, `offline_maps_*`).
+
+### Recovering admin access
+
+The database has no SQL admin by default — access is via Microsoft Entra. If whoever set it up is unavailable, any subscription **Owner** can take over without prior database access:
+
+- Make yourself the server's Entra admin — a pure control-plane operation, via the portal (the server's *Authentication* blade) or:
+
+    ~~~bash
+    az postgres flexible-server ad-admin create --resource-group ${METRICS_RG} --server-name ${PG_SERVER} \
+        --display-name "$(az ad signed-in-user show --query userPrincipalName -o tsv)" \
+        --object-id "$(az ad signed-in-user show --query id -o tsv)"
+    ~~~
+
+    then connect as the operator above (Entra token as password).
+
+- Alternatively, the native break-glass admin password is in the metrics Key Vault as `pg-admin-password` (username `metricsadmin`), for password auth if Entra is unavailable.
+
 ## Common issues
 
-This section collects known failure modes and the first-look response for each. It is not exhaustive — the alert first-actions above and the per-component log queries are normally sufficient — but it captures recurring issues that are not obvious from the dashboards alone.
+Most failure modes are alert-driven — their first-actions are in the [Alerts](#alerts) section above, and the per-component log queries below cover the rest. This section captures the remaining issues that are *not* tied to a specific alert.
 
 - **`PrincipalNotFound` during `iosbase.sh`.** Intermittent. The base deploy script assigns a managed identity a role before Entra has propagated the identity's existence. The script will then fail with `PrincipalNotFound`. Mitigation: simply re-run `iosbase.sh`. The script is safe to re-run.
-
-- **iOS ingestion VM still running after 12 hours.** The full-globe ingestion takes 8–10 hours; significantly longer means the VM is stuck. Run `iOS ingestion - detailed logs` and look for the last log line — `imposm3` typically logs once per minute. If the VM is genuinely hung (no log output for >30 minutes), terminate it manually in the portal; the next scheduled timer run will start cleanly.
-
-- **Android ingestion run failed but no production worker change occurred.** This is the expected behaviour: the upload tooling validates the new data through the `*-test` workers before promoting it to the production workers. A failure during validation leaves production untouched. Check `Android VM processing - high level` to find the failing step, fix the underlying issue, and re-trigger the timer.
-
-- **Photon VMSS has two VMs and never returns to one.** The reimage logic in `src/trigger/reimage.py` waits for both VMs to be healthy before deleting the older one. If the new VM never reaches a healthy state, the VMSS stays at capacity 2 indefinitely. Run `Photon function app logs` and `Photon VM logs - high level` to diagnose; a manual delete of the stuck instance may be required.
 
 - **Front Door 5xx spike with no corresponding origin spike.** Front Door reports errors that the origin never sees (TLS handshake failures, Front Door internal errors). Run `iOS Front Door Errors` (or `Photon Front Door Errors`) and check the error category column — `OriginConnectionAborted` and similar indicate origin-side issues; other categories may indicate Front Door or client-side issues.

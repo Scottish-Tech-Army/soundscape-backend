@@ -11,6 +11,15 @@ param metricAppName string
 @description('Cloudflare metrics function app name')
 param cfMetricsAppName string
 
+@description('Usage-metrics (Cloudflare) reader function app name')
+param usageMetricsAppName string
+
+@description('Shared metrics Postgres server FQDN (from the metricsdb deployment outputs)')
+param pgHost string
+
+@description('Shared metrics database name (from the metricsdb deployment outputs)')
+param pgDatabase string
+
 @description('Storage account name')
 param storageName string
 
@@ -423,6 +432,9 @@ module functionApps './functions.bicep' = {
     triggerAppName: triggerAppName
     metricAppName: metricAppName
     cfMetricsAppName: cfMetricsAppName
+    usageMetricsAppName: usageMetricsAppName
+    pgHost: pgHost
+    pgDatabase: pgDatabase
     storageName: storageName
     vmssName: vmssName
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName

@@ -1,36 +1,48 @@
 # Infrastructure deployment and prerequisites to deployment
 
-This document describes how to deploy common resources before you can deploy individual instances.
+This document describes how to deploy the common infrastructure that must exist before you can deploy any individual iOS, Android, photon, or links instance.
 
-It covers the following.
+## Deploying common infrastructure from scratch
 
-- [Common prerequisites](#common-prerequisites) describes common prerequisites before you start anything.
+To stand up the common infrastructure in a fresh subscription, work through these in order:
 
-- [Diagnostics infrastructure](#diagnostics-infrastructure) describes diagnostics infrastructure required by other components.
+1. [Common prerequisites](#common-prerequisites) — install the tooling, log in to the subscription, and set quotas. Do this first, once per subscription/operator.
 
-- [Shared resource group deployment](#shared-resource-group-deployment) describes how to deploy the shared resource group containing the Azure Front Door, Azure Container Registry, and DNS components.
+2. [Diagnostics infrastructure](#diagnostics-infrastructure) — the shared alert group and log query packs that the other components depend on.
 
-- [Adding DNS zones and endpoints](#adding-dns-zones-and-endpoints) describes how to add the shared DNS zones and corresponding endpoints in Front Door for iOS and photon traffic.
+3. [Shared resource group deployment](#shared-resource-group-deployment) — Azure Front Door, the Container Registry, DNS, and the shared Log Analytics workspace.
 
-- [Front Door cutover pattern](#front-door-cutover-pattern) is a shared appendix describing the test-then-cut-over flow used by both the iOS and photon deployment procedures.
+4. [Usage-metrics resource group deployment](#usage-metrics-resource-group-deployment) — the long-term usage-metrics database and its shared reader.
 
-## Config file convention
+5. [Adding DNS zones and endpoints](#adding-dns-zones-and-endpoints) — the shared DNS zones and corresponding Front Door endpoints for iOS and photon traffic.
 
-Each deployment procedure begins by sourcing a config file under `config/`. These config files are pre-checked-in for the live deployments — you should only edit them if you are moving to another subscription, changing region, or similar. When a procedure says "set up a config file", it is documenting what the file should contain rather than asking you to write it from scratch. The deploy scripts assume the config has already been sourced into your shell.
+With the common infrastructure in place, deploy individual instances using their own documents: [iOS](iosdeploy.md), [Android](androiddeploy.md), [photon](photondeploy.md), and the [links site](linksdeploy.md).
+
+The remaining sections are reference material used by several of the steps above:
+
+- The [Config file convention](#config-file-convention)
+
+- The [Note on spot VMs](#note-on-spot-vms)
+
+- The [Front Door cutover pattern](#front-door-cutover-pattern) (the test-then-cut-over flow shared by the iOS and photon procedures).
 
 ## Common prerequisites
 
 Before you can initially use any of the tooling to deploy any components, you need the following.
 
-- A PC to run the tooling on. The tooling was tested using Linux, but anything running bash (4.0+) should be fine, including a Mac or WSL on Windows. This PC must have various utilities installed. The tools, which components require them, and tested versions are as follows.
+- A PC to run the tooling on. The tooling was tested using Linux, but anything running bash should be fine, including a Mac or WSL on Windows. This PC must have various utilities installed. The tools are as follows.
 
-    - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (2.50 or later) — required for all components.
+    - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) — required for all components.
 
     - [Docker](https://docs.docker.com/engine/install/) (any recent version) — required for components that build container images: iOS (`iosbuild.sh`) and photon (`photonbuild.sh`).
 
     - [Azure functions core tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=linux) (v4) — required for components that publish function apps via `functionapp.sh`: iOS, Android, and photon.
 
     - Python 3.12 — only required if you want to run function app code locally. Not needed for normal deployment, since `func azure functionapp publish` builds in the cloud.
+
+    - The `psql` PostgreSQL client — required for the usage-metrics schema step (`metricsschema.sh`), which applies SQL to the metrics database.
+
+    - Various other CLI tools such as `jq` and `curl`, required by various scripts.
 
     - The contents of this repo checked out locally, to allow running of the various scripts.
 
@@ -161,6 +173,53 @@ Shared infrastructure contains the Azure Front Door, Azure Container Registry, a
     ~~~bash
     bash scripts/sharedalerts.sh
     ~~~
+
+## Usage-metrics resource group deployment
+
+The usage-metrics store is shared infrastructure — one per subscription, in its own `soundscape-metrics` resource group — holding long-term usage metrics for Superset. See [architecture.md](architecture.md#usage-metrics-architecture) for what it is and why. **Deploy it after the shared resource group and before any Android instance**, because the Android deploy reads this deployment's outputs and grants its reader access to the database.
+
+This step needs the `psql` client installed locally (see [Common prerequisites](#common-prerequisites)). The relevant configuration already lives in `shared-cfg.sh`:
+
+~~~bash
+# The metrics stack lives in its own RG.
+export METRICS_RG=soundscape-metrics
+export METRICS_REGION=uksouth
+
+# Superset source IP for the database firewall rule. Leave blank until it is known.
+export METRICS_SUPERSET_IP=
+~~~
+
+- Source the shared config.
+
+    ~~~bash
+    . config/shared-cfg.sh
+    ~~~
+
+- Deploy the database, Key Vault, and the shared reader function app.
+
+    ~~~bash
+    bash scripts/metricsdeploy.sh
+    ~~~
+
+- Apply the database schema and access control — the `usage_metrics` table, the reader's Entra-mapped writer role, and the read-only `superset_ro` role (whose password is generated once into Key Vault).
+
+    ~~~bash
+    bash scripts/metricsschema.sh
+    ~~~
+
+- Publish the shared reader's code. (`functionapp.sh` takes the target resource group as an argument and publishes the function apps it finds there — here just the shared reader.)
+
+    ~~~bash
+    bash scripts/functionapp.sh ${METRICS_RG}
+    ~~~
+
+- Populate history by triggering the reader's backfill once: in the portal, open the `usagemetrics-*` function app in `soundscape-metrics`, select the `usagemetrics_backfill` function, and use `Code & Test → Test/Run` (optionally with a `days` query parameter). The nightly timer keeps it current thereafter.
+
+### Notes
+
+- **`metricsschema.sh` must be run by the same operator who ran `metricsdeploy.sh`.** That deploy binds both the database's Entra admin and the Key Vault secret-write permission to that operator's identity, so a different user would have neither and the step would fail. If operators must change, re-run the idempotent `metricsdeploy.sh` as the new operator first (it re-grants both). `metricsschema.sh` opens a temporary firewall rule for your workstation for the duration of the run and removes it on exit.
+
+- Both scripts are idempotent and safe to re-run. Once Superset's egress IP is known, set `METRICS_SUPERSET_IP` in `shared-cfg.sh` and re-run `metricsschema.sh` to add its firewall rule — that rule lives in `metricsschema.sh`, not the deployment template, so re-running `metricsdeploy.sh` will not add it.
 
 ## Adding DNS zones and endpoints
 
@@ -294,3 +353,7 @@ Only proceed once the load test against `<TEST_ENDPOINT>` has fully completed wi
     - Load should now be arriving at your new deployment in the dashboard, and falling away on the previous one.
 
 - Once you are satisfied, the previous deployment can be left running for rollback safety and deleted later, or torn down immediately if you have already validated the deployment elsewhere.
+
+## Config file convention
+
+Each deployment procedure begins by sourcing a config file under `config/`. These config files are pre-checked-in for the live deployments — you should only edit them if you are moving to another subscription, changing region, or similar. When a procedure says "set up a config file", it is documenting what the file should contain rather than asking you to write it from scratch. The deploy scripts assume the config has already been sourced into your shell.

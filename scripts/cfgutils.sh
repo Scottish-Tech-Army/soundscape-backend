@@ -5,6 +5,7 @@ export TRIGGERAPPNAME=trigger-${UNIQUESTRING}
 export METRICAPPNAME=vmcount-${UNIQUESTRING}
 export TILESRVAPPNAME=tilesrv-${UNIQUESTRING}
 export CFMETRICSAPPNAME=cfmetrics-${UNIQUESTRING}
+export USAGEMETRICSAPPNAME=usagemetrics-${UNIQUESTRING}
 
 # This just checks that we are using the right Azure subscription.
 # If not, it sets it, and if that fails expects the sourcing script to bomb out.

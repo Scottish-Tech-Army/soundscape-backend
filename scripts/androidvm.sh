@@ -48,6 +48,14 @@ az storage blob upload-batch \
   --pattern files.tgz \
   --overwrite
 
+# The usage-metrics reader writes to the shared metrics Postgres DB (deployed separately
+# into ${METRICS_RG}). Read its host + database name from that deployment's outputs so the
+# Android function app can be configured to point at it. (The shared metrics infra must
+# therefore be deployed before the Android instance — see the deploy docs.)
+echo "Reading shared metrics DB connection details from ${METRICS_RG}"
+PG_HOST=$(az deployment group show -g ${METRICS_RG} -n metricsdb --query properties.outputs.pgServerFqdn.value -o tsv)
+PG_DATABASE=$(az deployment group show -g ${METRICS_RG} -n metricsdb --query properties.outputs.pgDatabaseName.value -o tsv)
+
 # Create the deployment itself
 echo "Create deployment"
 az deployment group create \
@@ -57,6 +65,9 @@ az deployment group create \
                  triggerAppName=${TRIGGERAPPNAME} \
                  metricAppName=${METRICAPPNAME} \
                  cfMetricsAppName=${CFMETRICSAPPNAME} \
+                 usageMetricsAppName=${USAGEMETRICSAPPNAME} \
+                 pgHost=${PG_HOST} \
+                 pgDatabase=${PG_DATABASE} \
                  pmtilesBucket=${PMTILES_BUCKET} \
                  extractsBucket=${EXTRACTS_BUCKET} \
                  useSpot=${USE_SPOT} \
