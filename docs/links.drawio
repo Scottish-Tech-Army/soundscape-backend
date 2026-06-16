@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net" agent="Claude Code (feature architecture-diagrams)">
+  <diagram name="Links" id="links-soundscape">
+    <mxGraphModel dx="1643" dy="947" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="lk-title" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" value="Links site architecture" vertex="1">
+          <mxGeometry height="30" width="360" x="90" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-users" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Clients&lt;br&gt;(iOS / Android)" vertex="1">
+          <mxGeometry height="60" width="30" x="40" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-shared" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;" value="soundscape-shared RG" vertex="1">
+          <mxGeometry height="370" width="370" x="160" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-dns" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/DNS_Zones.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="64" x="206" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-c-dns" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="DNS child zone&lt;br&gt;links.soundscape…&lt;br&gt;(A-alias to FD endpoint)" vertex="1">
+          <mxGeometry height="40" width="160" x="178" y="236" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-fd" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/Front_Doors.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="206" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-c-fd" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Azure Front Door&lt;br&gt;(links endpoint;&lt;br&gt;HTTP→HTTPS)" vertex="1">
+          <mxGeometry height="40" width="120" x="180" y="395" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-rules" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=4;align=center;" value="Rules engine" vertex="1">
+          <mxGeometry height="300" width="150" x="363" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-rule1" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" value="/.well-known/*&lt;br&gt;→ storage origin&lt;br&gt;(static files)" vertex="1">
+          <mxGeometry height="50" width="134" x="371" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-rule2" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" value="all other paths&lt;br&gt;→ 301 redirect to&lt;br&gt;GitHub Pages site" vertex="1">
+          <mxGeometry height="50" width="134" x="371" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-rg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;" value="soundscape-links RG" vertex="1">
+          <mxGeometry height="300" width="220" x="580" y="147" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-st" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/storage/Storage_Accounts.svg;" value="" vertex="1">
+          <mxGeometry height="68" width="84" x="640" y="201" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-c-st" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Storage Account&lt;br&gt;(static website hosting)" vertex="1">
+          <mxGeometry height="30" width="164" x="608" y="282" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-files" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;" value="assetlinks.json&lt;br&gt;apple-app-site-association&lt;br&gt;health" vertex="1">
+          <mxGeometry height="80" width="160" x="610" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-gh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" value="GitHub Pages&lt;br&gt;Soundscape-Android&lt;br&gt;(external)" vertex="1">
+          <mxGeometry height="60" width="160" x="358" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-e1" edge="1" parent="1" source="lk-users" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="lk-fd" value="request">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="80" y="300" as="sourcePoint" />
+            <mxPoint x="206" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lk-e2" edge="1" parent="1" source="lk-fd" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="lk-rules" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="274" y="360" as="sourcePoint" />
+            <mxPoint x="350" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lk-e3" edge="1" parent="1" source="lk-rule1" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="lk-st" value="static files">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="500" y="235" as="sourcePoint" />
+            <mxPoint x="648" y="244" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lk-e4" edge="1" parent="1" source="lk-rule2" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;" target="lk-gh" value="301">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="425" y="340" as="sourcePoint" />
+            <mxPoint x="440" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

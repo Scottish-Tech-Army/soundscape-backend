@@ -1,0 +1,81 @@
+<mxfile host="app.diagrams.net" agent="Claude Code (feature architecture-diagrams)">
+  <diagram name="Photon" id="photon-soundscape">
+    <mxGraphModel dx="1643" dy="947" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ph-title" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" value="Photon search server architecture" vertex="1">
+          <mxGeometry height="30" width="440" x="40" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-users" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Android&lt;br&gt;clients" vertex="1">
+          <mxGeometry height="60" width="30" x="20" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-shared" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;" value="soundscape-shared RG" vertex="1">
+          <mxGeometry height="160" width="240" x="104" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-fd" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/Front_Doors.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="180" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-c-fd" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Azure Front Door&lt;br&gt;(shared with iOS)" vertex="1">
+          <mxGeometry height="30" width="120" x="154" y="265" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-rg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;" value="Photon RG" vertex="1">
+          <mxGeometry height="430" width="420" x="380" y="75" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-lb" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/Load_Balancers.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="420" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-c-lb" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Load Balancer&lt;br&gt;(exposes search URL)" vertex="1">
+          <mxGeometry height="30" width="120" x="460" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-vmss" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/VM_Scale_Sets.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="420" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-c-vmss" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="VM Scale Set&lt;br&gt;(photon-server&lt;br&gt;Docker image)" vertex="1">
+          <mxGeometry height="40" width="120" x="394" y="435" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-fn" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="640" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-c-fn" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Function App&lt;br&gt;(monthly scale-up to 2;&lt;br&gt;health-checks &amp; reaps&lt;br&gt;old VM every 5 min)" vertex="1">
+          <mxGeometry height="50" width="148" x="600" y="265" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-gh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" value="graphhopper&lt;br&gt;data (external)" vertex="1">
+          <mxGeometry height="55" width="120" x="620" y="375" as="geometry" />
+        </mxCell>
+        <mxCell id="ph-e1" edge="1" parent="1" source="ph-users" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="ph-fd" value="search">
+          <mxGeometry height="50" relative="1" width="50" x="0.2308" y="20" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="95" y="160" as="sourcePoint" />
+            <mxPoint x="160" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ph-e2" edge="1" parent="1" source="ph-fd" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="ph-lb" value="search&lt;div&gt;routing&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" x="-0.1628" y="20" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="200" y="260" as="sourcePoint" />
+            <mxPoint x="420" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ph-e3" edge="1" parent="1" source="ph-lb" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="ph-vmss" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="454" y="270" as="sourcePoint" />
+            <mxPoint x="454" y="370" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ph-e4" edge="1" parent="1" source="ph-fn" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;" target="ph-vmss" value="scale / reap">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="674" y="270" as="sourcePoint" />
+            <mxPoint x="490" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ph-e5" edge="1" parent="1" source="ph-vmss" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;" target="ph-gh" value="downloads data">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="490" y="400" as="sourcePoint" />
+            <mxPoint x="620" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

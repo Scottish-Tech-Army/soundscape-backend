@@ -2,6 +2,16 @@
 
 This documents the architecture of how both Android and iOS back ends for Soundscape work. While they are very different, there are some common components; after this overview section there are sections that describe the iOS and Android architectures in detail.
 
+The diagram below shows the seven resource groups and the principal dependencies between them; each resource group is then described in its own section.
+
+![Resource group overview diagram](overview.svg)
+
+> **Note:** For clarity the overview shows only the principal request-routing and usage-metrics dependencies. It omits:
+>
+> - the container-registry image pulls — the ACR in `soundscape-shared` provides container images to the iOS and Photon resource groups;
+> - the diagnostics relationships — the `soundscape-shared` Log Analytics workspace stores the Front Door logs, while the `soundscape-diags` query packs and alert rules span the deployment, with the action group as the alert-notification endpoint;
+> - the Android usage-metrics reader's read from Application Insights — the overview draws only the shared reader's read from Log Analytics; both reader sources are shown in full in the [Usage metrics](#usage-metrics-architecture) diagram.
+
 This document is organised as follows.
 
 - [Overview](#overview) — the resource groups and how they fit together.
@@ -13,7 +23,7 @@ This document is organised as follows.
 
 The different resources are split into seven resource groups.
 
-- There is a diagnostics RG, `soundscape-diags`. This contains the shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications).
+- There is a diagnostics RG, `soundscape-diags`. This contains the shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications). It has no dedicated diagram of its own: its components appear in the overview above, and its operational use (queries and alerts) is detailed in [operations.md](operations.md).
 
 - There is a shared RG, `soundscape-shared`. This contains
 
@@ -39,9 +49,9 @@ The different resources are split into seven resource groups.
 
 # iOS Architecture
 
-This repository contains code that allows the deployment of a back end for the [Soundscape iPhone app](https://apps.apple.com/gb/app/soundscape/id6459021379). The app calculates its location, converts that to OpenStreetMap tile format, and uses that to build an HTTP GET request that retrieves a JSON file of [OpenStreetMap](https://www.openstreetmap.org) data showing known locations in the area. The back end (this repository) constructs, stores, and returns that data.
-
 ![iOS Architecture Diagram](iossoundscape.svg)
+
+This repository contains code that allows the deployment of a back end for the [Soundscape iPhone app](https://apps.apple.com/gb/app/soundscape/id6459021379). The app calculates its location, converts that to OpenStreetMap tile format, and uses that to build an HTTP GET request that retrieves a JSON file of [OpenStreetMap](https://www.openstreetmap.org) data showing known locations in the area. The back end (this repository) constructs, stores, and returns that data.
 
 ## Architecture summary
 
@@ -113,7 +123,7 @@ There are three components to the Android architecture.
 
 2. There is an offline maps download component that again runs in Cloudflare, orchestrated from Azure.
 
-3. There is a search component, using photon server. This is covered in the [last section on photon](#photon-server-architecture), as it is logically distinct from the rest of the Android components, and is not shown in the architecture diagram.
+3. There is a search component, using photon server. This is covered in the [last section on photon](#photon-server-architecture), as it is logically distinct from the rest of the Android components, and is not shown in the Android diagram below (it has its own diagram in that section).
 
 ![Android Architecture Diagram](android.svg)
 
@@ -201,9 +211,11 @@ The trigger, vmcount and cfmetrics apps use the FlexConsumption plan (Python 3.1
 
 # Photon server architecture
 
+![Photon architecture diagram](photon.svg)
+
 The photon server architecture consists of the following.
 
-- There is a [VM Scale Set (VMSS)](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from graphhopper.
+- There is a [VM Scale Set (VMSS)](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from [graphhopper](https://www.graphhopper.com/), an external data source.
 
 - There is a load balancer, that exposes the search URL to use.
 
@@ -218,6 +230,8 @@ Every month, the VM reloads its data. This occurs as follows.
 - When both instances are healthy, the older one is tidied up by the function app (which checks every five minutes to see if the new VM is healthy yet).
 
 # Links site architecture
+
+![Links site architecture diagram](links.svg)
 
 The links site at `https://links.soundscape.scottishtecharmy.org` supports Android App Links verification and provides a landing page redirect. It is a static site with no server-side logic.
 
@@ -240,6 +254,8 @@ The links site at `https://links.soundscape.scottishtecharmy.org` supports Andro
 - The DNS zone `links.soundscape.scottishtecharmy.org` is a child of the existing `soundscape.scottishtecharmy.org` zone in the shared RG, with an A record aliased to the Front Door endpoint.
 
 # Usage metrics architecture
+
+![Usage metrics architecture diagram](metrics.svg)
 
 Long-term usage metrics — iOS and photon request and session counts, pmtiles downloads, and successful offline-map downloads — are collected into a small PostgreSQL database that [Superset](https://superset.apache.org/) can be pointed at for trend visualisation. The raw data already exists in Log Analytics and Application Insights, but with limited retention; this store keeps it indefinitely in a convenient form for external graphing.
 

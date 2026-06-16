@@ -1,106 +1,119 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" version="29.1.1">
-  <diagram name="Page-1" id="kpWqqGgzcMaTYUVZ83Kg">
-    <mxGraphModel dx="1660" dy="920" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+<mxfile host="app.diagrams.net" agent="Claude Code (feature architecture-diagrams)">
+  <diagram name="Android" id="android-soundscape">
+    <mxGraphModel dx="1643" dy="947" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="920" pageHeight="640" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="egQawjjLsLs505Gd_vo8-1" parent="1" style="whiteSpace=wrap;html=1;imageAspect=0;" value="" vertex="1">
-          <mxGeometry height="320" width="400" x="40" y="200" as="geometry" />
+        <mxCell id="and-title" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" value="Android architecture" vertex="1">
+          <mxGeometry height="30" width="360" x="50" y="10" as="geometry" />
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-2" parent="1" style="whiteSpace=wrap;html=1;aspect=fixed;" value="" vertex="1">
-          <mxGeometry height="320" width="320" x="480" y="198.5" as="geometry" />
+        <mxCell id="and-users" parent="1" style="shape=umlActor;verticalLabelPosition=middle;verticalAlign=middle;html=1;outlineConnect=0;labelPosition=right;align=left;" value="Android clients" vertex="1">
+          <mxGeometry height="60" width="30" x="190" y="50" as="geometry" />
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-3" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/VM_Scale_Sets.svg;" value="" vertex="1">
-          <mxGeometry height="68" width="68" x="660" y="220" as="geometry" />
+        <mxCell id="and-cf" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=bottom;fontSize=14;fontStyle=1;spacingTop=6;" value="Cloudflare (platform)" vertex="1">
+          <mxGeometry height="390" width="450" x="40" y="170" as="geometry" />
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-5" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
-          <mxGeometry height="60" width="68" x="672" y="390" as="geometry" />
+        <mxCell id="and-tw" parent="1" style="label;whiteSpace=wrap;html=1;align=center;verticalAlign=bottom;spacingLeft=0;spacingBottom=4;imageAlign=center;imageVerticalAlign=top;image=img/clipart/Gear_128x128.png" value="Tiles worker" vertex="1">
+          <mxGeometry height="80" width="120" x="60" y="235" as="geometry" />
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-11" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" value="Azure" vertex="1">
-          <mxGeometry height="30" width="240" x="510" y="540" as="geometry" />
+        <mxCell id="and-ew" parent="1" style="label;whiteSpace=wrap;html=1;align=center;verticalAlign=bottom;spacingLeft=0;spacingBottom=4;imageAlign=center;imageVerticalAlign=top;image=img/clipart/Gear_128x128.png" value="Extracts worker" vertex="1">
+          <mxGeometry height="80" width="120" x="190" y="235" as="geometry" />
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-13" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="Function Apps" vertex="1">
-          <mxGeometry height="30" width="60" x="680" y="460" as="geometry" />
+        <mxCell id="and-eqw" parent="1" style="label;whiteSpace=wrap;html=1;align=center;verticalAlign=bottom;spacingLeft=0;spacingBottom=4;imageAlign=center;imageVerticalAlign=top;image=img/clipart/Gear_128x128.png" value="Extracts queue worker" vertex="1">
+          <mxGeometry height="80" width="130" x="325" y="235" as="geometry" />
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-14" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="VM&lt;div&gt;Scale Set&lt;/div&gt;" vertex="1">
-          <mxGeometry height="30" width="120" x="640" y="300" as="geometry" />
+        <mxCell id="and-tr2" parent="1" style="shape=datastore;whiteSpace=wrap;html=1;" value="Tiles R2 store" vertex="1">
+          <mxGeometry height="90" width="110" x="60" y="420" as="geometry" />
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-18" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;" value="Cloudflare" vertex="1">
-          <mxGeometry height="30" width="240" x="64" y="540" as="geometry" />
+        <mxCell id="and-er2" parent="1" style="shape=datastore;whiteSpace=wrap;html=1;" value="Extracts R2 store&lt;br&gt;(cache of Azure master)" vertex="1">
+          <mxGeometry height="90" width="125" x="185" y="420" as="geometry" />
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-19" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="egQawjjLsLs505Gd_vo8-25" value="">
+        <mxCell id="and-eq" parent="1" style="shape=datastore;whiteSpace=wrap;html=1;" value="Extracts queue" vertex="1">
+          <mxGeometry height="70" width="110" x="330" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="and-rg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=bottom;fontSize=14;fontStyle=1;spacingTop=6;dashed=1;" value="Android instance RG&lt;br&gt;(per-deployment — cut over)" vertex="1">
+          <mxGeometry height="400" width="330" x="550" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="and-st" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/storage/Storage_Accounts.svg;" value="" vertex="1">
+          <mxGeometry height="68" width="84" x="581" y="241" as="geometry" />
+        </mxCell>
+        <mxCell id="and-c-st" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Extracts master&lt;br&gt;Storage Account" vertex="1">
+          <mxGeometry height="30" width="124" x="561" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="and-vmss" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/VM_Scale_Sets.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="760" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="and-c-vmss" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Upload&lt;br&gt;VM Scale Set" vertex="1">
+          <mxGeometry height="30" width="112" x="738" y="211" as="geometry" />
+        </mxCell>
+        <mxCell id="and-fn" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="750" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="and-c-fn" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Function Apps&lt;br&gt;(trigger, vmcount,&lt;br&gt;cfmetrics, metrics reader)" vertex="1">
+          <mxGeometry height="40" width="202" x="614" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="and-e1" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="and-tw" value="tile reads">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="160" y="100" as="sourcePoint" />
-            <mxPoint x="242.02800000000002" y="81.25999999999999" as="targetPoint" />
+            <mxPoint x="190" y="120" as="sourcePoint" />
+            <mxPoint x="120" y="235" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-20" edge="1" parent="1" source="egQawjjLsLs505Gd_vo8-25" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="egQawjjLsLs505Gd_vo8-27" value="">
+        <mxCell id="and-e2" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="and-ew" value="extract reads">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="419.9979999999999" y="144.83400000000006" as="sourcePoint" />
-            <mxPoint x="497.16200000000003" y="144.5039999999999" as="targetPoint" />
+            <mxPoint x="210" y="120" as="sourcePoint" />
+            <mxPoint x="250" y="235" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-21" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="egQawjjLsLs505Gd_vo8-26" value="">
+        <mxCell id="and-e3" edge="1" parent="1" source="and-tw" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="and-tr2" value="">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="210" y="90" as="sourcePoint" />
-            <mxPoint x="488.27" y="111.49581164971596" as="targetPoint" />
+            <mxPoint x="120" y="330" as="sourcePoint" />
+            <mxPoint x="120" y="420" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-25" parent="1" style="label;whiteSpace=wrap;html=1;align=center;verticalAlign=bottom;spacingLeft=0;spacingBottom=4;imageAlign=center;imageVerticalAlign=top;image=img/clipart/Gear_128x128.png" value="Tiles worker" vertex="1">
-          <mxGeometry height="80" width="120" x="60" y="220" as="geometry" />
-        </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-26" parent="1" style="label;whiteSpace=wrap;html=1;align=center;verticalAlign=bottom;spacingLeft=0;spacingBottom=4;imageAlign=center;imageVerticalAlign=top;image=img/clipart/Gear_128x128.png" value="Extracts worker" vertex="1">
-          <mxGeometry height="80" width="120" x="184" y="220" as="geometry" />
-        </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-27" parent="1" style="shape=datastore;whiteSpace=wrap;html=1;" value="Tiles R2 store" vertex="1">
-          <mxGeometry height="100" width="110" x="64" y="360" as="geometry" />
-        </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-28" parent="1" style="shape=datastore;whiteSpace=wrap;html=1;" value="Extracts R2 store (cache of Azure storage master)" vertex="1">
-          <mxGeometry height="100" width="110" x="189" y="360" as="geometry" />
-        </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-29" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/storage/Storage_Accounts.svg;" value="" vertex="1">
-          <mxGeometry height="90" width="112.5" x="518.25" y="360" as="geometry" />
-        </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-30" edge="1" parent="1" source="egQawjjLsLs505Gd_vo8-26" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="egQawjjLsLs505Gd_vo8-28" value="">
+        <mxCell id="and-e4" edge="1" parent="1" source="and-ew" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="and-er2" value="">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="191" y="90" as="sourcePoint" />
-            <mxPoint x="190" y="150" as="targetPoint" />
+            <mxPoint x="250" y="330" as="sourcePoint" />
+            <mxPoint x="250" y="420" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-31" edge="1" parent="1" source="egQawjjLsLs505Gd_vo8-26" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;entryX=0.253;entryY=0.049;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.75;exitY=1;exitDx=0;exitDy=0;" target="nPncv58hlZtiYQvxpjIo-4" value="">
-          <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="320" y="310" as="sourcePoint" />
-            <mxPoint x="440" y="182" as="targetPoint" />
+        <mxCell id="and-e5" edge="1" parent="1" source="and-ew" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="and-eq" value="enqueue if large&lt;div&gt;&lt;i&gt;and&lt;/i&gt; not in store&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" x="-0.0229" y="2" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="310" y="350" as="sourcePoint" />
+            <mxPoint x="360" y="430" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-32" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="Extract reads" vertex="1">
-          <mxGeometry height="30" width="96" x="225" y="130" as="geometry" />
-        </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-33" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="Tile reads" vertex="1">
-          <mxGeometry height="30" width="96" x="30" y="130" as="geometry" />
-        </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-34" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="Azure storage" vertex="1">
-          <mxGeometry height="30" width="96" x="518.25" y="460" as="geometry" />
-        </mxCell>
-        <mxCell id="egQawjjLsLs505Gd_vo8-40" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Users" vertex="1">
-          <mxGeometry height="60" width="30" x="169" y="20" as="geometry" />
-        </mxCell>
-        <mxCell id="nPncv58hlZtiYQvxpjIo-2" parent="1" style="label;whiteSpace=wrap;html=1;align=center;verticalAlign=bottom;spacingLeft=0;spacingBottom=4;imageAlign=center;imageVerticalAlign=top;image=img/clipart/Gear_128x128.png" value="Extracts queue worker" vertex="1">
-          <mxGeometry height="80" width="120" x="310" y="220" as="geometry" />
-        </mxCell>
-        <mxCell id="nPncv58hlZtiYQvxpjIo-3" edge="1" parent="1" source="nPncv58hlZtiYQvxpjIo-2" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="nPncv58hlZtiYQvxpjIo-4" value="">
-          <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="410" y="110" as="sourcePoint" />
-            <mxPoint x="656" y="216" as="targetPoint" />
+        <mxCell id="and-e6" edge="1" parent="1" source="and-eqw" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="and-eq" value="processes&lt;div&gt;queue&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" x="-0.0619" y="32" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="390" y="330" as="sourcePoint" />
+            <mxPoint x="400" y="430" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="nPncv58hlZtiYQvxpjIo-4" parent="1" style="shape=datastore;whiteSpace=wrap;html=1;" value="Extracts queue" vertex="1">
-          <mxGeometry height="70" width="110" x="315" y="390" as="geometry" />
+        <mxCell id="and-e7" edge="1" parent="1" source="and-eqw" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="and-st" value="fetch extracts&lt;div&gt;from Azure&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" x="0.0317" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="455" y="280" as="sourcePoint" />
+            <mxPoint x="580" y="284" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-        <mxCell id="nPncv58hlZtiYQvxpjIo-5" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;entryX=-0.02;entryY=0.575;entryDx=0;entryDy=0;entryPerimeter=0;" target="egQawjjLsLs505Gd_vo8-29" value="">
+        <mxCell id="and-e8" edge="1" parent="1" source="and-fn" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;entryX=0.519;entryY=1.002;entryDx=0;entryDy=0;entryPerimeter=0;" target="and-vmss" value="scale up monthly">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="370" y="300" as="sourcePoint" />
-            <mxPoint x="509" y="133" as="targetPoint" />
+            <mxPoint x="730" y="430" as="sourcePoint" />
+            <mxPoint x="794" y="312" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="and-e9" edge="1" parent="1" source="and-vmss" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;" target="and-st" value="uploads extracts">
+          <mxGeometry height="50" relative="1" width="50" x="0.0686" y="-19" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="760" y="282" as="sourcePoint" />
+            <mxPoint x="664" y="282" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="and-e10" edge="1" parent="1" source="and-vmss" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;entryX=1.007;entryY=0.66;entryDx=0;entryDy=0;entryPerimeter=0;" target="and-cf" value="uploads pmtiles to R2&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;,&lt;/span&gt;&lt;div&gt;configures workers&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="760" y="230" as="sourcePoint" />
+            <mxPoint x="490" y="200" as="targetPoint" />
           </mxGeometry>
         </mxCell>
       </root>
