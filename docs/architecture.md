@@ -207,6 +207,8 @@ The trigger, vmcount and cfmetrics apps use the FlexConsumption plan (Python 3.1
 
 # Photon server architecture
 
+![Photon architecture diagram](photon.svg)
+
 The photon server architecture consists of the following.
 
 - There is a [VM Scale Set (VMSS)](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from graphhopper.
@@ -224,6 +226,8 @@ Every month, the VM reloads its data. This occurs as follows.
 - When both instances are healthy, the older one is tidied up by the function app (which checks every five minutes to see if the new VM is healthy yet).
 
 # Links site architecture
+
+![Links site architecture diagram](links.svg)
 
 The links site at `https://links.soundscape.scottishtecharmy.org` supports Android App Links verification and provides a landing page redirect. It is a static site with no server-side logic.
 
@@ -246,6 +250,8 @@ The links site at `https://links.soundscape.scottishtecharmy.org` supports Andro
 - The DNS zone `links.soundscape.scottishtecharmy.org` is a child of the existing `soundscape.scottishtecharmy.org` zone in the shared RG, with an A record aliased to the Front Door endpoint.
 
 # Usage metrics architecture
+
+![Usage metrics architecture diagram](metrics.svg)
 
 Long-term usage metrics — iOS and photon request and session counts, pmtiles downloads, and successful offline-map downloads — are collected into a small PostgreSQL database that [Superset](https://superset.apache.org/) can be pointed at for trend visualisation. The raw data already exists in Log Analytics and Application Insights, but with limited retention; this store keeps it indefinitely in a convenient form for external graphing.
 

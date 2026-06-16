@@ -13,11 +13,19 @@ for the docs in `docs/` — those remain authoritative.
   in this repo's tooling — the SVG/PNG are exported by hand from the app. Claude
   authors only the `.drawio` XML.
 
+- **Embedding the source in the SVG is an export option, not automatic.** The
+  `content=` copy of the diagram only ends up in the `.svg` if **"Include a copy
+  of my diagram"** is ticked in the SVG export dialog; a plain SVG export omits
+  it (e.g. `overview.svg` was first exported without it). Harmless while the
+  matching `.drawio` is committed alongside, but tick the box to match the older
+  `iossoundscape.svg` / `android.svg`, which carry the embedded source.
+
 - **Icon paths used in `overview.drawio` not previously seen in `iossoundscape.drawio`
   / `android.drawio`** (verify these resolve on first export; swap if drawio shows a
   broken image): `analytics/Log_Analytics_Workspaces.svg` (Log Analytics workspace
   and, reused, the query packs), `management_governance/Alerts.svg` (action group),
-  `networking/Load_Balancers.svg` (Photon load balancer). The paths reused from the
+  `networking/Load_Balancers.svg` (Photon load balancer), and (in `metrics.drawio`)
+  `devops/Application_Insights.svg` (Android-reader source). The paths reused from the
   existing diagrams (Front_Doors, Container_Registries, DNS_Zones, Worker_Container_App,
   Azure_Database_PostgreSQL_Server, VM_Scale_Sets, Function_Apps, Storage_Accounts)
   are known-good.

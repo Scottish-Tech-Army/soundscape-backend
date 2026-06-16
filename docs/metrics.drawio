@@ -1,0 +1,89 @@
+<mxfile host="app.diagrams.net" agent="Claude Code (feature architecture-diagrams)">
+  <diagram name="Metrics" id="metrics-soundscape">
+    <mxGraphModel dx="1643" dy="947" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n-yWFbXqiJMekTrbNIa7-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6" value="soundscape-shared RG" vertex="1">
+          <mxGeometry height="170" width="258" x="70" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-and-rg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;dashed=1;" value="Android instance RG" vertex="1">
+          <mxGeometry height="170" width="420" x="320" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-title" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" value="Usage metrics architecture" vertex="1">
+          <mxGeometry height="30" width="400" x="40" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-la" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/analytics/Log_Analytics_Workspaces.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="64" x="167" y="148" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-c-la" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Front Door&lt;br&gt;Log Analytics&lt;br&gt;(soundscape-shared)" vertex="1">
+          <mxGeometry height="40" width="124" x="130" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-ai" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/devops/Application_Insights.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="64" x="360" y="426" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-c-ai" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Application Insights&lt;br&gt;(Android instance RG;&lt;br&gt;cfmetrics traces)" vertex="1">
+          <mxGeometry height="40" width="140" x="328" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-rg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;" value="soundscape-metrics RG&lt;br&gt;(singleton — survives instance cutovers)" vertex="1">
+          <mxGeometry height="240" width="380" x="360" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-shared-rd" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="400" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-c-shared-rd" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Shared reader&lt;br&gt;(METRICS_SOURCE=&lt;br&gt;frontdoor)" vertex="1">
+          <mxGeometry height="40" width="124" x="372" y="214" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-pg" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/databases/Azure_Database_PostgreSQL_Server.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="48" x="610" y="148" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-c-pg" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="PostgreSQL Flexible Server&lt;br&gt;(B1ms) — usage_metrics table" vertex="1">
+          <mxGeometry height="40" width="120" x="510" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-and-rd" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="600" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-c-and-rd" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Android reader&lt;br&gt;(same code,&lt;br&gt;METRICS_SOURCE=cloudflare)" vertex="1">
+          <mxGeometry height="40" width="160" x="554" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-superset" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" value="Superset&lt;br&gt;(external; superset_ro&lt;br&gt;via firewall rule)" vertex="1">
+          <mxGeometry height="80" width="90" x="790" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="mt-e1" edge="1" parent="1" source="mt-la" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;" target="mt-shared-rd" value="reads (nightly)">
+          <mxGeometry height="50" relative="1" width="50" x="-0.0521" y="-11" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="140" y="180" as="sourcePoint" />
+            <mxPoint x="400" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mt-e2" edge="1" parent="1" source="mt-ai" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;" target="mt-and-rd" value="reads (nightly)">
+          <mxGeometry height="50" relative="1" width="50" x="-0.1278" y="-10" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="140" y="470" as="sourcePoint" />
+            <mxPoint x="400" y="470" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mt-e3" edge="1" parent="1" source="mt-shared-rd" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="mt-pg" value="upsert">
+          <mxGeometry height="50" relative="1" width="50" x="0.0141" y="10" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="470" y="180" as="sourcePoint" />
+            <mxPoint x="610" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mt-e4" edge="1" parent="1" source="mt-and-rd" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="mt-pg" value="upsert">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="470" y="470" as="sourcePoint" />
+            <mxPoint x="630" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mt-e5" edge="1" parent="1" source="mt-superset" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;" target="mt-pg" value="read-only SQL">
+          <mxGeometry height="50" relative="1" width="50" x="0.2121" y="-10" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="790" y="180" as="sourcePoint" />
+            <mxPoint x="660" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
