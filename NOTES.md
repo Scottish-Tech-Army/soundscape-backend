@@ -20,15 +20,33 @@ for the docs in `docs/` — those remain authoritative.
   matching `.drawio` is committed alongside, but tick the box to match the older
   `iossoundscape.svg` / `android.svg`, which carry the embedded source.
 
-- **Icon paths used in `overview.drawio` not previously seen in `iossoundscape.drawio`
-  / `android.drawio`** (verify these resolve on first export; swap if drawio shows a
-  broken image): `analytics/Log_Analytics_Workspaces.svg` (Log Analytics workspace
-  and, reused, the query packs), `management_governance/Alerts.svg` (action group),
-  `networking/Load_Balancers.svg` (Photon load balancer), and (in `metrics.drawio`)
-  `devops/Application_Insights.svg` (Android-reader source). The paths reused from the
-  existing diagrams (Front_Doors, Container_Registries, DNS_Zones, Worker_Container_App,
-  Azure_Database_PostgreSQL_Server, VM_Scale_Sets, Function_Apps, Storage_Accounts)
-  are known-good.
+- **Azure 2 icon paths introduced for the new diagrams** (all confirmed to render
+  — the four diagrams were exported and visually reviewed): `analytics/Log_Analytics_Workspaces.svg`
+  (Log Analytics workspace and, reused, the query packs), `management_governance/Alerts.svg`
+  (action group), `networking/Load_Balancers.svg` (Photon load balancer), and
+  `devops/Application_Insights.svg` (Android-reader source in `metrics.drawio`). The
+  paths reused from the existing diagrams (Front_Doors, Container_Registries, DNS_Zones,
+  Worker_Container_App, Azure_Database_PostgreSQL_Server, VM_Scale_Sets, Function_Apps,
+  Storage_Accounts) are known-good.
+
+- **Follow-ups from the docs-structure review:** (1) the two pre-existing diagrams
+  `iossoundscape.drawio` and `android.drawio` used the *older* visual style (plain
+  unlabelled RG rectangles, 24pt free-text headings, no title cell), diverging from
+  the four new diagrams. **Both have now been re-authored to the new convention**
+  (titled grey container boxes, dashed per-deployment instance RGs, title cell, 12pt
+  captions). iOS additionally gained its previously-missing ingestion edges (trigger
+  function→VMSS scale-up, VMSS→PostgreSQL populates, ACR→tilesrv image pull). Android
+  keeps Cloudflare as a separate *platform* box (solid, not an Azure RG) and the Azure
+  box became the dashed `Android instance RG`; its serving path is preserved and
+  dashed upload-orchestration edges were added (trigger→VMSS, VMSS→storage,
+  VMSS→Cloudflare). All six diagrams now share one visual style. (2) `soundscape-diags`
+  has no dedicated diagram —
+  for now this is a documented choice (see the diags bullet in the Overview and
+  operations.md), but a small diagnostics diagram could be added. Minor open source
+  nits in the new diagrams: `overview.drawio` edge `ov-e7` ("reads Log Analytics")
+  has a free-floating target rather than binding to the `ov-la` cell, and the
+  `soundscape-shared RG` box in `metrics.drawio` has an auto-generated cell id
+  rather than an `mt-*` one.
 
 ## Usage-metrics database (historical-usage-superset, issue #35)
 

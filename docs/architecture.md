@@ -6,7 +6,11 @@ The diagram below shows the seven resource groups and the principal dependencies
 
 ![Resource group overview diagram](overview.svg)
 
-> **Note:** For clarity the overview shows only the principal request-routing and usage-metrics dependencies. It omits the container-registry image pulls (the ACR in `soundscape-shared` provides images to the iOS, Android, and Photon resource groups) and the diagnostics fan-out (the Log Analytics workspace and action group collect from, and alert on, all resource groups).
+> **Note:** For clarity the overview shows only the principal request-routing and usage-metrics dependencies. It omits:
+>
+> - the container-registry image pulls — the ACR in `soundscape-shared` provides container images to the iOS and Photon resource groups;
+> - the diagnostics relationships — the `soundscape-shared` Log Analytics workspace stores the Front Door logs, while the `soundscape-diags` query packs and alert rules span the deployment, with the action group as the alert-notification endpoint;
+> - the Android usage-metrics reader's read from Application Insights — the overview draws only the shared reader's read from Log Analytics; both reader sources are shown in full in the [Usage metrics](#usage-metrics-architecture) diagram.
 
 This document is organised as follows.
 
@@ -19,7 +23,7 @@ This document is organised as follows.
 
 The different resources are split into seven resource groups.
 
-- There is a diagnostics RG, `soundscape-diags`. This contains the shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications).
+- There is a diagnostics RG, `soundscape-diags`. This contains the shared Log Analytics queries for both iOS and Android, and an action group (which is logically an endpoint for alert notifications). It has no dedicated diagram of its own: its components appear in the overview above, and its operational use (queries and alerts) is detailed in [operations.md](operations.md).
 
 - There is a shared RG, `soundscape-shared`. This contains
 
@@ -45,9 +49,9 @@ The different resources are split into seven resource groups.
 
 # iOS Architecture
 
-This repository contains code that allows the deployment of a back end for the [Soundscape iPhone app](https://apps.apple.com/gb/app/soundscape/id6459021379). The app calculates its location, converts that to OpenStreetMap tile format, and uses that to build an HTTP GET request that retrieves a JSON file of [OpenStreetMap](https://www.openstreetmap.org) data showing known locations in the area. The back end (this repository) constructs, stores, and returns that data.
-
 ![iOS Architecture Diagram](iossoundscape.svg)
+
+This repository contains code that allows the deployment of a back end for the [Soundscape iPhone app](https://apps.apple.com/gb/app/soundscape/id6459021379). The app calculates its location, converts that to OpenStreetMap tile format, and uses that to build an HTTP GET request that retrieves a JSON file of [OpenStreetMap](https://www.openstreetmap.org) data showing known locations in the area. The back end (this repository) constructs, stores, and returns that data.
 
 ## Architecture summary
 
@@ -119,7 +123,7 @@ There are three components to the Android architecture.
 
 2. There is an offline maps download component that again runs in Cloudflare, orchestrated from Azure.
 
-3. There is a search component, using photon server. This is covered in the [last section on photon](#photon-server-architecture), as it is logically distinct from the rest of the Android components, and is not shown in the architecture diagram.
+3. There is a search component, using photon server. This is covered in the [last section on photon](#photon-server-architecture), as it is logically distinct from the rest of the Android components, and is not shown in the Android diagram below (it has its own diagram in that section).
 
 ![Android Architecture Diagram](android.svg)
 
@@ -211,7 +215,7 @@ The trigger, vmcount and cfmetrics apps use the FlexConsumption plan (Python 3.1
 
 The photon server architecture consists of the following.
 
-- There is a [VM Scale Set (VMSS)](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from graphhopper.
+- There is a [VM Scale Set (VMSS)](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) containing the photon server. Each instance comes up, downloads the docker image, and runs it against data downloaded from [graphhopper](https://www.graphhopper.com/), an external data source.
 
 - There is a load balancer, that exposes the search URL to use.
 
