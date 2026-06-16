@@ -2,6 +2,12 @@
 
 This documents the architecture of how both Android and iOS back ends for Soundscape work. While they are very different, there are some common components; after this overview section there are sections that describe the iOS and Android architectures in detail.
 
+The diagram below shows the seven resource groups and the principal dependencies between them; each resource group is then described in its own section.
+
+![Resource group overview diagram](overview.svg)
+
+> **Note:** For clarity the overview shows only the principal request-routing and usage-metrics dependencies. It omits the container-registry image pulls (the ACR in `soundscape-shared` provides images to the iOS, Android, and Photon resource groups) and the diagnostics fan-out (the Log Analytics workspace and action group collect from, and alert on, all resource groups).
+
 This document is organised as follows.
 
 - [Overview](#overview) — the resource groups and how they fit together.

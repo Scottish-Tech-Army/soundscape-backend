@@ -1,0 +1,202 @@
+<mxfile host="app.diagrams.net" agent="Claude Code (feature architecture-diagrams)">
+  <diagram name="Overview" id="overview-soundscape">
+    <mxGraphModel dx="1643" dy="914" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="980" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ov-shared" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;" value="soundscape-shared&lt;br&gt;(singleton — shared infrastructure)" vertex="1">
+          <mxGeometry height="250" width="540" x="370" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-fd" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/Front_Doors.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="410" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-fd" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Azure Front Door" vertex="1">
+          <mxGeometry height="30" width="84" x="402" y="205" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-acr" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/containers/Container_Registries.svg;" value="" vertex="1">
+          <mxGeometry height="61" width="68" x="540" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-acr" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Container Registry" vertex="1">
+          <mxGeometry height="30" width="88" x="530" y="205" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-la" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/analytics/Log_Analytics_Workspaces.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="64" x="680" y="138" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-la" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Log Analytics&lt;br&gt;workspace" vertex="1">
+          <mxGeometry height="30" width="104" x="660" y="205" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-dns" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/DNS_Zones.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="64" x="810" y="138" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-dns" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="DNS Zones" vertex="1">
+          <mxGeometry height="30" width="64" x="810" y="205" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-diags" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;" value="soundscape-diags&lt;br&gt;(singleton)" vertex="1">
+          <mxGeometry height="250" width="300" x="1008" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-qp" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/analytics/Log_Analytics_Workspaces.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="64" x="1060" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-qp" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Log Analytics&lt;br&gt;query packs" vertex="1">
+          <mxGeometry height="30" width="104" x="1040" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ag" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/management_governance/Alerts.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="60" x="1202" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-ag" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Action group" vertex="1">
+          <mxGeometry height="30" width="80" x="1192" y="192" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ios" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;dashed=1;align=left;spacingLeft=9;" value="iOS instance RG&lt;br&gt;(per-deployment&lt;div&gt;— cut over)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="300" width="300" x="30" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ios-tile" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/other/Worker_Container_App.svg;" value="" vertex="1">
+          <mxGeometry height="66" width="68" x="74" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-ios-tile" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Tile Server&lt;br&gt;Container App" vertex="1">
+          <mxGeometry height="30" width="108" x="54" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ios-pg" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/databases/Azure_Database_PostgreSQL_Server.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="48" x="220" y="428" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-ios-pg" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="PostgreSQL" vertex="1">
+          <mxGeometry height="30" width="96" x="196" y="498" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ios-vmss" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/VM_Scale_Sets.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="80" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-ios-vmss" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Ingestion&lt;br&gt;VM Scale Set" vertex="1">
+          <mxGeometry height="30" width="112" x="58" y="616" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ios-fn" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="220" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-ios-fn" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Trigger&lt;br&gt;Function App" vertex="1">
+          <mxGeometry height="30" width="108" x="200" y="616" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-and" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;dashed=1;" value="Android instance RG&lt;br&gt;(per-deployment — cut over)" vertex="1">
+          <mxGeometry height="300" width="340" x="380" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-and-st" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/storage/Storage_Accounts.svg;" value="" vertex="1">
+          <mxGeometry height="68" width="84" x="410" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-and-st" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Tile data&lt;br&gt;Storage Account" vertex="1">
+          <mxGeometry height="30" width="124" x="390" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-and-vmss" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/VM_Scale_Sets.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="548" y="432" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-and-vmss" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Upload&lt;br&gt;VM Scale Set" vertex="1">
+          <mxGeometry height="30" width="108" x="528" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-and-fn" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="60" x="652" y="432" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-and-fn" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Function Apps&lt;br&gt;(trigger, vmcount,&lt;br&gt;cfmetrics)" vertex="1">
+          <mxGeometry height="40" width="108" x="620" y="495" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-and-rd" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="548" y="566" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-and-rd" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Usage-metrics&lt;br&gt;reader (Android)" vertex="1">
+          <mxGeometry height="30" width="128" x="520" y="626" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ph" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;align=left;" value="Photon RG&lt;br&gt;(singleton)" vertex="1">
+          <mxGeometry height="300" width="300" x="760" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ph-lb" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/Load_Balancers.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="790" y="432" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-ph-lb" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Load Balancer" vertex="1">
+          <mxGeometry height="30" width="108" x="770" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ph-vmss" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/VM_Scale_Sets.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="920" y="432" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-ph-vmss" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Photon&lt;br&gt;VM Scale Set" vertex="1">
+          <mxGeometry height="30" width="108" x="900" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ph-fn" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="855" y="556" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-ph-fn" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Reaper&lt;br&gt;Function App" vertex="1">
+          <mxGeometry height="30" width="108" x="835" y="616" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-links" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;" value="soundscape-links&lt;br&gt;(singleton)" vertex="1">
+          <mxGeometry height="300" width="240" x="1100" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-links-st" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/storage/Storage_Accounts.svg;" value="" vertex="1">
+          <mxGeometry height="68" width="84" x="1178" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-links-st" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Static site&lt;br&gt;Storage Account" vertex="1">
+          <mxGeometry height="30" width="124" x="1158" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-met" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=6;" value="soundscape-metrics&lt;br&gt;(singleton)" vertex="1">
+          <mxGeometry height="200" width="358" x="402" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-met-pg" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/databases/Azure_Database_PostgreSQL_Server.svg;" value="" vertex="1">
+          <mxGeometry height="64" width="48" x="430" y="775" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-met-pg" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="usage_metrics&lt;br&gt;PostgreSQL DB" vertex="1">
+          <mxGeometry height="30" width="96" x="406" y="843" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-met-rd" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/compute/Function_Apps.svg;" value="" vertex="1">
+          <mxGeometry height="60" width="68" x="566" y="775" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-c-met-rd" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="Usage-metrics&lt;br&gt;shared reader" vertex="1">
+          <mxGeometry height="30" width="108" x="546" y="839" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-superset" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" value="Superset&lt;br&gt;(external)" vertex="1">
+          <mxGeometry height="70" width="150" x="118" y="775" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-e1" edge="1" parent="1" source="ov-c-fd" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;exitX=0;exitY=1;exitDx=0;exitDy=0;" target="ov-ios-tile" value="iOS tiles">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="110" y="230" as="sourcePoint" />
+            <mxPoint x="108" y="430" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ov-e2" edge="1" parent="1" source="ov-c-fd" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="ov-ph-lb" value="Photon search">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="148" y="160" as="sourcePoint" />
+            <mxPoint x="790" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ov-e3" edge="1" parent="1" source="ov-c-fd" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;exitX=0.75;exitY=1;exitDx=0;exitDy=0;" target="ov-links-st" value="links / .well-known">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="148" y="150" as="sourcePoint" />
+            <mxPoint x="1178" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ov-e6" edge="1" parent="1" source="ov-met-rd" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;" target="ov-met-pg" value="write">
+          <mxGeometry height="50" relative="1" width="50" x="0.0498" y="14" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="560" y="810" as="sourcePoint" />
+            <mxPoint x="490" y="810" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ov-e7" edge="1" parent="1" source="ov-met-rd" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;" value="reads Log Analytics">
+          <mxGeometry height="50" relative="1" width="50" x="-0.6334" y="-18" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="600" y="770" as="sourcePoint" />
+            <mxPoint x="700" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ov-e8" edge="1" parent="1" source="ov-and" style="endArrow=classic;html=1;rounded=0;strokeWidth=3;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="ov-met-pg" value="write">
+          <mxGeometry height="50" relative="1" width="50" x="-0.3158" y="-17" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="548" y="640" as="sourcePoint" />
+            <mxPoint x="470" y="775" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ov-e9" edge="1" parent="1" source="ov-superset" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;dashed=1;" target="ov-met-pg" value="read">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="780" y="805" as="sourcePoint" />
+            <mxPoint x="490" y="810" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ov-title" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" value="Soundscape back end — resource group overview" vertex="1">
+          <mxGeometry height="30" width="600" x="40" y="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

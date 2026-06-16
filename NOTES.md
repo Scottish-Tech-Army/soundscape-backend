@@ -3,6 +3,25 @@
 Non-obvious technical findings, recorded as they are discovered. Not a substitute
 for the docs in `docs/` — those remain authoritative.
 
+## Architecture diagrams (architecture-diagrams, issue #36)
+
+- **Diagram workflow.** The `docs/*.drawio` sources are authored as diagrams.net
+  XML using the **Azure 2** icon library (`image=img/lib/azure2/<category>/<Icon>.svg`).
+  Export from diagrams.net produces a `.svg` that **embeds the editable source** in
+  a `content=` attribute (so the `.svg` is the round-trippable artefact), plus a
+  `.drawio.png`. `architecture.md` embeds the `.svg`. There is no headless export
+  in this repo's tooling — the SVG/PNG are exported by hand from the app. Claude
+  authors only the `.drawio` XML.
+
+- **Icon paths used in `overview.drawio` not previously seen in `iossoundscape.drawio`
+  / `android.drawio`** (verify these resolve on first export; swap if drawio shows a
+  broken image): `analytics/Log_Analytics_Workspaces.svg` (Log Analytics workspace
+  and, reused, the query packs), `management_governance/Alerts.svg` (action group),
+  `networking/Load_Balancers.svg` (Photon load balancer). The paths reused from the
+  existing diagrams (Front_Doors, Container_Registries, DNS_Zones, Worker_Container_App,
+  Azure_Database_PostgreSQL_Server, VM_Scale_Sets, Function_Apps, Storage_Accounts)
+  are known-good.
+
 ## Usage-metrics database (historical-usage-superset, issue #35)
 
 - **This (nonprofit) subscription refuses new Azure SQL servers but provisions
