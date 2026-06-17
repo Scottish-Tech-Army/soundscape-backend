@@ -58,7 +58,8 @@ AzureDiagnostics
 | summarize
     ios_requests = countif(isSuccess),
     ios_requests_origin = countif(isSuccess and isMiss),
-    ios_requests_error = countif(not(isSuccess))
+    ios_requests_error = countif(not(isSuccess)),
+    ios_requests_http2 = countif(isSuccess and httpVersion_s == "2.0.0.0")
     by metric_ts = bin(TimeGenerated, 1h), country = tostring(clientCountry_s)
 """
 
@@ -90,11 +91,16 @@ AzureDiagnostics
 | where requestUri_s contains "/tiles/"
 | project TimeGenerated,
           client = strcat(tostring(clientIp_s), ":", tostring(clientPort_s)),
-          country = tostring(clientCountry_s)
+          country = tostring(clientCountry_s),
+          httpVersion_s
 | order by client asc, TimeGenerated asc
 | extend session_start = row_window_session(TimeGenerated, 1d, {timeout}m, client != prev(client))
-| summarize country = take_any(country) by client, session_start
-| summarize ios_sessions = count() by metric_ts = bin(session_start, 1h), country
+| summarize country = take_any(country),
+            v2_only = countif(httpVersion_s != "2.0.0.0") == 0
+            by client, session_start
+| summarize ios_sessions = count(),
+            ios_sessions_http2 = countif(v2_only)
+            by metric_ts = bin(session_start, 1h), country
 """
 
 _PHOTON_SESSIONS_KQL = """

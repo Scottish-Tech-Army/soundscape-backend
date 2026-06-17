@@ -260,7 +260,7 @@ Photon log queries are as follows.
 
 ## Usage metrics database
 
-The long-term usage metrics live in a PostgreSQL Flexible Server in the `soundscape-metrics` resource group (see [architecture.md](architecture.md#usage-metrics-architecture)). The reader function apps populate it automatically — a nightly timer plus an on-demand backfill run on initial deploy. This section covers connecting to it (including from Superset), and recovering admin access, neither of which are expected in normal operation but are useful for debugging. All the commands assume `. config/shared-cfg.sh` has been sourced (for `METRICS_RG`).
+The long-term usage metrics live in a PostgreSQL Flexible Server in the `soundscape-metrics` resource group (see [architecture.md](architecture.md#usage-metrics-architecture)). The reader function apps populate it automatically — a nightly timer plus an on-demand backfill run on initial deploy. This section covers connecting to it (including from Superset), the shape of the data and the meaning of each metric, and recovering admin access, none of which are expected in normal operation but are useful for debugging. All the commands assume `. config/shared-cfg.sh` has been sourced (for `METRICS_RG`).
 
 ### Connecting to the database
 
@@ -378,6 +378,23 @@ The whole point of the store is to be a database [Superset](https://superset.apa
     ~~~
 
 Each reader re-reads a trailing window nightly and upserts, so recent hours self-correct and rows are never deleted. History dates back to 30 days before first running (June 2026) for Front Door metrics (`ios_*`, `photon_*`) and 90 days for Cloudflare metrics (`pmtiles_*`, `offline_maps_*`).
+
+The metrics (`metric_name` values) are below. All are hourly counts. Superset shows the names but not their meaning, so this is the reference for what each one measures.
+
+| `metric_name` | Meaning |
+|---|---|
+| `ios_requests` | Successful iOS tile requests (HTTP 200) served via Front Door. |
+| `ios_requests_origin` | Successful iOS tile requests served from the origin (cache MISS), i.e. not from the CDN cache. A subset of `ios_requests`. |
+| `ios_requests_error` | Failed iOS tile requests (non-200). |
+| `ios_requests_http2` | Successful iOS tile requests carried over HTTP/2. A subset of `ios_requests`. |
+| `ios_sessions` | iOS client sessions starting in the hour. A client is an IP:port; a gap longer than the session timeout starts a new session. |
+| `ios_sessions_http2` | iOS sessions starting in the hour that used HTTP/2 exclusively (no HTTP/1.1 requests). A subset of `ios_sessions`. |
+| `photon_requests` | Successful Photon search requests (HTTP 200) served via Front Door. |
+| `photon_requests_origin` | Successful Photon requests served from the origin (cache MISS). A subset of `photon_requests`. |
+| `photon_requests_error` | Failed Photon requests (non-200). |
+| `photon_sessions` | Photon client sessions starting in the hour (same session definition as `ios_sessions`). |
+| `pmtiles_requests` | Total requests to the Cloudflare pmtiles worker (Android map tiles); the long-term store of its `worker requests` count — see [Cloudflare metrics](#cloudflare-metrics). |
+| `offline_maps_downloads_success` | Successful offline-map downloads (the Cloudflare extracts worker's `worker requests success` count) — see [Cloudflare metrics](#cloudflare-metrics). |
 
 ### Recovering admin access
 
