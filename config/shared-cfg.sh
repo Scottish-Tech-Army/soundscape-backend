@@ -21,4 +21,4 @@ export METRICS_REGION=uksouth
 
 # Superset source IP for the Postgres firewall rule (used to let superset access the
 # DB). Leave blank to skip the rule for now.
-export METRICS_SUPERSET_IP=18.169.134.59
+export METRICS_SUPERSET_IP=16.61.130.188
