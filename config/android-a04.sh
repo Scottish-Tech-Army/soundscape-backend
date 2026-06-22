@@ -4,7 +4,7 @@ export RG=android04
 export REGION=westeurope
 
 # Do not use SPOT VMS
-export USE_SPOT=false
+export USE_SPOT=true
 
 # Globally unique names, used in both bicep and in scripts
 # A good way to generate this is "date | md5sum | head -c 20 && echo"
