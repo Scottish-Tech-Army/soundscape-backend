@@ -834,7 +834,8 @@ module vmSuccessAlert './alert.bicep' = {
   }
 }
 
-// Scheduled query alert rule for detecting "VM SUCCESS" in LAW logs
+// Scheduled query alert rule for detecting when a VM has been running for more than 6 hours.
+// "If the number of VMs has been > 0 throughout the past 6 hours, then fire"
 module vmTimeoutAlert './alert.bicep' = {
   name: 'vm-timeout-alert'
   params: {
@@ -850,10 +851,9 @@ module vmTimeoutAlert './alert.bicep' = {
       | where OperationName == "vmcount"
       | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
       | where TimeGenerated > ago(6h)
-      | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
+      | extend Value = toint(extract(@"METRIC: [\w ]+: (\d+)", 1, Message))
       | summarize MinValue = min(Value)
       | where MinValue > 0
     '''
   }
 }
-

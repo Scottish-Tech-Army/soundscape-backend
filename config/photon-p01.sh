@@ -2,7 +2,7 @@
 export PREFIX=p01
 export RG=photon01
 export REGION=westeurope
-export VERSION=2.0
+export VERSION=2.3
 
 # Globally unique string, used in both bicep and in scripts
 # A good way to generate this is "date | md5sum | head -c 20 && echo"

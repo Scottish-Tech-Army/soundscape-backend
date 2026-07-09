@@ -21,7 +21,7 @@ az login --identity --client-id ${ACR_CLIENT_ID}
 az acr login --name ${REGISTRY_NAME}
 docker pull ${PHOTONIMAGE}
 
-# For tedious reasons (ARM64 mostly) we need to build the docker image locally.
+# For tedious reasons (ARM64 mostly) we need to build the health docker image locally.
 pushd ${BASE}/health
 export HEALTHIMAGE=health:latest
 docker build -t ${HEALTHIMAGE} -f Dockerfile.health .

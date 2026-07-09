@@ -31,11 +31,17 @@ packages:
   - python-is-python3
 
 write_files:
+  # This file avoids apt-get clashes by letting it wait up to 10 minutes until the lock is free.
+  - path: /etc/apt/apt.conf.d/99-dpkg-lock-timeout
+    content: |
+      DPkg::Lock::Timeout "600";
+    owner: root:root
+    permissions: '0644'
   - path: /opt/photon/env.sh
     permissions: '0700'
     content: |
       #!/bin/bash
-      # Environment variables for the android jobs
+      # Environment variables for the photon jobs
       export BASE=/opt/photon
       export DATADIR=/mnt
       {{ENV_BLOCK}}

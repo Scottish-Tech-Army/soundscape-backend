@@ -1333,7 +1333,7 @@ module vmUnhealthyAlert './alert.bicep' = {
       AppTraces
       | where OperationName == "vmcount"
       | where Message contains "METRIC:" and Message contains "Healthy instance count"
-      | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
+      | extend Value = toint(extract(@"METRIC: [\w ]+: (\d+)", 1, Message))
       | where TimeGenerated > ago(1h)
       | summarize MinValue = min(Value)
       | where MinValue < 1
@@ -1356,7 +1356,7 @@ module vmMultipleAlert './alert.bicep' = {
       AppTraces
       | where OperationName == "vmcount"
       | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
-      | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
+      | extend Value = toint(extract(@"METRIC: [\w ]+: (\d+)", 1, Message))
       | where TimeGenerated > ago(12h)
       | summarize MinValue = min(Value)
       | where MinValue > 1
@@ -1365,6 +1365,7 @@ module vmMultipleAlert './alert.bicep' = {
 }
 
 // Alert for more than one VM running briefly (i.e. reimage has started)
+// If it does not drop back to 1 again, then a more severe alert will fire.
 module vmRoutineReimage './alert.bicep' = {
   name: 'vm-reimage-alert'
   params: {
@@ -1379,7 +1380,7 @@ module vmRoutineReimage './alert.bicep' = {
       AppTraces
       | where OperationName == "vmcount"
       | where Message contains "METRIC:" and Message contains "Current VMSS capacity"
-      | extend Value = toint(extract(@"METRIC: [\\w ]+: (\\d+)", 1, Message))
+      | extend Value = toint(extract(@"METRIC: [\w ]+: (\d+)", 1, Message))
       | where TimeGenerated > ago(1h)
       | summarize MaxValue = max(Value)
       | where MaxValue > 1
