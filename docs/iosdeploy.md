@@ -20,13 +20,15 @@ The process is as follows.
 
 ## Prerequisites
 
-- The shared infrastructure must already be deployed. The `soundscape-diags`, `soundscape-shared`, and the `prd2` and `tst` DNS zones / Front Door endpoints (per [Adding DNS zones and endpoints](/docs/infradeploy.md#adding-dns-zones-and-endpoints)) must all exist before any of the iOS deploy scripts will work.
-
 - General prerequisites are described in the [infrastructure deployment document](/docs/infradeploy.md), and you should follow those, including in particular:
 
     - Making sure that the diags infrastructure has been deployed.
 
     - Making sure that quotas have been set.
+
+    - Creating the two RGs `soundscape-diags` and `soundscape-shared`.
+
+    - Creating the `prd2` and `tst` Front Door endpoints and DNS records.
 
 ## Deploying in Azure
 

@@ -233,7 +233,7 @@ Every month, the VM reloads its data. This occurs as follows.
 
 ![Links site architecture diagram](links.svg)
 
-The links site at `https://links.soundscape.scottishtecharmy.org` supports Android App Links verification and provides a landing page redirect. It is a static site with no server-side logic.
+The links site at `https://links.soundscape.scottishtecharmy.org` supports iOS and Android App Links verification and provides a landing page redirect. It is a static site with no server-side logic.
 
 - A storage account in the `soundscape-links` RG has static website hosting enabled. It holds three files.
 
@@ -251,7 +251,11 @@ The links site at `https://links.soundscape.scottishtecharmy.org` supports Andro
 
 - HTTP requests are redirected to HTTPS by Front Door natively.
 
-- The DNS zone `links.soundscape.scottishtecharmy.org` is a child of the existing `soundscape.scottishtecharmy.org` zone in the shared RG, with an A record aliased to the Front Door endpoint.
+- DNS is handled as follows.
+
+    - `links.soundscape.scottishtecharmy.org` is a CNAME alias record in the `soundscape.scottishtecharmy.org` DNS zone in the shared RG, pointing at the `links-ep` Front Door endpoint.
+
+    - `linkstest.soundscape.scottishtecharmy.org` is configured identically, but with its own Front Door endpoint (`linkstest-ep`), origin group, route and rule set, and is for testing purposes.
 
 # Usage metrics architecture
 

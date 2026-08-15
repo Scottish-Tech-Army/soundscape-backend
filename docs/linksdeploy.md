@@ -30,25 +30,26 @@ All scripts in this procedure are idempotent — re-running on partial failure i
 
     *On first run the script assigns the necessary Azure AD role for blob access; RBAC propagation can take a variable amount of time (normally a minute, occasionally longer if Entra is slow). If the sync step fails with a 403 permissions error, wait a minute or two and re-run the script.*
 
-- Set up the DNS zone and Front Door configuration.
+- Set up the DNS record and Front Door configuration for both the production domain (`links`) and once for the test domain (`linkstest`). Here `LABEL` must be either `links` or `linkstest`.
 
     ~~~bash
-    bash scripts/linkszone.sh
+    bash scripts/linkszone.sh LABEL
     ~~~
 
-    This creates the `links.soundscape.scottishtecharmy.org` DNS zone as a child of the existing `soundscape.scottishtecharmy.org` zone (NS delegation is handled automatically), then creates the AFD endpoint, custom domain, route, and rules engine rules.
+    This creates the `LABEL-ep` AFD endpoint, custom domain, origin group, origin, route and rules engine rules, then creates a CNAME alias record for `LABEL` in the `soundscape.scottishtecharmy.org` DNS zone, pointing at that endpoint.
 
-- Configure the custom domain certificate.
+- Configure the custom domain certificate, for each domain in turn.
 
     - In [the portal](https://portal.azure.com), navigate to the `soundscape-fd` Front Door profile.
 
     - Select `Settings/Domains` on the left.
 
-    - The `links.soundscape.scottishtecharmy.org` domain will be in state *Domain validation needed*. Click on the `Validation state` (shown as *Pending*).
+    - The `LABEL.soundscape.scottishtecharmy.org` domain will be in state *Domain validation needed*. Click on the `Validation state` (shown as *Pending*).
 
-    - This will reveal the required TXT record value, then add that `_dnsauth` TXT record to the `links.soundscape.scottishtecharmy.org` DNS zone.
+    - This will reveal the required TXT record value. Add that value as a `_dnsauth.LABEL` TXT record in the `soundscape.scottishtecharmy.org` DNS zone.
 
-    Wait for Front Door to complete TLS certificate provisioning. This may take up to 48 hours, but is normally far quicker (an hour or so is normal).
+
+    - Wait for Front Door to complete TLS certificate provisioning. This may take up to 48 hours, but is normally far quicker (an hour or so is normal).
 
 ## Smoke test
 

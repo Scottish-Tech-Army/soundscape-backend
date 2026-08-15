@@ -20,7 +20,7 @@ The process is as follows.
 
     - Making sure that the shared infrastructure (`soundscape-shared` RG, `soundscape-fd` Front Door, and the Azure Container Registry) has been deployed.
 
-    - Making sure that the `photon` and `photontest` DNS zones and Front Door endpoints have been added (see [Adding DNS zones and endpoints](/docs/infradeploy.md#adding-dns-zones-and-endpoints)).
+    - Making sure that the `photon` and `photontest` Front Door endpoints and DNS records have been added (see [Adding DNS records and endpoints](/docs/infradeploy.md#adding-dns-records-and-endpoints)).
 
     - Making sure that quotas have been set.
 

@@ -14,7 +14,7 @@ To stand up the common infrastructure in a fresh subscription, work through thes
 
 4. [Usage-metrics resource group deployment](#usage-metrics-resource-group-deployment) — the long-term usage-metrics database and its shared reader.
 
-5. [Adding DNS zones and endpoints](#adding-dns-zones-and-endpoints) — the shared DNS zones and corresponding Front Door endpoints for iOS and photon traffic.
+5. [Adding DNS records and endpoints](#adding-dns-records-and-endpoints) — the shared DNS records and corresponding Front Door endpoints for iOS and photon traffic.
 
 With the common infrastructure in place, deploy individual instances using their own documents: [iOS](iosdeploy.md), [Android](androiddeploy.md), [photon](photondeploy.md), and the [links site](linksdeploy.md).
 
@@ -221,9 +221,9 @@ export METRICS_SUPERSET_IP=
 
 - Both scripts are idempotent and safe to re-run. Once Superset's egress IP is known, set `METRICS_SUPERSET_IP` in `shared-cfg.sh` and re-run `metricsschema.sh` to add its firewall rule — that rule lives in `metricsschema.sh`, not the deployment template, so re-running `metricsdeploy.sh` will not add it.
 
-## Adding DNS zones and endpoints
+## Adding DNS records and endpoints
 
-In order to add the shared DNS zones and corresponding endpoints in Front Door, you should do the following, for each of the relevant zones, which here we will denote as `ZONE` in the instructions. There are four relevant zones.
+In order to add the shared DNS records and corresponding endpoints in Front Door, you should do the following, for each of the relevant domains, which here we will denote as `ZONE` in the instructions. There are four relevant domains.
 
 - `prd2` is for live iOS traffic
 
@@ -241,13 +241,13 @@ To deploy and configure them, follow these steps.
     . config/shared-cfg.sh
     ~~~
 
-- Create the DNS zone and custom domain; here `TYPE` must be either `ios` or `photon`
+- Create the DNS record and custom domain
 
     ~~~bash
-    bash scripts/sharedzone.sh ZONE TYPE
+    bash scripts/sharedzone.sh ZONE
     ~~~
 
-    Note that this will automatically add the correct `NS` records in the parent `soundscape.scottishtecharmy.org` DNS zone.
+    This creates a CNAME alias record for `ZONE` in the `soundscape.scottishtecharmy.org` DNS zone, pointing at the Front Door endpoint. The script works out from the domain whether to configure an iOS or a photon endpoint.
 
 - Validate the Front Door custom domain
 
@@ -261,7 +261,9 @@ To deploy and configure them, follow these steps.
 
     - Click on the `Validation state` which should show `Pending`.
 
-    - Add the TXT record (`_dnsauth`) to the `ZONE` DNS zone with the value supplied.
+    - Add the TXT record, named `_dnsauth.ZONE`, to the `soundscape.scottishtecharmy.org` parent DNS zone with the value supplied.
+
+        This is a one-off step: because `ZONE` is a CNAME pointing directly at the Front Door endpoint, Front Door revalidates the certificate automatically at renewal, so this record does not need to be added again for the life of the domain (see [Microsoft's Front Door domains documentation](https://learn.microsoft.com/en-us/azure/frontdoor/domain), "Certificate renewal").
 
     - Wait for the validation to complete. Periodically refresh the `Domains` pane until the validation state changes from `Pending` to `Approved`. This normally takes a few minutes but can occasionally take a few hours.
 

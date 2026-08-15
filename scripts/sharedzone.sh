@@ -1,6 +1,31 @@
 #!/bin/bash
-# Set up shared DNS zone and plumb it all into AFD
+# Set up a shared DNS record and plumb it all into AFD
+#
+# Usage:  bash scripts/sharedzone.sh {prd2|tst|photon|photontest}
 set -euo pipefail
+
+# Retrieve the base domain from the parameter. There are only four shared
+# domains, and which service each one fronts is a fixed fact about it, so the
+# endpoint type is derived here rather than passed in as a second argument
+# that could only ever contradict the first.
+if [[ $# -ne 1 ]]
+then
+  echo "Usage: $0 <BASE_DOMAIN>" >&2
+  echo "  where BASE_DOMAIN is one of 'prd2', 'tst', 'photon' or 'photontest'" >&2
+  exit 1
+fi
+
+BASE_DOMAIN="${1,,}" # lowercase
+
+case "${BASE_DOMAIN}" in
+  prd2|tst)          ENDPOINT_TYPE="ios" ;;
+  photon|photontest) ENDPOINT_TYPE="photon" ;;
+  *)
+    echo "Error: BASE_DOMAIN must be one of 'prd2', 'tst', 'photon' or 'photontest' (got '$1')" >&2
+    exit 1
+    ;;
+esac
+
 echo "SHAREDRG: ${SHAREDRG}"
 
 # This script must run from the parent directory of the scripts directory
@@ -8,93 +33,16 @@ cd "$(dirname "$0")/.."
 # Check we are logged into the correct subscription
 az account set --subscription ${SUBSCRIPTION}
 
-# Retrieve the base domain and endpoint type from the parameters
-if [[ $# -ne 2 ]]
-then
-  echo "Usage: $0 <BASE_DOMAIN> <ENDPOINT_TYPE>"
-  echo "  where BASE_DOMAIN is the alphanumeric prefix for the shared zone"
-  echo "  and ENDPOINT_TYPE is either 'ios' or 'photon'"
-  exit 1
-fi
+. scripts/zoneutils.sh
 
-BASE_DOMAIN=$1
-ENDPOINT_TYPE=$2
-
-if [[ ! "$BASE_DOMAIN" =~ ^[a-zA-Z0-9]+$ ]]; then
-  echo "Error: base_domain must contain only letters and numbers."
-  exit 1
-fi
-
-if [[ "$ENDPOINT_TYPE" != "ios" && "$ENDPOINT_TYPE" != "photon" ]]; then
-  echo "Error: ENDPOINT_TYPE must be either 'ios' or 'photon'."
-  exit 1
-fi
-
-BASE_DOMAIN=${BASE_DOMAIN,,} # convert to lowercase
-
-if [[ ! "$1" =~ ^[a-zA-Z0-9]+$ ]]; then
-  echo "Error: base_domain must contain only letters and numbers."
-  exit 1
-fi
-
-ZONE_NAME="${BASE_DOMAIN}.${DNS_SUFFIX}"
-
-echo "Creating DNS zone and AFD infra ${ZONE_NAME} in RG ${SHAREDRG}"
+echo "Setting up AFD infra for ${BASE_DOMAIN}.${DNS_SUFFIX} in RG ${SHAREDRG}"
 echo
 
 AFD_ENDPOINT_NAME="${BASE_DOMAIN}-ep"
-AFD_CUSTOM_DOMAIN_NAME="${BASE_DOMAIN}-cd"
 AFD_ROUTE_NAME="${BASE_DOMAIN}-route"
 
-# DNS zone
-if az network dns zone show \
-    -g ${SHAREDRG} \
-    -n ${ZONE_NAME} \
-    >/dev/null 2>&1
-then
-    echo "DNS zone ${ZONE_NAME} already exists"
-else
-    echo "Creating DNS zone ${ZONE_NAME}"
-    az network dns zone create \
-      -g ${SHAREDRG} \
-      -n ${ZONE_NAME} \
-      --parent-name ${DNS_SUFFIX}
-fi
-
-# AFD Endpoint; logical place that the zone will point at
-if az afd endpoint show \
-    -g ${SHAREDRG} \
-    --profile-name "${FRONTDOOR}" \
-    -n "${AFD_ENDPOINT_NAME}" \
-    >/dev/null 2>&1
-then
-  echo "AFD endpoint ${AFD_ENDPOINT_NAME} already exists"
-else
-  echo "Creating AFD endpoint ${AFD_ENDPOINT_NAME}"
-  az afd endpoint create \
-    -g ${SHAREDRG} \
-    --profile-name "${FRONTDOOR}" \
-    -n "${AFD_ENDPOINT_NAME}" \
-    --enabled-state Enabled
-fi
-
-# AFD custom domain
-if az afd custom-domain show \
-    -g ${SHAREDRG} \
-    --profile-name ${FRONTDOOR} \
-    -n ${BASE_DOMAIN} \
-    >/dev/null 2>&1
-then
-  echo "AFD custom domain ${AFD_CUSTOM_DOMAIN_NAME} already exists"
-else
-  echo "Creating AFD custom domain ${AFD_CUSTOM_DOMAIN_NAME}"
-  az afd custom-domain create \
-    -g ${SHAREDRG} \
-    --profile-name ${FRONTDOOR} \
-    -n ${BASE_DOMAIN} \
-    --host-name ${ZONE_NAME} \
-    --certificate-type ManagedCertificate
-fi
+# AFD endpoint and custom domain
+ensure_endpoint_and_domain "${BASE_DOMAIN}"
 
 if [[ "$ENDPOINT_TYPE" == "ios" ]]; then
   FWDPROTOCOL="" # No forwarding protocol; keep protocol as is
@@ -103,6 +51,25 @@ else
   FWDPROTOCOL="--forwarding-protocol HttpOnly"
   PATTERN="photon"
 fi
+
+# Content types the route compresses. The cdn CLI extension takes cache settings
+# as a single structured --cache-configuration argument and supplies no defaults,
+# so this is the list that the retired --enable-compression flag used to fill in
+# on our behalf. It is spelled out rather than left empty because an enabled-but-
+# empty list compresses nothing: dropping it would silently stop compressing on
+# every route created from here on, while leaving existing routes compressing.
+AFD_COMPRESS_TYPES="\
+application/eot,application/font,application/font-sfnt,application/javascript,\
+application/json,application/opentype,application/otf,application/pkcs7-mime,\
+application/truetype,application/ttf,application/vnd.ms-fontobject,application/xhtml+xml,\
+application/xml,application/xml+rss,application/x-font-opentype,application/x-font-truetype,\
+application/x-font-ttf,application/x-httpd-cgi,application/x-javascript,application/x-mpegurl,\
+application/x-opentype,application/x-otf,application/x-perl,application/x-ttf,\
+font/eot,font/ttf,font/otf,font/opentype,\
+image/svg+xml,text/css,text/csv,text/html,\
+text/javascript,text/js,text/plain,text/richtext,\
+text/tab-separated-values,text/xml,text/x-script,text/x-component,\
+text/x-java-source"
 
 # AFD route; created pointing to the dummy origin, but can be updated later
 if az afd route show \
@@ -121,35 +88,17 @@ else
     --endpoint-name "${AFD_ENDPOINT_NAME}" \
     -n "${AFD_ROUTE_NAME}" \
     --enabled-state Enabled \
-    --custom-domains "${BASE_DOMAIN}" \
+    --formatted-custom-domains "[{id:$(afd_resource_id customDomains "${BASE_DOMAIN}")}]" \
     --supported-protocols Https \
     --https-redirect Disabled \
-    --enable-compression true \
-    --enable-caching true \
-    --query-string-caching-behavior UseQueryString \
+    --cache-configuration "{query-string-caching-behavior:UseQueryString,compression-settings:{is-compression-enabled:true,content-types-to-compress:[${AFD_COMPRESS_TYPES}]}}" \
     --link-to-default-domain Disabled \
     ${FWDPROTOCOL} --patterns-to-match "/${PATTERN}/*" \
     --origin-path "/" \
     --origin-group dummy-blackhole
 fi
 
-# DNS A record
-TARGET="/subscriptions/${SUBSCRIPTION}/resourceGroups/${SHAREDRG}/providers/Microsoft.Cdn/profiles/${FRONTDOOR}/afdEndpoints/${AFD_ENDPOINT_NAME}"
-
-if az network dns record-set a show \
-    -g ${SHAREDRG} \
-    -z ${ZONE_NAME} \
-    -n "@" \
-    >/dev/null 2>&1
-then
-    echo "DNS A record @ in ${ZONE_NAME} already exists"
-else
-    echo "Creating DNS A record @ in ${ZONE_NAME} -> ${TARGET}"
-    az network dns record-set a create \
-    -g ${SHAREDRG} \
-    -z ${ZONE_NAME} \
-    -n "@" \
-    --target-resource "${TARGET}"
-fi
+# DNS CNAME alias record, in the parent zone, pointing at the AFD endpoint
+ensure_dns_alias "${BASE_DOMAIN}"
 
 echo "SUCCESS"
