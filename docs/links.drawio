@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Claude Code (feature architecture-diagrams)">
   <diagram name="Links" id="links-soundscape">
-    <mxGraphModel dx="1643" dy="947" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="640" math="0" shadow="0">
+    <mxGraphModel dx="1648" dy="947" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="640" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -16,8 +16,8 @@
         <mxCell id="lk-dns" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/DNS_Zones.svg;" value="" vertex="1">
           <mxGeometry height="64" width="64" x="206" y="170" as="geometry" />
         </mxCell>
-        <mxCell id="lk-c-dns" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="DNS child zone&lt;br&gt;links.soundscape…&lt;br&gt;(A-alias to FD endpoint)" vertex="1">
-          <mxGeometry height="40" width="160" x="178" y="236" as="geometry" />
+        <mxCell id="lk-c-dns" parent="1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" value="CNAME alias record&lt;br&gt;links.soundscape…&lt;div&gt;to AFD endpoint&lt;/div&gt;" vertex="1">
+          <mxGeometry height="40" width="160" x="160" y="242" as="geometry" />
         </mxCell>
         <mxCell id="lk-fd" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/networking/Front_Doors.svg;" value="" vertex="1">
           <mxGeometry height="60" width="68" x="206" y="330" as="geometry" />

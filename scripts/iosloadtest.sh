@@ -6,17 +6,13 @@ DNS_SUFFIX=soundscape.scottishtecharmy.org
 
 # This script should be run from the location where the outputs are to go, but it relies on files in the repo.
 
-# This file takes a single argument, which can be "soundscape", "prd2", or "tst".
+# This file takes a single argument, which can be "prd2" or "tst".
 if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 {soundscape|prd2|tst}"
+    echo "Usage: $0 {prd2|tst}"
     exit 1
 fi
 
 case "$1" in
-    soundscape)
-        DOMAIN="$1"
-        TILESRV_APP_URL="https://soundscape.${DNS_SUFFIX}/tiles"
-        ;;
     prd2)
         DOMAIN="$1"
         TILESRV_APP_URL="https://prd2.${DNS_SUFFIX}/tiles"
@@ -26,7 +22,7 @@ case "$1" in
         TILESRV_APP_URL="https://tst.${DNS_SUFFIX}/tiles"
         ;;
     *)
-        echo "Invalid argument: $1 - must be one of soundscape, prd2, tst"
+        echo "Invalid argument: $1 - must be one of prd2, tst"
         exit 1
         ;;
 esac

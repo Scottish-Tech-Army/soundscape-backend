@@ -1,22 +1,42 @@
 #!/bin/bash
-# Set up DNS zone and AFD configuration for the links site
+# Set up DNS and AFD configuration for a links-site label: either the live
+# "links" domain or the "linkstest" test domain, which share the same Front
+# Door profile and storage origin.
+#
+# Usage:  bash scripts/linkszone.sh {links|linkstest}
 set -euo pipefail
+
+if [ "$#" -ne 1 ]; then
+  echo "Usage: bash scripts/linkszone.sh {links|linkstest}" >&2
+  exit 1
+fi
+
+# Check the label provided.
+LABEL="${1,,}" # lowercase
+case "${LABEL}" in
+  links|linkstest) ;;
+  *)
+    echo "Error: label must be 'links' or 'linkstest' (got '$1')" >&2
+    exit 1
+    ;;
+esac
 
 # This script must run from the parent directory of the scripts directory
 cd "$(dirname "$0")/.."
 # cfgutils sources shared-cfg.sh (providing SHAREDRG, FRONTDOOR, DNS_SUFFIX)
 # and handles az account set
 . scripts/cfgutils.sh
+. scripts/zoneutils.sh
 
 echo "SHAREDRG: ${SHAREDRG}"
 
-ZONE_NAME="links.${DNS_SUFFIX}"
-AFD_ENDPOINT_NAME="links-ep"
-AFD_CUSTOM_DOMAIN_NAME="links"
-AFD_ORIGIN_GROUP_NAME="links-og"
-AFD_ORIGIN_NAME="links-origin"
-AFD_ROUTE_NAME="links-route"
-AFD_RULESET_NAME="linksruleset"
+AFD_ENDPOINT_NAME="${LABEL}-ep"
+AFD_ORIGIN_GROUP_NAME="${LABEL}-og"
+AFD_ORIGIN_NAME="${LABEL}-origin"
+AFD_ROUTE_NAME="${LABEL}-route"
+AFD_RULESET_NAME="${LABEL}ruleset"
+
+echo "Setting up AFD infra for ${LABEL}.${DNS_SUFFIX} in RG ${SHAREDRG}"
 
 # Derive info site hostname and path from INFOSITE config variable
 INFOSITE_NO_SCHEME=${INFOSITE#https://}
@@ -34,55 +54,8 @@ STORAGE_WEB_HOST=${STORAGE_WEB_URL#https://}
 STORAGE_WEB_HOST=${STORAGE_WEB_HOST%/}
 echo "Storage web hostname: ${STORAGE_WEB_HOST}"
 
-# DNS zone (created as child of parent zone; NS delegation is handled automatically)
-if az network dns zone show \
-    -g ${SHAREDRG} \
-    -n ${ZONE_NAME} \
-    >/dev/null 2>&1
-then
-    echo "DNS zone ${ZONE_NAME} already exists"
-else
-    echo "Creating DNS zone ${ZONE_NAME}"
-    az network dns zone create \
-        -g ${SHAREDRG} \
-        -n ${ZONE_NAME} \
-        --parent-name ${DNS_SUFFIX}
-fi
-
-# AFD endpoint
-if az afd endpoint show \
-    -g ${SHAREDRG} \
-    --profile-name ${FRONTDOOR} \
-    -n ${AFD_ENDPOINT_NAME} \
-    >/dev/null 2>&1
-then
-    echo "AFD endpoint ${AFD_ENDPOINT_NAME} already exists"
-else
-    echo "Creating AFD endpoint ${AFD_ENDPOINT_NAME}"
-    az afd endpoint create \
-        -g ${SHAREDRG} \
-        --profile-name ${FRONTDOOR} \
-        -n ${AFD_ENDPOINT_NAME} \
-        --enabled-state Enabled
-fi
-
-# AFD custom domain (ManagedCertificate; auto-validated via Azure DNS in same subscription)
-if az afd custom-domain show \
-    -g ${SHAREDRG} \
-    --profile-name ${FRONTDOOR} \
-    -n ${AFD_CUSTOM_DOMAIN_NAME} \
-    >/dev/null 2>&1
-then
-    echo "AFD custom domain ${AFD_CUSTOM_DOMAIN_NAME} already exists"
-else
-    echo "Creating AFD custom domain ${AFD_CUSTOM_DOMAIN_NAME}"
-    az afd custom-domain create \
-        -g ${SHAREDRG} \
-        --profile-name ${FRONTDOOR} \
-        -n ${AFD_CUSTOM_DOMAIN_NAME} \
-        --host-name ${ZONE_NAME} \
-        --certificate-type ManagedCertificate
-fi
+# AFD endpoint and custom domain
+ensure_endpoint_and_domain "${LABEL}"
 
 # AFD origin group
 # Health probe uses /.well-known/health — a trivial static file that returns 200.
@@ -147,7 +120,7 @@ else
 fi
 
 # AFD route: accepts HTTP and HTTPS, redirects HTTP to HTTPS, forwards to storage origin.
-# Caching is disabled. The rule set is applied to handle the redirect logic.
+# Caching is disabled (the default). The rule set is applied to handle the redirect logic.
 if az afd route show \
     -g ${SHAREDRG} \
     --profile-name ${FRONTDOOR} \
@@ -164,20 +137,25 @@ else
         --endpoint-name ${AFD_ENDPOINT_NAME} \
         -n ${AFD_ROUTE_NAME} \
         --enabled-state Enabled \
-        --custom-domains ${AFD_CUSTOM_DOMAIN_NAME} \
+        --formatted-custom-domains "[{id:$(afd_resource_id customDomains "${LABEL}")}]" \
         --supported-protocols Http Https \
         --https-redirect Enabled \
         --link-to-default-domain Disabled \
         --patterns-to-match "/*" \
         --origin-group ${AFD_ORIGIN_GROUP_NAME} \
         --forwarding-protocol HttpsOnly \
-        --enable-caching false \
-        --rule-sets ${AFD_RULESET_NAME}
+        --formatted-rule-sets "[{id:$(afd_resource_id ruleSets "${AFD_RULESET_NAME}")}]"
 fi
 
 # Redirect rule: requests whose URL path does NOT begin with /.well-known/ are
 # redirected (301) to the info site (INFOSITE in config). Requests for
 # /.well-known/ (assetlinks.json, health) match no rule and pass through to origin.
+#
+# The condition and action are given in the cdn extension's shorthand syntax
+# (https://aka.ms/cli-shorthand): the extension has no flat --match-variable /
+# --action-name flags, only these two structured arguments. Values interpolated
+# from config are single-quoted so a "/" or "." in them cannot be read as
+# shorthand punctuation.
 if az afd rule show \
     -g ${SHAREDRG} \
     --profile-name ${FRONTDOOR} \
@@ -194,34 +172,11 @@ else
         --rule-set-name ${AFD_RULESET_NAME} \
         --name redirecttoinfosite \
         --order 1 \
-        --match-variable UrlPath \
-        --operator BeginsWith \
-        --negate-condition true \
-        --match-values "/.well-known/" \
-        --action-name UrlRedirect \
-        --redirect-type Moved \
-        --redirect-protocol Https \
-        --custom-hostname "${INFOSITE_HOST}" \
-        --custom-path "${INFOSITE_PATH}/"
+        --conditions "[{url-path:{parameters:{operator:BeginsWith,negate-condition:true,match-values:['/.well-known/']}}}]" \
+        --actions "[{url-redirect:{parameters:{redirect-type:Moved,destination-protocol:Https,custom-hostname:'${INFOSITE_HOST}',custom-path:'${INFOSITE_PATH}/'}}}]"
 fi
 
-# DNS A record aliased to the AFD endpoint
-TARGET="/subscriptions/${SUBSCRIPTION}/resourceGroups/${SHAREDRG}/providers/Microsoft.Cdn/profiles/${FRONTDOOR}/afdEndpoints/${AFD_ENDPOINT_NAME}"
-
-if az network dns record-set a show \
-    -g ${SHAREDRG} \
-    -z ${ZONE_NAME} \
-    -n "@" \
-    >/dev/null 2>&1
-then
-    echo "DNS A record @ in ${ZONE_NAME} already exists"
-else
-    echo "Creating DNS A record @ in ${ZONE_NAME}"
-    az network dns record-set a create \
-        -g ${SHAREDRG} \
-        -z ${ZONE_NAME} \
-        -n "@" \
-        --target-resource "${TARGET}"
-fi
+# DNS CNAME alias record, in the parent zone, pointing at the AFD endpoint
+ensure_dns_alias "${LABEL}"
 
 echo "SUCCESS"
