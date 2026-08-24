@@ -35,7 +35,9 @@ The different resources are split into seven resource groups.
 
     - A Log Analytics workspace which stores logs and metrics from Azure Front Door.
 
-    - Some alert rules
+    - Alert rules covering both Front Door traffic and managed-certificate expiry.
+
+    - A user-assigned managed identity (`cert-alerts-uami`) with Reader on this resource group, required for managed cert expiry alerts (only - other alerts do not need a UAMI).
 
 - There is an iOS instance RG, described in detail in the [iOS Architecture](#ios-architecture) section below. This contains an Azure PostgreSQL database and an Azure Container App to serve the data from it. New iOS instance RGs can be created and the traffic cut over as required (for example to allow configuration changes).
 

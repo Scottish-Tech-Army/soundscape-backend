@@ -100,4 +100,4 @@ Once the certificate is active, verify the two behaviours.
 
 ## Operations
 
-The links site is not actively monitored — there are no dedicated dashboards, alerts, or saved log queries in [operations.md](operations.md). Front Door health checks against `/.well-known/health` provide implicit availability monitoring (Front Door will mark the origin unhealthy if `health` stops returning 200), but this is not surfaced as an alert. If a problem is suspected, re-run the smoke test above.
+The links site has no dedicated dashboard or saved log queries. Its Front Door managed certificates *are* monitored, by the shared [certificate-expiry alerts](operations.md#certificate-expiry-alerts), which cover every custom domain on the `soundscape-fd` profile including `links` and `linkstest`. Front Door health checks against `/.well-known/health` provide implicit availability monitoring (Front Door will mark the origin unhealthy if `health` stops returning 200), but this is not surfaced as an alert. If a problem is suspected, re-run the smoke test above.

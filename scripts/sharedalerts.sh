@@ -16,6 +16,9 @@ az deployment group create \
     --resource-group ${SHAREDRG} \
     --template-file templates/sharedalerts.bicep \
     --parameters sharedLAW=${SHAREDLAW} \
-                 diagsRG=${DIAGSRG}
+                 diagsRG=${DIAGSRG} \
+                 certAlertEarlyDays=${CERT_ALERT_EARLY_DAYS} \
+                 certAlertImminentDays=${CERT_ALERT_IMMINENT_DAYS} \
+                 certAlertUamiName=${CERT_ALERT_UAMI}
 
 echo "SUCCESS"
