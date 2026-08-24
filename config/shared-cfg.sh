@@ -7,6 +7,7 @@ export SHAREDLAW=shared-law
 export REGISTRYNAME=soundscape
 export REGISTRYRG=$SHAREDRG
 export REGISTRYUAMI=registry-uami
+export CERT_ALERT_UAMI=cert-alerts-uami
 export FRONTDOOR=soundscape-fd
 
 # Subscription
@@ -22,3 +23,7 @@ export METRICS_REGION=uksouth
 # Superset source IP for the Postgres firewall rule (used to let superset access the
 # DB). Leave blank to skip the rule for now.
 export METRICS_SUPERSET_IP=16.61.130.188
+
+# Certificate-expiry alert thresholds, in days.
+export CERT_ALERT_EARLY_DAYS=30
+export CERT_ALERT_IMMINENT_DAYS=10

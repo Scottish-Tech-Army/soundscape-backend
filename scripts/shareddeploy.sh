@@ -20,7 +20,8 @@ az deployment group create \
     --template-file templates/sharedbase.bicep \
     --parameters registryName=${REGISTRYNAME} \
                  uamiName=${REGISTRYUAMI} \
-                 sharedLAW=${SHAREDLAW}
+                 sharedLAW=${SHAREDLAW} \
+                 certAlertUamiName=${CERT_ALERT_UAMI}
 
 # Check if the Front Door profile exists, and if not create it
 if az afd profile show --resource-group ${SHAREDRG} --profile-name ${FRONTDOOR} >/dev/null 2>&1

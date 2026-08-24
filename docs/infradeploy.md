@@ -10,13 +10,13 @@ To stand up the common infrastructure in a fresh subscription, work through thes
 
 2. [Diagnostics infrastructure](#diagnostics-infrastructure) — the shared alert group and log query packs that the other components depend on.
 
-3. [Shared resource group deployment](#shared-resource-group-deployment) — Azure Front Door, the Container Registry, DNS, and the shared Log Analytics workspace.
+3. [Shared resource group deployment](#shared-resource-group-deployment) — Azure Front Door, the Container Registry, DNS, the shared Log Analytics workspace, and the shared alert rules (including certificate-expiry monitoring).
 
 4. [Usage-metrics resource group deployment](#usage-metrics-resource-group-deployment) — the long-term usage-metrics database and its shared reader.
 
 5. [Adding DNS records and endpoints](#adding-dns-records-and-endpoints) — the shared DNS records and corresponding Front Door endpoints for iOS and photon traffic.
 
-With the common infrastructure in place, deploy individual instances using their own documents: [iOS](iosdeploy.md), [Android](androiddeploy.md), [photon](photondeploy.md), and the [links site](linksdeploy.md).
+With the common infrastructure in place, deploy individual instances using their own documents: [iOS](iosdeploy.md), [Android](androiddeploy.md), [photon](photondeploy.md), and the [links site](linksdeploy.md). Once the first instance is carrying traffic, return to [Shared resource group deployment](#shared-resource-group-deployment) to rerun `sharedalerts.sh` (part of step 3 that must be deferred if no traffic is arriving yet).
 
 The remaining sections are reference material used by several of the steps above:
 
@@ -54,6 +54,8 @@ Before you can initially use any of the tooling to deploy any components, you ne
     ~~~
 
     If necessary, you can log in using a different account, or use `az account set` to reset which subscription is in use.
+
+    In order to create the various resources, you should have `Owner` access to all Resource Groups.
 
 - Quotas must be set for the subscription.
 
@@ -133,7 +135,7 @@ To deploy this infrastructure, follow the steps below.
 
 ## Shared resource group deployment
 
-Shared infrastructure contains the Azure Front Door, Azure Container Registry, and DNS components for the deployment. To deploy this infrastructure, follow the steps below.
+Shared infrastructure contains the Azure Front Door, Azure Container Registry, DNS components, the shared Log Analytics workspace, and the shared alert rules including certificate-expiry monitoring. To deploy this infrastructure, follow the steps below.
 
 - Set up a config file (see [Config file convention](#config-file-convention)).
 
@@ -145,12 +147,22 @@ Shared infrastructure contains the Azure Front Door, Azure Container Registry, a
         # Shared RG configuration
         # Region and RG
         export SHAREDREGION=westeurope
+        export DNS_SUFFIX=soundscape.scottishtecharmy.org
         export SHAREDRG=soundscape-shared
         export SHAREDLAW=shared-law
         export REGISTRYNAME=soundscape
         export REGISTRYRG=$SHAREDRG
         export REGISTRYUAMI=registry-uami
         export FRONTDOOR=soundscape-fd
+
+        # Certificate-expiry alerts. CERT_ALERT_UAMI names the managed
+        # identity the rules use to read Azure Resource Graph; it is created
+        # by shareddeploy.sh. The two thresholds are in days:
+        # CERT_ALERT_EARLY_DAYS controls the routine early-warning alert,
+        # CERT_ALERT_IMMINENT_DAYS the daily high-severity one.
+        export CERT_ALERT_UAMI=cert-alerts-uami
+        export CERT_ALERT_EARLY_DAYS=30
+        export CERT_ALERT_IMMINENT_DAYS=10
 
         # Subscription
         export SUBSCRIPTION=9ff2d6b4-099b-4370-9629-6f490b4ac356
@@ -162,13 +174,13 @@ Shared infrastructure contains the Azure Front Door, Azure Container Registry, a
     . config/shared-cfg.sh
     ~~~
 
-- Run the script to create the shared resource group and set up resources within it.
+- Run the script to create the shared resource group and set up resources within it. See [the certificate-expiry alerts](operations.md#certificate-expiry-alerts) for what that identity is ultimately for.
 
     ~~~bash
     bash scripts/shareddeploy.sh
     ~~~
 
-- Once traffic is flowing through Front Door (which only happens after the first deployment is up), set up the alerts. *Until some traffic has been logged by Front Door, this script will fail with cryptic errors.*
+- Once traffic is flowing through Front Door (which only happens after the first deployment is up), set up the alerts. *Until some traffic has been logged by Front Door, this script will fail with cryptic errors, but can safely be deferred until later, at the cost of no alerts being configured.*
 
     ~~~bash
     bash scripts/sharedalerts.sh

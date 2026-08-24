@@ -5,8 +5,10 @@ This document covers how to monitor and operate an existing deployment. It is in
 It is organised as follows.
 
 - [Dashboards](#dashboards) — the per-component portal dashboards built by each deployment, and what they show.
-- [Alerts](#alerts) — the alerts that fire when something is wrong, and the first action to take for each.
+- [Alerts](#alerts) — the alerts that fire when something is wrong, the first action to take for each, and how to test the certificate alerts.
 - [Detailed log monitoring](#detailed-log-monitoring) — the saved log queries used to investigate issues, grouped by component.
+- [Usage metrics database](#usage-metrics-database) — connecting to the long-term metrics store, the shape of the data, and the meaning of each metric.
+- [Common issues](#common-issues) — failure modes not tied to a specific alert.
 
 ## Dashboards
 
@@ -75,6 +77,9 @@ The photon deployment process creates a dashboard, named after the resource grou
 ## Alerts
 
 A range of alerts are configured, and will be seen in email reports sent to the configured users.
+### VM related alerts
+
+These are triggered by VM related incidents, for either iOS or Android.
 
 - Severity 4: a VM (iOS or Android) successfully ran to completion.
 
@@ -88,11 +93,13 @@ A range of alerts are configured, and will be seen in email reports sent to the 
 
     - First action: as above. Additionally, check the VMSS in the portal — if a VM is still running, terminate it manually. The next scheduled run will then start cleanly. The cause of the hang is normally visible in the detailed-logs query, even though the VM did not write a final error. (For iOS, the full-globe ingestion normally takes 8–10 hours; in the `iOS ingestion - detailed logs` query `imposm3` logs roughly once a minute, so no output for more than 30 minutes indicates a genuine hang.)
 
+### iOS specific alerts
+
 - Severity 2: errors are reported in Azure Front Door for Soundscape iOS requests.
 
     - First action: run `iOS Front Door Errors` (note that this query lives in the shared workspace, see below). If errors are concentrated on a single endpoint or path, check the corresponding tilesrv logs (`iOS tilesrv access logs`) for the same time window.
 
-For photon:
+### Photon related alerts
 
 - Severity 4: a reimage of the photon VMSS has started.
 
@@ -109,6 +116,52 @@ For photon:
 - Severity 2: errors are reported in Azure Front Door for photon requests.
 
     - First action: run `Photon Front Door Errors` (in the shared workspace, see below) and `Photon Container logs` for the same window.
+
+### Certificate expiry alerts
+
+These alerts warn before an Azure-managed TLS certificate expires. They discover certificates at evaluation time from Azure Resource Graph, covering every custom domain on the shared Front Door profile (`soundscape-fd` in `soundscape-shared`). Coverage is bounded by the alert identity's Reader scope on `soundscape-shared`, so a Front Door profile created in another resource group would not be monitored; see [architecture.md](architecture.md).
+
+The two rules - `cert-expiry-early-warning` (displayed as *Certificate expiry: early warning*) and `cert-expiry-imminent` (*Certificate expiry: imminent*) - evaluate every six hours. Notifications for a given certificate are muted for 24 hours after firing, so six-hourly evaluation still yields at most one email per certificate per day.
+
+Each affected certificate produces its own alert instance and its own email, so several domains expiring together generate several mails rather than one. Alerts do not auto-resolve — close them manually in the portal once the certificate is renewed.
+
+To list every managed certificate with its expiry date and the days remaining, run the following. It needs `az login` against the subscription and the Azure CLI `resource-graph` extension (installed automatically on first use).
+
+~~~bash
+az graph query -q "cdnresources
+| where type == 'microsoft.cdn/profiles/secrets'
+| project subject = tostring(properties.parameters.subject),
+          expires = todatetime(properties.parameters.expirationDate),
+          daysLeft = datetime_diff('day', todatetime(properties.parameters.expirationDate), now())
+| order by expires asc" -o table
+~~~
+
+The same data is visible per-domain on the Front Door `Settings → Domains` pane.
+
+- Severity 3: a Front Door managed certificate's remaining life has just dropped below `CERT_ALERT_EARLY_DAYS` days (30 in production) - the routine early warning. The email names the affected domain and the certificate's expiry date. The rule matches a **one-day band** at that threshold, so each certificate crosses it exactly once and the alert fires **once only** without repeating. A certificate already inside the threshold when the rules are first deployed has passed the band and will never raise an early warning.
+
+  - First action: none urgently. Open the Front Door instance (`soundscape-fd` in `soundscape-shared`) in the portal, find the named domain under `Settings → Domains`, and check its certificate state. For certs which relate to `CNAME` records, renewal should have happened automatically and this is an error; for those with `A` records, the `_dnsauth` `TXT` record must be manually updated and revalidation forced in the portal.
+
+- Severity 1: a Front Door managed certificate will expire within `CERT_ALERT_IMMINENT_DAYS` days (10 in production) - repeats daily for as long as the condition holds. The email names the affected domain and the certificate's expiry date.
+
+    - First action: as above, but urgently, as there is limited time remaining..
+
+#### Testing the certificate alerts
+
+Run this after deploying or changing the shared alerts, to confirm the rule, its managed identity and the action group are all wired up. Because the alerts only fire when a real certificate approaches expiry, the way to test them is to raise a threshold until live certificates breach it.
+
+**Choosing the test value differs between the two alerts.** The imminent alert fires for any certificate inside its threshold, so any comfortably large value (100, say) will trigger it. The early warning only fires inside a **one-day band** just below its threshold, so its test value must be the whole number of days remaining until a live certificate expires, as seen in the portal. A value outside the band produces **no email at all**, which looks identical to a broken deployment, so check the value carefully.
+
+Edit the relevant threshold in `config/shared-cfg.sh`, then re-source the file and redeploy:
+
+~~~bash
+. config/shared-cfg.sh
+bash scripts/sharedalerts.sh
+~~~
+
+Both rules evaluate every six hours, so allow up to that long for the alert to fire. Confirm it in the portal under `Monitor → Alerts`, filtered to the `soundscape-shared` resource group, as well as by the email arriving.
+
+**Restore both thresholds to their production values once testing is finished**, changing `config/shared-cfg.sh` back to `CERT_ALERT_EARLY_DAYS=30` and `CERT_ALERT_IMMINENT_DAYS=10`, then redeploying as above.
 
 ## Detailed log monitoring
 

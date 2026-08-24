@@ -1,9 +1,21 @@
 @description('Shared Log Analytics workspace name')
 param sharedLAW string
 
-// Removed for now - alert disabled at bottom
 @description('Diags RG with alert group')
 param diagsRG string
+
+// Mirrored from certalerts.bicep so a bad threshold fails at the outermost
+// boundary the deploy script passes into, rather than one module deeper.
+@description('Days-to-expiry threshold for the certificate-expiry early warning')
+@minValue(1)
+param certAlertEarlyDays int
+
+@description('Days-to-expiry threshold for the certificate-expiry imminent alert')
+@minValue(1)
+param certAlertImminentDays int
+
+@description('Name of the pre-existing managed identity (created in sharedbase.bicep) the certificate-expiry rules use to read Azure Resource Graph')
+param certAlertUamiName string
 
 /*
  * Log Analytics Workspace
@@ -56,5 +68,19 @@ module photonErrorAlert './alert.bicep' = {
     | where requestUri_s startswith "https://photon."
     | where requestUri_s contains "/photon/"
     '''
+  }
+}
+
+// Certificate-expiry alerts (early warning + imminent expiry) for every
+// managed certificate on this shared Front Door profile. See
+// templates/certalerts.bicep for the design this implements.
+module certAlerts './certalerts.bicep' = {
+  name: 'cert-alerts'
+  params: {
+    diagsRG: diagsRG
+    logAnalyticsId: logAnalytics.id
+    earlyDays: certAlertEarlyDays
+    imminentDays: certAlertImminentDays
+    certAlertUamiName: certAlertUamiName
   }
 }
