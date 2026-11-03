@@ -59,13 +59,6 @@ resource certAlertsUami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-0
 // but is deliberate — date subtraction (datetime_diff and friends) could
 // not be made to work against arg(). expiryDate is a formatted string, not
 // a datetime, because alert dimensions only accept string/numeric columns.
-//
-// queryPrefix deliberately stops mid-statement at `| where`, and the
-// threshold clause is interpolated onto it below. The space separating the
-// two is written into the interpolation rather than left as trailing
-// whitespace inside the literal, where it would be both invisible to a
-// reviewer and load-bearing: losing it yields `| wherecertExp < ...`, which
-// fails to execute, and this feature does not alert on its own failure.
 var queryPrefix = '''
 arg("").cdnresources
 | where type == "microsoft.cdn/profiles/secrets"

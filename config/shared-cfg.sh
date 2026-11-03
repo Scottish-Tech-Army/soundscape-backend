@@ -22,7 +22,7 @@ export METRICS_REGION=uksouth
 
 # Superset source IP for the Postgres firewall rule (used to let superset access the
 # DB). Leave blank to skip the rule for now.
-export METRICS_SUPERSET_IP=16.61.130.188
+export METRICS_SUPERSET_IP=13.135.181.15
 
 # Certificate-expiry alert thresholds, in days.
 export CERT_ALERT_EARLY_DAYS=30
